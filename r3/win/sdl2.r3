@@ -51,3 +51,52 @@
 	dup "SDL_RenderPresent" getproc 'sys-SDL_RenderPresent !
 	drop
 	;
+	
+#SDL_windows
+#SDL_screen
+
+|typedef struct SDL_Surface {
+|    Uint32 flags;               /**< Read-only */
+|    SDL_PixelFormat *format;    /**< Read-only */
+|    int w, h;                   /**< Read-only */
+|    int pitch;                  /**< Read-only */
+|    void *pixels;               /**< Read-write */
+|    /** Application data associated with the surface */
+|    void *userdata;             /**< Read-write */
+|    /** information needed for surfaces requiring locks */
+|    int locked;                 /**< Read-only */
+|    void *lock_data;            /**< Read-only */
+|    /** clipping information */
+|    SDL_Rect clip_rect;         /**< Read-only */
+|    /** info for fast blit mapping to other surfaces */
+|    struct SDL_BlitMap *map;    /**< Private */
+|    /** Reference count -- used when freeing surface */
+|    int refcount;               /**< Read-mostly */
+|} SDL_Surface;
+
+##screenw
+##screenh
+##gr_buffer
+
+::SDLinit | w h --
+	'screenh ! 'screenw !
+	$3231 SDL_init drop
+	"r3sdl" $1FFF0000 $1FFF0000 screenw screenh 0 SDL_CreateWindow 'SDL_windows !
+	SDL_windows SDL_GetWindowSurface 'SDL_screen !
+	
+| window=SDL_CreateWindow(title,SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,XRES,YRES,0);
+|	if (!window) return -1;
+|	if (f==1) SDL_SetWindowFullscreen(window,SDL_WINDOW_FULLSCREEN);
+|	screen = SDL_GetWindowSurface(window);	
+
+	0 SDL_ShowCursor drop | disable cursor
+	SDL_screen @ 20 + d@ 'gr_buffer ! 
+	;
+	
+::SDLquit
+	SDL_windows SDL_DestroyWindow drop 
+	SDL_Quit drop ;
+	
+::SDLupdate	
+	SDL_windows SDL_UpdateWindowSurface drop ;
+	
