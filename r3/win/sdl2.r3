@@ -52,45 +52,44 @@
 	drop
 	;
 	
-#SDL_windows
-#SDL_screen
+##SDL_windows
+##SDL_screen
 
-|typedef struct SDL_Surface {
-|    Uint32 flags;               /**< Read-only */
-|    SDL_PixelFormat *format;    /**< Read-only */
-|    int w, h;                   /**< Read-only */
-|    int pitch;                  /**< Read-only */
-|    void *pixels;               /**< Read-write */
-|    /** Application data associated with the surface */
-|    void *userdata;             /**< Read-write */
-|    /** information needed for surfaces requiring locks */
-|    int locked;                 /**< Read-only */
-|    void *lock_data;            /**< Read-only */
-|    /** clipping information */
-|    SDL_Rect clip_rect;         /**< Read-only */
-|    /** info for fast blit mapping to other surfaces */
-|    struct SDL_BlitMap *map;    /**< Private */
-|    /** Reference count -- used when freeing surface */
-|    int refcount;               /**< Read-mostly */
-|} SDL_Surface;
+|struct SDL_Surface
+|        flags           dd ? +0
+|                        dd ? +4
+|       ?format          dq ? +8
+|        w               dd ? +16
+|        h               dd ? +20
+|        pitch           dd ? +24
+|                        dd ? +28
+|        pixels          dq ? +32
+|        userdata        dq ?
+|        locked          dd ?
+|                        dd ?
+|        lock_data       dq ?
+|        clip_rect       SDL_Rect
+|        map             dq ?
+|        refcount        dd ?
+|                        dd ?
+|ends
 
 ##screenw
 ##screenh
+##pitch
+##sizebuffer
 ##gr_buffer
 
-::SDLinit | w h --
+::SDLinit | "titulo" w h --
+	2dup * 'sizebuffer !
 	'screenh ! 'screenw !
 	$3231 SDL_init drop
-	"r3sdl" $1FFF0000 $1FFF0000 screenw screenh 0 SDL_CreateWindow 'SDL_windows !
-	SDL_windows SDL_GetWindowSurface 'SDL_screen !
-	
-| window=SDL_CreateWindow(title,SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,XRES,YRES,0);
-|	if (!window) return -1;
-|	if (f==1) SDL_SetWindowFullscreen(window,SDL_WINDOW_FULLSCREEN);
-|	screen = SDL_GetWindowSurface(window);	
+	$1FFF0000 $1FFF0000 screenw screenh 0 SDL_CreateWindow dup 'SDL_windows !
+	SDL_GetWindowSurface dup 'SDL_screen !
+	24 + d@+ 'pitch !
+	4 + @ 'gr_buffer ! 
 
 	0 SDL_ShowCursor drop | disable cursor
-	SDL_screen @ 20 + d@ 'gr_buffer ! 
 	;
 	
 ::SDLquit

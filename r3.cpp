@@ -954,19 +954,19 @@ next:
 	case CLZ:TOS=iclz(TOS);goto next;					//CLZ
 	case FECH:TOS=*(int64_t*)TOS;goto next;//@
 	case CFECH:TOS=*(char*)TOS;goto next;//C@
-	case QFECH:TOS=*(int*)TOS;goto next;//D@	
-	case FECHPLUS:NOS++;*NOS=TOS+4;TOS=*(int64_t*)TOS;goto next;//@+
+	case QFECH:TOS=*(int32_t*)TOS;goto next;//D@	
+	case FECHPLUS:NOS++;*NOS=TOS+8;TOS=*(int64_t*)TOS;goto next;//@+
 	case CFECHPLUS:NOS++;*NOS=TOS+1;TOS=*(char*)TOS;goto next;// C@+
-	case QFECHPLUS:NOS++;*NOS=TOS+8;TOS=*(int*)TOS;goto next;//D@+		
+	case QFECHPLUS:NOS++;*NOS=TOS+4;TOS=*(int32_t*)TOS;goto next;//D@+		
 	case STOR:*(int64_t*)TOS=(int64_t)*NOS;NOS--;TOS=*NOS;NOS--;goto next;// !
 	case CSTOR:*(char*)TOS=(char)*NOS;NOS--;TOS=*NOS;NOS--;goto next;//C!
-	case QSTOR:*(int*)TOS=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//D!
-	case STOREPLUS:*(int64_t*)TOS=*NOS;NOS--;TOS+=4;goto next;// !+
+	case QSTOR:*(int32_t*)TOS=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//D!
+	case STOREPLUS:*(int64_t*)TOS=*NOS;NOS--;TOS+=8;goto next;// !+
 	case CSTOREPLUS:*(char*)TOS=*NOS;NOS--;TOS++;goto next;//C!+
-	case QSTOREPLUS:*(int*)TOS=*NOS;NOS--;TOS+=8;goto next;//D!+
+	case QSTOREPLUS:*(int32_t*)TOS=*NOS;NOS--;TOS+=4;goto next;//D!+
 	case INCSTOR:*(int64_t*)TOS+=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//+!
 	case CINCSTOR:*(char*)TOS+=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//C+!
-	case QINCSTOR:*(int*)TOS+=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//D+!
+	case QINCSTOR:*(int32_t*)TOS+=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//D+!
 	case TOA:REGA=TOS;TOS=*NOS;NOS--;goto next; //>A
 	case ATO:NOS++;*NOS=TOS;TOS=REGA;goto next; //A> 
 	case AF:NOS++;*NOS=TOS;TOS=*(int*)REGA;goto next;//A@

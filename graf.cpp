@@ -133,7 +133,6 @@ if (f==2) {
 } else {
 	window=SDL_CreateWindow(title,SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,XRES,YRES,0);if (!window) return -1;
 	if (f==1) SDL_SetWindowFullscreen(window,SDL_WINDOW_FULLSCREEN);
-	screen = SDL_GetWindowSurface(window);
 #ifdef EMSCRIPTEN
 	renderer=SDL_CreateRenderer(window, -1, 0);
 	texture=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_ARGB8888,SDL_TEXTUREACCESS_STREAMING,XRES,YRES);
