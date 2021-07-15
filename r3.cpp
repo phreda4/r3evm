@@ -1024,10 +1024,19 @@ next:
 		memset64((uint64_t*)*(NOS-1),*NOS,TOS);		
 		NOS-=2;TOS=*NOS;NOS--;goto next;
 
+#if defined(LINUX) || defined(RPI)
+	case LOADLIB: // "" -- hmo
+		TOS=(int64_t)dlopen((char*)TOS,RTLD_NOW));goto next; //RTLD_LAZY 1 RTLD_NOW 2
+	case GETPROCA: // hmo "" -- ad		
+		TOS=(int64_t)dlsym((void*)*NOS,(char*)TOS);NOS--;goto next;
+#else	// WINDOWS
 	case LOADLIB: // "" -- hmo
 		TOS=(int64_t)LoadLibraryA((char*)TOS);goto next;
 	case GETPROCA: // hmo "" -- ad
 		TOS=(int64_t)GetProcAddress((HMODULE)*NOS,(char*)TOS);NOS--;goto next;
+#endif
+		
+		 
 	case SYSCALL0: // adr -- rs
 		TOS=((int64_t (__stdcall *)())TOS)();goto next;
 	case SYSCALL1: // a0 adr -- rs 

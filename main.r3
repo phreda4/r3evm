@@ -2,21 +2,29 @@
 ^r3/lib/str.r3
 	
 |--------------------------------------
-:type | str cnt --
-	stdout rot rot 0 0 WriteFile drop ;
-:ms | ms --
-	Sleep ;
-
 :cls | color --
 	gr_buffer >a sizebuffer ( 1? over a!+ 1 - ) 2drop ;
 	
+#buffer * 256
+
+:input
+	'buffer
+	( key 13 <>? swap c!+ ) drop
+	0 swap c! ;
 	
-:test
-	|$ffffff SDL_screen 28 + @ d! ;
-	
+:tt	
+	100 ( 1? 1 -
+		50 ms
+		key? . ) drop ;
+		
 :main
 	windows
+	"1;1H" .[ | home
+	"2J" .[  | cls
 	"r3init" 6 type
+	cr
+	input
+	cr
 	sdl2
 	"r3sdl" 640 480 SDLinit
 
