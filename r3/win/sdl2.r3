@@ -1,5 +1,6 @@
+| SDL2.dll
+|
 
-|--------------------------------------SDL
 #sys-SDL_Init 
 #sys-SDL_Quit 
 #sys-SDL_GetNumVideoDisplays 
@@ -15,6 +16,11 @@
 #sys-SDL_UpdateTexture 
 #sys-SDL_RenderCopy 
 #sys-SDL_RenderPresent 
+#sys-SDL_Delay
+#sys-SDL_PollEvent	
+#sys-SDL_GetTicks
+#sys-SDL_StartTextInput	
+#sys-SDL_StopTextInput
 
 ::SDL_Init sys-SDL_Init sys1 drop ;
 ::SDL_Quit sys-SDL_Quit sys0 drop ;
@@ -31,26 +37,11 @@
 ::SDL_UpdateTexture sys-SDL_UpdateTexture sys4 ;
 ::SDL_RenderCopy sys-SDL_RenderCopy sys4 ;
 ::SDL_RenderPresent sys-SDL_RenderPresent sys1 ;
-
-#sys-SDL_Delay
-::SDL_Delay | dl --
-	sys-SDL_Delay sys1 drop ;
-	
-#sys-SDL_PollEvent	
-::SDL_PollEvent | &evt -- ok
-	sys-SDL_PollEvent sys1 ;
-
-#sys-SDL_GetTicks
-::SDL_GetTicks | -- msec
-	sys-SDL_GetTicks sys0 ;
-	
-#sys-SDL_StartTextInput	
-::SDL_StartTextInput
-	sys-SDL_StartTextInput sys0 drop ;
-	
-#sys-SDL_StopTextInput
-::SDL_StopTextInput
-	sys-SDL_StopTextInput sys0 drop ;
+::SDL_Delay sys-SDL_Delay sys1 drop ;
+::SDL_PollEvent sys-SDL_PollEvent sys1 ; | &evt -- ok
+::SDL_GetTicks sys-SDL_GetTicks sys0 ; | -- msec
+::SDL_StartTextInput sys-SDL_StartTextInput sys0 drop ;
+::SDL_StopTextInput sys-SDL_StopTextInput sys0 drop ;
 	
 ::sdl2
 	"SDL2.DLL" loadlib
@@ -69,36 +60,17 @@
 	dup "SDL_UpdateTexture" getproc 'sys-SDL_UpdateTexture !
 	dup "SDL_RenderCopy" getproc 'sys-SDL_RenderCopy !
 	dup "SDL_RenderPresent" getproc 'sys-SDL_RenderPresent !
-	
-	"SDL_Delay" getproc 'sys-SDL_Delay !
-	"SDL_PollEvent" getproc 'sys-SDL_PollEvent !
-	"SDL_GetTicks" getproc 'sys-SDL_GetTicks !
+
+	dup "SDL_Delay" getproc 'sys-SDL_Delay !
+	dup "SDL_PollEvent" getproc 'sys-SDL_PollEvent !
+	dup "SDL_GetTicks" getproc 'sys-SDL_GetTicks !
 	drop
 	;
 
-##SDLevent * 56 
+|----------------------------------------------------------
 	
 ##SDL_windows
 ##SDL_screen
-
-|struct SDL_Surface
-|        flags           dd ? +0
-|                        dd ? +4
-|       ?format          dq ? +8
-|        w               dd ? +16
-|        h               dd ? +20
-|        pitch           dd ? +24
-|                        dd ? +28
-|        pixels          dq ? +32
-|        userdata        dq ?
-|        locked          dd ?
-|                        dd ?
-|        lock_data       dq ?
-|        clip_rect       SDL_Rect
-|        map             dq ?
-|        refcount        dd ?
-|                        dd ?
-|ends
 
 ##screenw
 ##screenh
@@ -122,6 +94,35 @@
 	SDL_windows SDL_DestroyWindow 
 	SDL_Quit ;
 	
-::SDLupdate	
+::SDLredraw
 	SDL_windows SDL_UpdateWindowSurface ;
+
+##SDLevent * 56 
+
+##SDLkey
+##SDLkeychar
+##SDLx ##SDLy ##SDLb
+	
+#SDL_KEYDOWN	$300     | Key pressed
+#SDL_KEYUP		$301     | Key released
+#SDL_TEXTINPUT	$303 | Keyboard text input
+#SDL_MOUSEMOTION	$400     | Mouse moved
+#SDL_MOUSEBUTTONDOWN $401    | Mouse button pressed
+#SDL_MOUSEBUTTONUP	$402     | Mouse button released
+#SDL_MOUSEWHEEL		$403     | Mouse wheel motion
+	
+::SDLupdate
+	0 'SDLkey !
+	0 'SDLkeychar !
+	10 SDL_delay
+	( 'SDLevent SDL_PollEvent 1? drop
+		'SDLevent d@ 
+		SDL_KEYDOWN =? ( 'SDLevent 16 + d@ dup $ffff and swap 16 >> or 'SDLkey ! )
+		SDL_KEYUP =? ( 'SDLevent 16 + d@ dup $ffff and swap 16 >> or $10000 or 'SDLkey ! )
+		SDL_TEXTINPUT =? ( 'SDLevent 12 + c@ 'SDLkeychar ! )
+		SDL_MOUSEMOTION	=? ( 'SDLevent 20 + d@+ 'SDLx ! d@ 'SDLy ! )
+		SDL_MOUSEBUTTONDOWN =? ( 'SDLevent 16 + c@ SDLb or 'SDLb ! )
+		SDL_MOUSEBUTTONUP =? ( 'SDLevent 16 + c@ not SDLb and 'SDLb ! )
+		drop
+		) drop ;
 	

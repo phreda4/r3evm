@@ -100,7 +100,7 @@ const char *r3bas[]={
 "LOADLIB","GETPROC",
 "SYS0","SYS1","SYS2","SYS3","SYS4","SYS5","SYS6","SYS7","SYS8",
 
-".",".S",
+//".",".S",
 
 "",// !!cut the dicc!!!
 "JMP","JMPR","LIT2","LIT3",	// internal only
@@ -137,7 +137,7 @@ QMOVED,QMOVEA,QFILL,
 
 LOADLIB,GETPROCA,
 SYSCALL0,SYSCALL1,SYSCALL2,SYSCALL3,SYSCALL4,SYSCALL5,SYSCALL6,SYSCALL7,SYSCALL8,
-DOT,DOTS,
+//DOT,DOTS,
 
 ENDWORD, // !! cut the dicc !!!
 JMP,JMPR,LIT2,LIT3,	// internal
@@ -213,10 +213,6 @@ for(int i=0;i<cntdicc;i++) {
 
 // scan for a valid number begin in *p char
 // return number in global var "nro"
-
-//typedef long int int64_t;
-//typedef unsigned long int uint64_t;
-//typedef unsigned int uint32_t;
 
 typedef __INT64_TYPE__ int64_t;
 typedef __UINT64_TYPE__ uint64_t;
@@ -1056,10 +1052,10 @@ next:
 	case SYSCALL8: // a1 a0 adr -- rs 
 		TOS=(int64_t)(* (int64_t(*)(int64_t,int64_t,int64_t,int64_t,int64_t,int64_t,int64_t,int64_t))TOS)(*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=8;goto next;
 
-
+/* -- DEBUG
 	case DOT:printf("%llx ",TOS);TOS=*NOS;NOS--;goto next;
 	case DOTS:printf((char*)TOS);TOS=*NOS;NOS--;goto next;
-	
+*/	
 	case ENDWORD: goto next;
 //----------------- ONLY INTERNAL
 	case JMP:ip=(op>>8);goto next;//JMP							// JMP

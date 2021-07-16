@@ -1,5 +1,4 @@
 ^r3/sys.r3
-^r3/lib/str.r3
 	
 |--------------------------------------
 :cls | color --
@@ -19,20 +18,20 @@
 		
 :main
 	windows
-	"1;1H" .[ | home
-	"2J" .[  | cls
-	"r3init" 6 type
+|	"1;1H" .[ | home
+|	"2J" .[  | cls
+	"r3init" .
 	cr
 	input
 	cr
 	sdl2
 	"r3sdl" 640 480 SDLinit
 
-	$ff0000 cls SDLupdate
+	$ff0000 cls SDLredraw
 	1000 ms	
-	$ff00 cls SDLupdate
+	$ff00 cls SDLredraw
 	1000 ms
-	$ff cls SDLupdate
+	$ff cls SDLredraw
 	1000 ms
 
 	SDLquit
