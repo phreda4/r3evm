@@ -42,7 +42,7 @@
 ::SDL_GetTicks sys-SDL_GetTicks sys0 ; | -- msec
 ::SDL_StartTextInput sys-SDL_StartTextInput sys0 drop ;
 ::SDL_StopTextInput sys-SDL_StopTextInput sys0 drop ;
-	
+
 ::sdl2
 	"SDL2.DLL" loadlib
 	dup "SDL_Init" getproc 'sys-SDL_Init !
@@ -76,7 +76,7 @@
 ##screenh
 ##pitch
 ##sizebuffer
-##gr_buffer
+##vframe
 
 ::SDLinit | "titulo" w h --
 	2dup * 'sizebuffer !
@@ -85,7 +85,7 @@
 	$1FFF0000 $1FFF0000 screenw screenh 0 SDL_CreateWindow dup 'SDL_windows !
 	SDL_GetWindowSurface dup 'SDL_screen !
 	24 + d@+ 'pitch !
-	4 + @ 'gr_buffer ! 
+	4 + @ 'vframe ! 
 
 	0 SDL_ShowCursor | disable cursor
 	;
@@ -117,7 +117,7 @@
 	10 SDL_delay
 	( 'SDLevent SDL_PollEvent 1? drop
 		'SDLevent d@ 
-		SDL_KEYDOWN =? ( 'SDLevent 16 + d@ dup $ffff and swap 16 >> or 'SDLkey ! )
+		SDL_KEYDOWN =? ( 'SDLevent 16 + d@ dup $ffff and swap 16 >> or dup .d . 'SDLkey ! )
 		SDL_KEYUP =? ( 'SDLevent 16 + d@ dup $ffff and swap 16 >> or $10000 or 'SDLkey ! )
 		SDL_TEXTINPUT =? ( 'SDLevent 12 + c@ 'SDLkeychar ! )
 		SDL_MOUSEMOTION	=? ( 'SDLevent 20 + d@+ 'SDLx ! d@ 'SDLy ! )
