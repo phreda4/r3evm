@@ -1,11 +1,10 @@
 ^r3/sys.r3
 ^r3/lib/sys.r3	
+^r3/win/console.r3	
+^r3/lib/gr.r3
 
 |--------------------------------------
-:cls | color --
-	vframe >a sizebuffer ( 1? over a!+ 1 - ) 2drop ;
-	
-:xy>v screenw * + 2 << vframe + ;	
+
 #buffer * 256
 
 :input
@@ -25,19 +24,19 @@
 	
 :main
 	windows
-|	"1;1H" .[ | home
-|	"2J" .[  | cls
+
 	"r3init" .
 	cr
 	input
 	cr
+	>esc< .h . " " .
 	sdl2
 	"r3sdl" 640 480 SDLinit
 
 	test
-	|$ff0000 cls SDLredraw 1000 ms	
-	|$ff00 cls SDLredraw 1000 ms
-	|$ff cls SDLredraw 1000 ms
+	$ff0000 'paper ! cls SDLredraw 1000 ms	
+	$ff00 'paper ! cls SDLredraw 1000 ms
+	$ff 'paper ! cls SDLredraw 1000 ms
 
 	SDLquit
 	;

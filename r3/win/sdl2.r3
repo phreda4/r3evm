@@ -72,17 +72,17 @@
 ##SDL_windows
 ##SDL_screen
 
-##screenw
-##screenh
+##sw
+##sh
 ##pitch
 ##sizebuffer
 ##vframe
 
 ::SDLinit | "titulo" w h --
 	2dup * 'sizebuffer !
-	'screenh ! 'screenw !
+	'sh ! 'sw !
 	$3231 SDL_init 
-	$1FFF0000 $1FFF0000 screenw screenh 0 SDL_CreateWindow dup 'SDL_windows !
+	$1FFF0000 $1FFF0000 sw sh 0 SDL_CreateWindow dup 'SDL_windows !
 	SDL_GetWindowSurface dup 'SDL_screen !
 	24 + d@+ 'pitch !
 	4 + @ 'vframe ! 
@@ -117,8 +117,8 @@
 	10 SDL_delay
 	( 'SDLevent SDL_PollEvent 1? drop
 		'SDLevent d@ 
-		SDL_KEYDOWN =? ( 'SDLevent 16 + d@ dup $ffff and swap 16 >> or dup .d . 'SDLkey ! )
-		SDL_KEYUP =? ( 'SDLevent 16 + d@ dup $ffff and swap 16 >> or $10000 or 'SDLkey ! )
+		SDL_KEYDOWN =? ( 'SDLevent 20 + d@ dup $ffff and swap 16 >> or 'SDLkey ! )
+		SDL_KEYUP =? ( 'SDLevent 20 + d@ dup $ffff and swap 16 >> or $1000 or 'SDLkey ! )
 		SDL_TEXTINPUT =? ( 'SDLevent 12 + c@ 'SDLkeychar ! )
 		SDL_MOUSEMOTION	=? ( 'SDLevent 20 + d@+ 'SDLx ! d@ 'SDLy ! )
 		SDL_MOUSEBUTTONDOWN =? ( 'SDLevent 16 + c@ SDLb or 'SDLb ! )
@@ -126,3 +126,10 @@
 		drop
 		) drop ;
 	
+##paper $0
+##ink $ff00	
+
+::cls
+	vframe paper sizebuffer fill ;
+	
+		

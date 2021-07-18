@@ -15,32 +15,32 @@
 
 ::empty | --
 	memmap> 'memmap =? ( drop mem 'here ! ; )
-	4 - dup 'memmap> ! @ 'here ! ;
+	8 - dup 'memmap> ! @ 'here ! ;
 
 ::savemem | "" --
-	memmap> 4 - @ here over - rot save ;
+	memmap> 8 - @ here over - rot save ;
 
 ::sizemem | -- size
-	here memmap> 4 - @ - ;
+	here memmap> 8 - @ - ;
 
 #inc 0
 ::savememinc | "" --
-	inc 0? ( memmap> 4 - @ nip )
+	inc 0? ( memmap> 8 - @ nip )
 	here over - rot append
 	here 'inc !
 	;
 
 ::cpymem | 'destino --
-	memmap> 4 - @ here over -
+	memmap> 8 - @ here over -
 	cmove ; | de sr cnt --
 
 ::appendmem | "" --
-	memmap> 4 - @ here over - rot append ;
+	memmap> 8 - @ here over - rot append ;
 
 |---
 ::, here !+ 'here ! ;
 ::,c here c!+ 'here ! ;
-::,q here q!+ 'here ! ;
+::,32 here d!+ 'here ! ;
 ::,s here swap
 	( c@+ 1? rot c!+ swap ) 2drop 'here ! ;
 ::,w here swap
@@ -98,18 +98,10 @@
 
 :,emit | c --
 	$25 <>? ( ,c ; ) drop
-	c@+ $f and 2 << 'control + @ ex ;
+	c@+ $f and 3 << 'control + @ ex ;
 
 ::,print | p p .. "" --
 	( c@+ 1? ,emit ) 2drop ;
-
-|::sprint | p p .. "" -- adr
-|	mark
-|	here 4096 +
-|	over =? ( 4096 + )
-|	dup 'here ! >r
-|	,print ,eol
-|	empty r> ;
 
 #buff * 4096
 

@@ -10,13 +10,13 @@
 #sys-SetConsoleMode
 #sys-FlushConsoleInputBuffer
 #sys-Sleep
-#sys-WaitForSingleObject sys2
+#sys-WaitForSingleObject 
 #sys-GetLastError
-#sys-CreateFileA
+#sys-CreateFile
 #sys-CloseHandle
 #sys-FlushFileBuffers
-#sys-DeleteFileA
-#sys-MoveFileA
+#sys-DeleteFile
+#sys-MoveFile
 #sys-SetFilePointer
 #sys-SetEndOfFile
 #sys-GetFileSize
@@ -26,6 +26,12 @@
 #sys-HeapFree
 #sys-HeapReAlloc
 
+#sys-GetTickCount
+#sys-GetLocalTime
+#sys-FindFirstFile
+#sys-FindNextFile
+#sys-FindClose
+#sys-CreateProcess
 
 ::AllocConsole sys-allocconsole sys0 drop ;
 ::ExitProcess sys-ExitProcess sys1 ;
@@ -38,11 +44,11 @@
 ::Sleep sys-Sleep sys1 drop ;
 ::WaitForSingleObject sys-WaitForSingleObject sys2 ;
 ::GetLastError sys-GetLastError sys0 ;
-::CreateFileA sys-CreateFileA sys7 ;
+::CreateFile sys-CreateFile sys7 ;
 ::CloseHandle sys-CloseHandle sys1 ;
 ::FlushFileBuffers sys-FlushFileBuffers sys1 ;
-::DeleteFileA sys-DeleteFileA sys1 ;
-::MoveFileA sys-MoveFileA sys2 ;
+::DeleteFile sys-DeleteFile sys1 ;
+::MoveFile sys-MoveFile sys2 ;
 ::SetFilePointer sys-SetFilePointer sys4 ;
 ::SetEndOfFile sys-SetEndOfFile sys1 ;
 ::GetFileSize sys-GetFileSize sys2 ;
@@ -51,6 +57,13 @@
 ::HeapAlloc 'sys-HeapAlloc sys3 drop ;
 ::HeapFree 'sys-HeapFree sys3 drop ;
 ::HeapReAlloc 'sys-HeapReAlloc sys4 drop ;
+
+::GetTickCount 'sys-GetTickCount sys0 ;
+::GetLocalTime 'sys-GetLocalTime sys1 drop ;
+::FindFirstFile 'sys-FindFirstFile sys2 ;
+::FindNextFile 'sys-FindNextFile sys2 ;
+::FindClose 'sys-FindClose sys1 drop ;
+|::CreateProcess 'sys-CreateProcess sys10 ;
 
 #console-mode
 ##process-heap
@@ -64,19 +77,21 @@
 	dup "AllocConsole" getproc 'sys-AllocConsole !
 	dup "ExitProcess" getproc 'sys-ExitProcess ! 
 	dup "GetStdHandle" getproc 'sys-GetStdHandle !
+	
 	dup "ReadFile" getproc 'sys-ReadFile !
 	dup "WriteFile" getproc 'sys-WriteFile !
+	
 	dup "GetConsoleMode" getproc 'sys-GetConsoleMode !
 	dup "SetConsoleMode" getproc 'sys-SetConsoleMode !
 	dup "FlushConsoleInputBuffer" getproc 'sys-FlushConsoleInputBuffer !
 	dup "Sleep" getproc 'sys-Sleep !
 	dup "WaitForSingleObject" getproc 'sys-WaitForSingleObject ! 
 	dup "GetLastError" getproc 'sys-GetLastError ! 
-	dup "CreateFileA" getproc 'sys-CreateFileA ! 
+	dup "CreateFileA" getproc 'sys-CreateFile ! 
 	dup "CloseHandle" getproc 'sys-CloseHandle !
 	dup "FlushFileBuffers" getproc 'sys-FlushFileBuffers !
-	dup "DeleteFileA" getproc 'sys-DeleteFileA !
-	dup "MoveFileA" getproc 'sys-MoveFileA !
+	dup "DeleteFileA" getproc 'sys-DeleteFile !
+	dup "MoveFileA" getproc 'sys-MoveFile !
 	dup "SetFilePointer" getproc 'sys-SetFilePointer !
 	dup "SetEndOfFile" getproc 'sys-SetEndOfFile !
 	dup "GetFileSize" getproc 'sys-GetFileSize !
@@ -86,6 +101,14 @@
 	dup "HeapFree" getproc 'sys-HeapFree !
 	dup "HeapReAlloc" getproc 'sys-HeapReAlloc !
 
+	dup "GetLocalTime" getproc 'sys-GetLocalTime !
+	dup "GetLocalTime" getproc 'sys-GetLocalTime !
+	dup "FindFirstFileA" getproc 'sys-FindFirstFile !
+	dup "FindNextFileA" getproc 'sys-FindNextFile !
+	dup "FindClose" getproc 'sys-FindClose !
+	
+	dup "GetTickCount" getproc 'sys-GetTickCount !
+	
 	drop
 	AllocConsole 
 	-10 GetStdHandle 'stdin ! | STD_INPUT_HANDLE

@@ -96,6 +96,7 @@ const char *r3bas[]={
 "MOVE","MOVE>","FILL",
 "CMOVE","CMOVE>","CFILL",
 "QMOVE","QMOVE>","QFILL",
+"MEM",
 
 "LOADLIB","GETPROC",
 "SYS0","SYS1","SYS2","SYS3","SYS4","SYS5","SYS6","SYS7","SYS8",
@@ -134,7 +135,7 @@ TOB,BTO,BF,BS,BA,BFA,BSA,
 MOVED,MOVEA,FILL,
 CMOVED,CMOVEA,CFILL,
 QMOVED,QMOVEA,QFILL,
-
+MEM,
 LOADLIB,GETPROCA,
 SYSCALL0,SYSCALL1,SYSCALL2,SYSCALL3,SYSCALL4,SYSCALL5,SYSCALL6,SYSCALL7,SYSCALL8,
 //DOT,DOTS,
@@ -1019,7 +1020,9 @@ next:
 //		W=(uint64_t)*(NOS-1);op=*NOS;while (TOS--) { *(uint64_t*)W=op;W+=8; }
 		memset64((uint64_t*)*(NOS-1),*NOS,TOS);		
 		NOS-=2;TOS=*NOS;NOS--;goto next;
-
+	case MEM://"MEM"
+		NOS++;*NOS=TOS;TOS=(int64_t)&memdata[memd];goto next;
+		
 #if defined(LINUX) || defined(RPI)
 	case LOADLIB: // "" -- hmo
 		TOS=(int64_t)dlopen((char*)TOS,RTLD_NOW));goto next; //RTLD_LAZY 1 RTLD_NOW 2

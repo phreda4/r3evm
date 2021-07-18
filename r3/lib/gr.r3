@@ -1,18 +1,16 @@
 | Drawing words
 | PHREDA 2018,2020
 |--------------------------
-^r3/lib/sys.r3
 ^r3/lib/mem.r3
-^r3/lib/math.r3
-^r3/lib/rand.r3
-^r3/lib/color.r3
 
 ##paper 0
+##ink $ff00
+
 ##xop 0 ##yop 0
 ##ccx 0 ##ccy 0	| cursor for text
 
 ::cls
-  vframe paper sw sh * fill ;
+  vframe paper sizebuffer fill ;
 
 ::xy>v | x y -- adr
   sw * + 2 << vframe + ;
@@ -54,10 +52,9 @@
     r@ + swap
     r> r> ) 4drop ;
 
-::bline | x y --
+::line | x y --
   2dup iline
-
-::bop | x y --
+::op | x y --
   'yop ! 'xop ! ;
 
 ::fillrect  | w h x y --
@@ -163,21 +160,6 @@
  		) drop ;
 
 |-----------------------------------------
-::fillbox | x1 y1 x2 y2 --
-	2dup op
-	swap pick2 pline
-	pick2 swap op
-	pline poli ;
-
-::fellipse | xc yc rx ry --
-	2swap
-	2dup pick4 - op
-	over pick4 + over pick4 - over pick3 2swap pcurve
-	over pick4 + over pick4 + pick3 over 2swap pcurve
-	over pick4 - over pick4 + over pick3 2swap pcurve
-	pick2 - over pick4 - over pcurve
-	2drop poli ;
-
 ::rectbox | x1 y1 x2 y2 --
 	2dup op
 	over pick3 line
@@ -188,20 +170,6 @@
 	xy>v >a
 	( 1? 1 -
 		over ( 1? 1 - a@ not a!+ ) drop
-		sw pick2 - 2 << a+
-		) 2drop ;
-
-::box.mix50 | w h x y --
-	xy>v >a
-	( 1? 1 -
-		over ( 1? 1 - a@ ink col50% a!+ ) drop
-		sw pick2 - 2 << a+
-		) 2drop ;
-
-::box.noise | w h x y --
-	xy>v >a
-	( 1? 1 -
-		over ( 1? 1 - rand8 a!+ ) drop
 		sw pick2 - 2 << a+
 		) 2drop ;
 
@@ -232,7 +200,7 @@
 	( 1? 1 - dot ) drop ;
 
 ::box.dot | x1 y1 x2 y2 --
-	msec 5 >> 'herel !
+	SDL_GetTicks 5 >> 'herel !
 	pick3 pick3 pick2 dotvline
 	herel neg 'herel !
 	over pick3 pick2 dotvline
