@@ -1,5 +1,7 @@
 | SDL2.dll
 |
+^r3/win/kernel32.r3
+^r3/win/core.r3
 
 #sys-SDL_Init 
 #sys-SDL_Quit 
@@ -103,13 +105,13 @@
 ##SDLkeychar
 ##SDLx ##SDLy ##SDLb
 	
-#SDL_KEYDOWN	$300     | Key pressed
-#SDL_KEYUP		$301     | Key released
-#SDL_TEXTINPUT	$303 | Keyboard text input
-#SDL_MOUSEMOTION	$400     | Mouse moved
-#SDL_MOUSEBUTTONDOWN $401    | Mouse button pressed
-#SDL_MOUSEBUTTONUP	$402     | Mouse button released
-#SDL_MOUSEWHEEL		$403     | Mouse wheel motion
+|#SDL_KEYDOWN	$300     | Key pressed
+|#SDL_KEYUP		$301     | Key released
+|#SDL_TEXTINPUT	$303 | Keyboard text input
+|#SDL_MOUSEMOTION	$400     | Mouse moved
+|#SDL_MOUSEBUTTONDOWN $401    | Mouse button pressed
+|#SDL_MOUSEBUTTONUP	$402     | Mouse button released
+|#SDL_MOUSEWHEEL		$403     | Mouse wheel motion
 	
 ::SDLupdate
 	0 'SDLkey !
@@ -117,19 +119,12 @@
 	10 SDL_delay
 	( 'SDLevent SDL_PollEvent 1? drop
 		'SDLevent d@ 
-		SDL_KEYDOWN =? ( 'SDLevent 20 + d@ dup $ffff and swap 16 >> or 'SDLkey ! )
-		SDL_KEYUP =? ( 'SDLevent 20 + d@ dup $ffff and swap 16 >> or $1000 or 'SDLkey ! )
-		SDL_TEXTINPUT =? ( 'SDLevent 12 + c@ 'SDLkeychar ! )
-		SDL_MOUSEMOTION	=? ( 'SDLevent 20 + d@+ 'SDLx ! d@ 'SDLy ! )
-		SDL_MOUSEBUTTONDOWN =? ( 'SDLevent 16 + c@ SDLb or 'SDLb ! )
-		SDL_MOUSEBUTTONUP =? ( 'SDLevent 16 + c@ not SDLb and 'SDLb ! )
+		$300 =? ( 'SDLevent 20 + d@ dup $ffff and swap 16 >> or 'SDLkey ! )
+		$301 =? ( 'SDLevent 20 + d@ dup $ffff and swap 16 >> or $1000 or 'SDLkey ! )
+		$303 =? ( 'SDLevent 12 + c@ 'SDLkeychar ! )
+		$400 =? ( 'SDLevent 20 + d@+ 'SDLx ! d@ 'SDLy ! )
+		$401 =? ( 'SDLevent 16 + c@ SDLb or 'SDLb ! )
+		$402 =? ( 'SDLevent 16 + c@ not SDLb and 'SDLb ! )
 		drop
-		) drop ;
-	
-##paper $0
-##ink $ff00	
-
-::cls
-	vframe paper sizebuffer fill ;
-	
+		) drop ;	
 		

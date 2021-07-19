@@ -32,19 +32,19 @@
 ::tolow | C -- c
 	$20 or ;
 
-::count | s1 -- s1 cnt
-	0 over ( c@+ 1?
-		drop swap 1 + swap ) 2drop  ;
-
 ::count | s1 -- s1 cnt	v3
 	dup >a
-	0 ( a@+ dup $01010101 -
+	0 ( da@+ dup $01010101 -
 		swap not and
 		$80808080 nand? drop 4 + )
 	$80 and? ( drop ; )
 	$8000 and? ( drop 1 + ; )
 	$800000 and? ( drop 2 + ; )
 	drop 3 + ;
+
+::count | s1 -- s1 cnt
+	0 over ( c@+ 1?
+		drop swap 1 + swap ) 2drop  ;
 
 ::= | s1 s2 -- 1/0
 	( swap c@+ 1?

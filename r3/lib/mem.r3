@@ -38,9 +38,9 @@
 	memmap> 8 - @ here over - rot append ;
 
 |---
-::, here !+ 'here ! ;
+::, here d!+ 'here ! ;
 ::,c here c!+ 'here ! ;
-::,32 here d!+ 'here ! ;
+::,q here !+ 'here ! ;
 ::,s here swap
 	( c@+ 1? rot c!+ swap ) 2drop 'here ! ;
 ::,w here swap

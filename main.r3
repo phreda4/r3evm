@@ -1,44 +1,40 @@
-^r3/sys.r3
-^r3/lib/sys.r3	
-^r3/win/console.r3	
-^r3/lib/gr.r3
+| sdl2 test program
+| PHREDA 2021
+^r3/win/console.r3
 
-|--------------------------------------
+#pad * 256
 
-#buffer * 256
-
-:input
-	'buffer
+:.input
+	'pad
 	( key 13 <>? swap c!+ ) drop
 	0 swap c! ;
+
+#.bye 0
+
+:ibye 1 '.bye ! "bye!" .print cr ;
 	
-:tt	
-	$ffffff SDLx SDLy xy>v d!
-	SDLkey
-	>esc< =? ( exit )
-	drop
-	;
-		
-:test
-	'tt onshow ;
+#inst "bye" 0
+#insc 'ibye 0
+
+:interp | adr -- ex/0
+	'pad trim 
+	'insc >a
+	'inst ( dup c@ 1? drop
+		2dup = 1? ( 3drop a> ; ) drop
+		>>0 8 a+ ) nip nip ;
+	
+:interprete
+	interp 0? ( drop ; )
+	ex ;
 	
 :main
-	windows
+	"r3 console - PHREDA 2021" .print cr
+	( .bye 0? drop
+		cr "r3> " .print 
+		.input cr
+		interprete
+		) drop ;
 
-	"r3init" .
-	cr
-	input
-	cr
-	>esc< .h . " " .
-	sdl2
-	"r3sdl" 640 480 SDLinit
-
-	test
-	$ff0000 'paper ! cls SDLredraw 1000 ms	
-	$ff00 'paper ! cls SDLredraw 1000 ms
-	$ff 'paper ! cls SDLredraw 1000 ms
-
-	SDLquit
-	;
-
-: main ;
+: 
+windows
+main ;

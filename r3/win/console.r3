@@ -1,3 +1,5 @@
+^r3/win/kernel32.r3
+^r3/win/core.r3
 ^r3/lib/mem.r3
 
 #kb 0
@@ -20,12 +22,16 @@
 	( c@+ 1? rot c!+ swap ) 2drop
 	'esc[ swap over - type ;
 	
-::. count type ;
+::.print count type ;
 
 ::.home	"H" .[ ; | home
-::.cls "J" .[ ; | cls
-|ESC[{line};{column}H  moves cursor to line #, column #
-::.at | x y --
+::.cls "J" .[ ; | cls 
+
+::.at | x y -- ;|ESC[{line};{column}H  moves cursor to line #, column #
 	swap "%d;%dH" sprint .[ ;
-|ESC[38;5;{ID}m	Set foreground color.
-|ESC[48;5;{ID}m	Set background color.
+
+::.fc | color -- ;|ESC[38;5;{ID}m	Set foreground color.
+	"38;4;%dm" sprint .[ ;
+	
+::.bc | color -- ;|ESC[48;5;{ID}m	Set background color.
+	"48;5;%dm" sprint .[ ;

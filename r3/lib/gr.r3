@@ -10,32 +10,32 @@
 ##ccx 0 ##ccy 0	| cursor for text
 
 ::cls
-  vframe paper sizebuffer fill ;
+  vframe paper sizebuffer dfill ;
 
 ::xy>v | x y -- adr
   sw * + 2 << vframe + ;
 
 ::pset | x y --
-  xy>v ink swap ! ;
+  xy>v ink swap d! ;
 
 ::psetc | c x y --
-  xy>v ! ;
+  xy>v d! ;
 
 ::pget | x y -- c
-  xy>v @ ;
+  xy>v d@ ;
 
 :hline | xd yd xa --
   pick2 - 0? ( drop pset ; )
   -? ( rot over + rot rot neg )
-  >r xy>v ink r> fill ;
+  >r xy>v ink r> dfill ;
 
 :hlineo | xmin yd xmax --
   pick2 - 0? ( drop pset ; )
-  >r xy>v ink r> fill ;
+  >r xy>v ink r> dfill ;
 
 :vline | x1 y1 cnt
 	rot rot xy>v >a
-	( 1? 1 - ink a! sw 2 << a+ ) drop ;
+	( 1? 1 - ink da! sw 2 << a+ ) drop ;
 
 :iline | xd yd --
   yop =? ( xop hline ; )
@@ -60,7 +60,7 @@
 ::fillrect  | w h x y --
   xy>v >a
   ( 1? 1 -
-    a> ink pick3 fill
+    a> ink pick3 dfill
 	sw 2 << a+
     ) 2drop ;
 
@@ -122,7 +122,7 @@
 		2dup swap 1 - -? ( 2drop ; )
 		pget cf <>? ( drop ; ) drop
 		rot >a 2dup	swap 1 -
-		a!+ a!+ a> rot rot
+		da!+ da!+ a> rot rot
 		1 'sa ! ; ) drop
 	2dup swap 1 - pget cf =? ( drop ; ) drop
 	0 'sa ! ;
@@ -132,7 +132,7 @@
 		2dup swap 1 + sh >=? ( 2drop ; )
 		pget cf <>? ( drop ; ) drop
 		rot >a 2dup swap 1 +
-		a!+ a!+ a> rot rot
+		da!+ da!+ a> rot rot
 		1 'sb ! ; ) drop
 	2dup swap 1 + pget cf =? ( drop ; ) drop
 	0 'sb ! ;
@@ -169,7 +169,7 @@
 ::box.inv | w h x y --
 	xy>v >a
 	( 1? 1 -
-		over ( 1? 1 - a@ not a!+ ) drop
+		over ( 1? 1 - da@ not da!+ ) drop
 		sw pick2 - 2 << a+
 		) 2drop ;
 
@@ -180,7 +180,7 @@
 :dot
 	dup herel +
 	%100 and? ( drop 4 a+ ; ) drop
-	a@ not a!+ ;
+	da@ not da!+ ;
 
 :dotvline | x y1 y2 --
 	2sort
