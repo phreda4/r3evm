@@ -1,3 +1,6 @@
+| SO core words
+| PHREDA 2021
+
 ^r3/lib/str.r3
 	
 ::ms | ms --
@@ -31,7 +34,7 @@
 	swap 24 >> $ffff and
 	;
 	
-#fdd * 512
+#fdd * 260
 #hfind 
 |struct WIN32_FIND_DATAA
 |  dwFileAttributes   dd ?
@@ -89,7 +92,38 @@
 	CloseHandle 
 	;
 
+|struct STARTUPINFO
+|  cb		  dd ?,?
+|  lpReserved	  dq ?
+|  lpDesktop	  dq ?
+|  lpTitle	  dq ?
+|  dwX		  dd ?
+|  dwY		  dd ?
+|  dwXSize	  dd ?
+|  dwYSize	  dd ?
+|  dwXCountChars   dd ?
+|  dwYCountChars   dd ?
+|  dwFillAttribute dd ?
+|  dwFlags	  dd ?
+|  wShowWindow	  dw ?
+|  cbReserved2	  dw ?,?,?
+|  lpReserved2	  dq ?
+|  hStdInput	  dq ?
+|  hStdOutput	  dq ?
+|  hStdError	  dq ?
 
+#sinfo * 100
 
+|struct PROCESS_INFORMATION
+|  hProcess    dq ?
+|  hThread     dq ?
+|  dwProcessId dd ?
+| dwThreadId  dd ?
 
-	
+#pinfo * 24
+
+::sys | "" --
+	'sinfo 0 100 cfill
+	68 'sinfo d!
+	0 swap 0 0 0 $8000000 0 0 'sinfo 'pinfo CreateProcess drop
+	;

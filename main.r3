@@ -11,10 +11,31 @@
 
 #.bye 0
 
+|-----------------
 :ibye 1 '.bye ! "bye!" .print cr ;
+
+|-----------------
+:ihelp
+	"r3 console help." .print cr
+	"dir - list archives in folder" .print cr
+	"bye - exit console" .print cr
+	;
+
+|-----------------	
+:linedir | adr --
+	44 + .print cr
+	;
 	
-#inst "bye" 0
-#insc 'ibye 0
+:idir
+	"r3//*" ffirst 
+	( 1? linedir 
+		fnext ) drop
+	cr
+	;
+	
+|-----------------	
+#inst "dir" "help" "bye" 0
+#insc 'idir 'ihelp 'ibye 0
 
 :interp | adr -- ex/0
 	'pad trim 
@@ -25,12 +46,13 @@
 	
 :interprete
 	interp 0? ( drop ; )
-	ex ;
+	@ ex ;
 	
 :main
 	"r3 console - PHREDA 2021" .print cr
+	|'itest ex
 	( .bye 0? drop
-		cr "r3> " .print 
+		"> " .print 
 		.input cr
 		interprete
 		) drop ;

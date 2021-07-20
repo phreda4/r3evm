@@ -108,7 +108,8 @@ const char *r3bas[]={
 "MEM",
 
 "LOADLIB","GETPROC",
-"SYS0","SYS1","SYS2","SYS3","SYS4","SYS5","SYS6","SYS7","SYS8",
+"SYS0","SYS1","SYS2","SYS3","SYS4","SYS5",
+"SYS6","SYS7","SYS8","SYS9","SYS10",
 
 //".",".S",
 
@@ -1087,9 +1088,9 @@ next:
 		
 		 
 	case SYSCALL0: // adr -- rs
-		TOS=((int64_t (__stdcall *)())TOS)();goto next;
+		TOS=(int64_t)(* (int64_t(*)())TOS)();goto next;
 	case SYSCALL1: // a0 adr -- rs 
-		TOS=((int64_t (__stdcall *)(int64_t))TOS)(*NOS);NOS--;goto next;
+		TOS=(int64_t)(* (int64_t(*)(int64_t))TOS)(*NOS);NOS--;goto next;
 	case SYSCALL2: // a1 a0 adr -- rs 
 		TOS=(int64_t)(* (int64_t(*)(int64_t,int64_t))TOS)(*(NOS-1),*NOS);NOS-=2;goto next;
 	case SYSCALL3: // a1 a0 adr -- rs 

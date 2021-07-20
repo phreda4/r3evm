@@ -1,5 +1,5 @@
 | Kernel32.dll
-|
+| PHREDA 2021
 
 #sys-AllocConsole
 #sys-ExitProcess 
@@ -54,16 +54,16 @@
 ::GetFileSize sys-GetFileSize sys2 ;
 
 ::GetProcessHeap sys-GetProcessHeap sys0 ;
-::HeapAlloc 'sys-HeapAlloc sys3 drop ;
-::HeapFree 'sys-HeapFree sys3 drop ;
-::HeapReAlloc 'sys-HeapReAlloc sys4 drop ;
+::HeapAlloc sys-HeapAlloc sys3 drop ;
+::HeapFree sys-HeapFree sys3 drop ;
+::HeapReAlloc sys-HeapReAlloc sys4 drop ;
 
-::GetTickCount 'sys-GetTickCount sys0 ;
-::GetLocalTime 'sys-GetLocalTime sys1 drop ;
-::FindFirstFile 'sys-FindFirstFile sys2 ;
-::FindNextFile 'sys-FindNextFile sys2 ;
-::FindClose 'sys-FindClose sys1 drop ;
-|::CreateProcess 'sys-CreateProcess sys10 ;
+::GetTickCount sys-GetTickCount sys0 ;
+::GetLocalTime sys-GetLocalTime sys1 drop ;
+::FindFirstFile sys-FindFirstFile sys2 ;
+::FindNextFile sys-FindNextFile sys2 ;
+::FindClose sys-FindClose sys1 drop ;
+::CreateProcess sys-CreateProcess sys10 ;
 
 #console-mode
 ##process-heap
@@ -102,11 +102,11 @@
 	dup "HeapReAlloc" getproc 'sys-HeapReAlloc !
 
 	dup "GetLocalTime" getproc 'sys-GetLocalTime !
-	dup "GetLocalTime" getproc 'sys-GetLocalTime !
 	dup "FindFirstFileA" getproc 'sys-FindFirstFile !
 	dup "FindNextFileA" getproc 'sys-FindNextFile !
 	dup "FindClose" getproc 'sys-FindClose !
-	
+
+	dup "CreateProcess" getproc 'sys-CreateProcess	!
 	dup "GetTickCount" getproc 'sys-GetTickCount !
 	
 	drop
