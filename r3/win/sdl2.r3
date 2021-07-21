@@ -16,13 +16,20 @@
 #sys-SDL_DestroyTexture 
 #sys-SDL_DestroyRenderer 
 #sys-SDL_UpdateTexture 
+#sys-SDL_RenderClear
 #sys-SDL_RenderCopy 
 #sys-SDL_RenderPresent 
+#sys-SDL_SetRenderDrawColor
+#sys-SDL_CreateTextureFromSurface
+#sys-SDL_FreeSurface
+
 #sys-SDL_Delay
 #sys-SDL_PollEvent	
 #sys-SDL_GetTicks
 #sys-SDL_StartTextInput	
 #sys-SDL_StopTextInput
+
+#sys-SDL_RWFromFile
 
 ::SDL_Init sys-SDL_Init sys1 drop ;
 ::SDL_Quit sys-SDL_Quit sys0 drop ;
@@ -37,13 +44,20 @@
 ::SDL_DestroyTexture sys-SDL_DestroyTexture sys1 ;
 ::SDL_DestroyRenderer sys-SDL_DestroyRenderer sys1 ;
 ::SDL_UpdateTexture sys-SDL_UpdateTexture sys4 ;
-::SDL_RenderCopy sys-SDL_RenderCopy sys4 ;
-::SDL_RenderPresent sys-SDL_RenderPresent sys1 ;
+::SDL_RenderClear sys-SDL_RenderClear sys1 drop ;
+::SDL_RenderCopy sys-SDL_RenderCopy sys4 drop ;
+::SDL_RenderPresent sys-SDL_RenderPresent sys1 drop ;
+::SDL_CreateTextureFromSurface sys-SDL_CreateTextureFromSurface sys2 ;
+::SDL_SetRenderDrawColor sys-SDL_SetRenderDrawColor sys5 drop ; 
+::SDL_FreeSurface sys-SDL_FreeSurface sys1 drop ;
+
 ::SDL_Delay sys-SDL_Delay sys1 drop ;
 ::SDL_PollEvent sys-SDL_PollEvent sys1 ; | &evt -- ok
 ::SDL_GetTicks sys-SDL_GetTicks sys0 ; | -- msec
 ::SDL_StartTextInput sys-SDL_StartTextInput sys0 drop ;
 ::SDL_StopTextInput sys-SDL_StopTextInput sys0 drop ;
+
+::SDL_RWFromFile sys-SDL_RWFromFile sys2 ;
 
 ::sdl2
 	"SDL2.DLL" loadlib
@@ -60,12 +74,18 @@
 	dup "SDL_DestroyTexture" getproc 'sys-SDL_DestroyTexture !
 	dup "SDL_DestroyRenderer" getproc 'sys-SDL_DestroyRenderer !
 	dup "SDL_UpdateTexture" getproc 'sys-SDL_UpdateTexture !
+	dup "SDL_RenderClear" getproc 'sys-SDL_RenderClear !
 	dup "SDL_RenderCopy" getproc 'sys-SDL_RenderCopy !
 	dup "SDL_RenderPresent" getproc 'sys-SDL_RenderPresent !
-
+	dup "SDL_CreateTextureFromSurface" getproc 'sys-SDL_CreateTextureFromSurface !
+	dup "SDL_SetRenderDrawColor" getproc 'sys-SDL_SetRenderDrawColor !
+	dup "SDL_FreeSurface" getproc 'sys-SDL_FreeSurface !
+	
 	dup "SDL_Delay" getproc 'sys-SDL_Delay !
 	dup "SDL_PollEvent" getproc 'sys-SDL_PollEvent !
 	dup "SDL_GetTicks" getproc 'sys-SDL_GetTicks !
+	
+	dup "SDL_RWFromFile" getproc 'sys-SDL_RWFromFile !
 	drop
 	;
 
@@ -97,7 +117,8 @@
 	SDL_Quit ;
 	
 ::SDLredraw
-	SDL_windows SDL_UpdateWindowSurface ;
+	|SDL_windows SDL_UpdateWindowSurface 
+	;
 
 ##SDLevent * 56 
 

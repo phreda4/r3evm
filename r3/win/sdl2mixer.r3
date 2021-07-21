@@ -1,5 +1,6 @@
 | SDL2_mixer.dll
 |
+^r3/win/sdl2.r3
 
 #sys-Mix_Init
 #sys-Mix_Quit
@@ -18,15 +19,15 @@
 ::Mix_Init sys-Mix_Init sys1 ;
 ::Mix_Quit sys-MIX_Quit sys0 drop ;
 	
-::Mix_LoadWAV_RW sys-Mix_LoadWAV_RW sys1 ;
+::Mix_LoadWAV "rb" SDL_RWFromFile sys-Mix_LoadWAV_RW sys1 ;
 ::Mix_LoadMUS sys-Mix_LoadMUS sys1 ;
-::Mix_PlayChannelTimed sys-Mix_PlayChannelTimed sys3 ;
+::Mix_PlayChannelTimed sys-Mix_PlayChannelTimed sys4 drop ;
 ::Mix_HaltChannel sys-Mix_HaltChannel
 ::Mix_PlayMusic sys-Mix_PlayMusic sys2 ;
 ::Mix_HaltMusic sys-Mix_HaltMusic sys1 drop ;
 ::Mix_FreeChunk sys-Mix_FreeChunk sys1 drop ;
 ::Mix_FreeMusic sys-Mix_FreeMusic sys1 drop ;
-::Mix_OpenAudio sys-Mix_OpenAudio sys4 ;
+::Mix_OpenAudio sys-Mix_OpenAudio sys4 drop ;
 ::Mix_CloseAudio sys-Mix_CloseAudio sys0 drop ;
 ::Mix_PlayingMusic sys-Mix_PlayingMusic	sys0 ;
 	
