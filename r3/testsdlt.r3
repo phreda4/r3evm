@@ -3,15 +3,14 @@
 
 ^r3/win/sdl2.r3	
 ^r3/win/sdl2image.r3	
-|^r3/win/glew.r3
+^r3/win/sdl2mixer.r3
 ^r3/lib/sys.r3
 ^r3/lib/gr.r3
 
 #SDLrenderer
 #texture
+#snd_shoot	
 #textbit
-
-#GL_context
 
 :xypen SDLx SDLy ;
 
@@ -52,7 +51,7 @@
 	>esc< =? ( exit )
 	<le> =? ( 1 'vx ! )
 	<ri> =? ( -1 'vx ! )	
-	
+	<f1> =? ( -1 snd_shoot 0 -1 Mix_PlayChannelTimed )	
 	drop ;
 		
 :draw
@@ -64,18 +63,17 @@
 	windows
 	sdl2
 	sdl2image
-|	glew
+	sdl2mixer
 	mark ;
 	
 :main
- 
-	"r3sdl" 640 480 SDLinit
-		|SDLinitGL
-		
-	SDL_windows -1 0 SDL_CreateRenderer 'SDLrenderer !
-	SDL_windows SDL_GL_CreateContext 'GL_context !
+	44100 $08010 2 4096 Mix_OpenAudio 
 	
-	SDLrenderer $0 $0 $0 $ff SDL_SetRenderDrawColor
+	 "media/snd/shoot.mp3" Mix_LoadWAV 'snd_shoot !
+	 
+	"r3sdl" 640 480 SDLinit
+	SDL_windows -1 0 SDL_CreateRenderer 'SDLrenderer !
+	SDLrenderer $ff $ff $ff $ff SDL_SetRenderDrawColor
 	$3 IMG_Init
 
 	"media/img/lolomario.png" IMG_Load 'surface !
@@ -87,6 +85,7 @@
 	draw
 	
 	SDLquit
+	Mix_CloseAudio
 	;
 
 : inicio main ;

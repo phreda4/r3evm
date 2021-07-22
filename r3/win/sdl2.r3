@@ -22,6 +22,8 @@
 #sys-SDL_SetRenderDrawColor
 #sys-SDL_CreateTextureFromSurface
 #sys-SDL_FreeSurface
+#sys-SDL_LockTexture
+#sys-SDL_UnlockTexture
 
 #sys-SDL_Delay
 #sys-SDL_PollEvent	
@@ -30,6 +32,11 @@
 #sys-SDL_StopTextInput
 
 #sys-SDL_RWFromFile
+
+#sys-SDL_GL_SetAttribute
+#sys-SDL_GL_CreateContext
+#sys-SDL_GL_SetSwapInterval
+#sys-SDL_GL_SwapWindow
 
 ::SDL_Init sys-SDL_Init sys1 drop ;
 ::SDL_Quit sys-SDL_Quit sys0 drop ;
@@ -50,6 +57,8 @@
 ::SDL_CreateTextureFromSurface sys-SDL_CreateTextureFromSurface sys2 ;
 ::SDL_SetRenderDrawColor sys-SDL_SetRenderDrawColor sys5 drop ; 
 ::SDL_FreeSurface sys-SDL_FreeSurface sys1 drop ;
+::SDL_LockTexture sys-SDL_LockTexture sys4 drop ;
+::SDL_UnlockTexture sys-SDL_UnlockTexture sys1 drop ;
 
 ::SDL_Delay sys-SDL_Delay sys1 drop ;
 ::SDL_PollEvent sys-SDL_PollEvent sys1 ; | &evt -- ok
@@ -58,6 +67,11 @@
 ::SDL_StopTextInput sys-SDL_StopTextInput sys0 drop ;
 
 ::SDL_RWFromFile sys-SDL_RWFromFile sys2 ;
+
+::SDL_GL_SetAttribute sys-SDL_GL_SetAttribute sys2 drop ;
+::SDL_GL_CreateContext sys-SDL_GL_CreateContext sys1 ;
+::SDL_GL_SetSwapInterval sys-SDL_GL_SetSwapInterval sys1 ;
+::SDL_GL_SwapWindow sys-SDL_GL_SwapWindow sys1 drop ;
 
 ::sdl2
 	"SDL2.DLL" loadlib
@@ -80,12 +94,19 @@
 	dup "SDL_CreateTextureFromSurface" getproc 'sys-SDL_CreateTextureFromSurface !
 	dup "SDL_SetRenderDrawColor" getproc 'sys-SDL_SetRenderDrawColor !
 	dup "SDL_FreeSurface" getproc 'sys-SDL_FreeSurface !
+	dup "SDL_LockTexture" getproc 'sys-SDL_LockTexture !
+	dup "SDL_UnlockTexture" getproc 'sys-SDL_UnlockTexture !
 	
 	dup "SDL_Delay" getproc 'sys-SDL_Delay !
 	dup "SDL_PollEvent" getproc 'sys-SDL_PollEvent !
 	dup "SDL_GetTicks" getproc 'sys-SDL_GetTicks !
 	
 	dup "SDL_RWFromFile" getproc 'sys-SDL_RWFromFile !
+	
+	dup "SDL_GL_SetAttribute" getproc 'sys-SDL_GL_SetAttribute !
+	dup "SDL_GL_CreateContext" getproc 'sys-SDL_GL_CreateContext !
+	dup "SDL_GL_SetSwapInterval" getproc 'sys-SDL_GL_SetSwapInterval !
+	dup "SDL_GL_SwapWindow" getproc 'sys-SDL_GL_SwapWindow	!
 	drop
 	;
 
@@ -110,6 +131,13 @@
 	4 + @ 'vframe ! 
 
 	0 SDL_ShowCursor | disable cursor
+	;
+
+::SDLinitGL | "titulo" w h --
+	'sh ! 'sw !
+	$3231 SDL_init 
+	$1FFF0000 $1FFF0000 sw sh 6 SDL_CreateWindow dup 'SDL_windows ! 
+	SDL_GetWindowSurface dup 'SDL_screen !
 	;
 	
 ::SDLquit

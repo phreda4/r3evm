@@ -32,6 +32,7 @@
 #sys-FindNextFile
 #sys-FindClose
 #sys-CreateProcess
+#sys-SetCurrentDirectory
 
 ::AllocConsole sys-allocconsole sys0 drop ;
 ::ExitProcess sys-ExitProcess sys1 ;
@@ -64,6 +65,7 @@
 ::FindNextFile sys-FindNextFile sys2 ;
 ::FindClose sys-FindClose sys1 drop ;
 ::CreateProcess sys-CreateProcess sys10 ;
+::SetCurrentDirectory sys-SetCurrentDirectory sys1 ;
 
 #console-mode
 ##process-heap
@@ -108,8 +110,9 @@
 
 	dup "CreateProcess" getproc 'sys-CreateProcess	!
 	dup "GetTickCount" getproc 'sys-GetTickCount !
-	
+	dup "SetCurrentDirectory" getproc 'sys-SetCurrentDirectory !
 	drop
+	
 	AllocConsole 
 	-10 GetStdHandle 'stdin ! | STD_INPUT_HANDLE
 	-11 GetStdHandle 'stdout ! | STD_OUTPUT_HANDLE
