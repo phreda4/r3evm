@@ -5,6 +5,7 @@
 ^r3/win/sdl2image.r3	
 ^r3/win/sdl2mixer.r3
 ^r3/win/sdl2ttf.r3
+^r3/win/ffm.r3
 ^r3/lib/sys.r3
 ^r3/lib/gr.r3
 
@@ -12,6 +13,9 @@
 #texture
 #snd_shoot	
 #textbit
+
+:xypen SDLx SDLy ;
+
 #font
 
 #desrec [ 0 100 200 200 ]
@@ -20,6 +24,15 @@
 
 #vx 0
 
+#srct [ 0 0 427 240 ]
+#mpixel 
+#mpitch
+
+:updatevideo
+	textbit 'srct 'mpixel 'mpitch SDL_LockTexture
+	mpixel FFM_redraw drop
+	textbit SDL_UnlockTexture
+	;
 
 #textbox [ 0 0 200 100 ]
 :RenderText | SDLrender color font "texto" x y --
@@ -35,6 +48,7 @@
 
 	
 :drawl
+	updatevideo
 
 	SDLrenderer 0 0 0 255 SDL_SetRenderDrawColor
 	SDLrenderer SDL_RenderClear
@@ -65,6 +79,7 @@
 	sdl2image
 	sdl2mixer
 	sdl2ttf
+	ffm
 	mark 
 	;
 	
@@ -93,7 +108,8 @@
 	"media/ttf/roboto-bold.ttf" 32 TTF_OpenFont 'font !
 
 	SDLrenderer $16362004 1 427 240 SDL_CreateTexture 'textbit !
-		
+	FFM_init "media/test.mp4" 427 240 FFM_open
+	
 	draw
 	
 	SDLquit

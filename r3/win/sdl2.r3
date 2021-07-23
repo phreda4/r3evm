@@ -24,6 +24,8 @@
 #sys-SDL_FreeSurface
 #sys-SDL_LockTexture
 #sys-SDL_UnlockTexture
+#sys-SDL_RenderSetLogicalSize
+#sys-SDL_SetRenderDrawBlendMode
 
 #sys-SDL_Delay
 #sys-SDL_PollEvent	
@@ -48,7 +50,7 @@
 ::SDL_DestroyWindow sys-SDL_DestroyWindow sys1 drop ;
 ::SDL_CreateRenderer sys-SDL_CreateRenderer sys3 ;
 ::SDL_CreateTexture sys-SDL_CreateTexture sys5 ;
-::SDL_DestroyTexture sys-SDL_DestroyTexture sys1 ;
+::SDL_DestroyTexture sys-SDL_DestroyTexture sys1 drop ;
 ::SDL_DestroyRenderer sys-SDL_DestroyRenderer sys1 ;
 ::SDL_UpdateTexture sys-SDL_UpdateTexture sys4 ;
 ::SDL_RenderClear sys-SDL_RenderClear sys1 drop ;
@@ -59,6 +61,8 @@
 ::SDL_FreeSurface sys-SDL_FreeSurface sys1 drop ;
 ::SDL_LockTexture sys-SDL_LockTexture sys4 drop ;
 ::SDL_UnlockTexture sys-SDL_UnlockTexture sys1 drop ;
+::SDL_RenderSetLogicalSize sys-SDL_RenderSetLogicalSize sys3 drop ;
+::SDL_SetRenderDrawBlendMode sys-SDL_SetRenderDrawBlendMode sys2 drop ;
 
 ::SDL_Delay sys-SDL_Delay sys1 drop ;
 ::SDL_PollEvent sys-SDL_PollEvent sys1 ; | &evt -- ok
@@ -96,6 +100,8 @@
 	dup "SDL_FreeSurface" getproc 'sys-SDL_FreeSurface !
 	dup "SDL_LockTexture" getproc 'sys-SDL_LockTexture !
 	dup "SDL_UnlockTexture" getproc 'sys-SDL_UnlockTexture !
+	dup "SDL_RenderSetLogicalSize" getproc 'sys-SDL_RenderSetLogicalSize !
+	dup "SDL_SetRenderDrawBlendMode" getproc 'sys-SDL_SetRenderDrawBlendMode !
 	
 	dup "SDL_Delay" getproc 'sys-SDL_Delay !
 	dup "SDL_PollEvent" getproc 'sys-SDL_PollEvent !
