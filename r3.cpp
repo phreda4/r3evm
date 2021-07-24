@@ -222,6 +222,7 @@ printf("diccionario\n");
 for(int i=0;i<cntdicc;i++) {
 	printf("%d. ",i);
 	printword(dicc[i].nombre);
+	printf("%d ",dicc[i].mem);	
 	printf("%d \n",dicc[i].info);	
 	}
 }
@@ -519,6 +520,9 @@ if (solvejmp(from,memc)) { // salta
 		}
 	}
 level--;	
+if (level<0) {
+	printf("ERROR bad )\n");
+	}
 lastblock=memc;
 }
 
@@ -537,6 +541,9 @@ int from=popA();
 memcode[from]|=(memc<<8);	// patch jmp
 codetok((from+1)<<8|LIT);
 level--;	
+if (level<0) {
+	printf("ERROR bad )\n");
+	}
 }
 
 // dicc base in data definition
@@ -661,8 +668,8 @@ while(*str!=0) {
 		case 0x27:	// $27 ' Direccion	// 'ADR
 			nro=isWord(str+1);
 			if (nro<0) { 
-				if (isBas(str)) // 'ink allow compile replace
-					{ compilaMAC(nro);str=nextw(str);break; }
+//				if (isBas(str)) // 'ink allow compile replace
+//					{ compilaMAC(nro);str=nextw(str);break; }
 				seterror(str,"adr not found");return 0; 
 				}
 			compilaADDR(nro);str=nextw(str);break;		
@@ -1157,6 +1164,8 @@ if (argc>1)
 else 
 	strcpy(filename,"main.r3");
 if (!r3compile(filename)) return -1;
+//dumpdicc();
+//dumpcode();
 runr3(boot);
 return 0;
 }

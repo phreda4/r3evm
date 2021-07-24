@@ -57,7 +57,7 @@
 ::fnext | -- fdd/0
 	hfind 'fdd FindNextFile
 	1? ( drop 'fdd ; )
-	hfind FindClose ; )
+	hfind FindClose ; 
 
 #cntf
 
