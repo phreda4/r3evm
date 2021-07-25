@@ -8,6 +8,7 @@
 #sys-WriteFile 
 #sys-GetConsoleMode 
 #sys-SetConsoleMode
+##sys-ReadConsoleInput
 #sys-FlushConsoleInputBuffer
 #sys-Sleep
 #sys-WaitForSingleObject 
@@ -32,7 +33,6 @@
 #sys-FindNextFile
 #sys-FindClose
 #sys-CreateProcess
-#sys-SetCurrentDirectory
 
 ::AllocConsole sys-allocconsole sys0 drop ;
 ::ExitProcess sys-ExitProcess sys1 ;
@@ -41,12 +41,13 @@
 ::WriteFile sys-WriteFile sys5 ;
 ::GetConsoleMode sys-GetConsoleMode sys2 ;
 ::SetConsoleMode sys-SetConsoleMode sys2 ;
+::ReadConsoleInput sys-ReadConsoleInput sys4 drop ;
 ::FlushConsoleInputBuffer sys-FlushConsoleInputBuffer sys1 ;
 ::Sleep sys-Sleep sys1 drop ;
 ::WaitForSingleObject sys-WaitForSingleObject sys2 ;
 ::GetLastError sys-GetLastError sys0 ;
 ::CreateFile sys-CreateFile sys7 ;
-::CloseHandle sys-CloseHandle sys1 ;
+::CloseHandle sys-CloseHandle sys1 drop ;
 ::FlushFileBuffers sys-FlushFileBuffers sys1 ;
 ::DeleteFile sys-DeleteFile sys1 ;
 ::MoveFile sys-MoveFile sys2 ;
@@ -65,7 +66,6 @@
 ::FindNextFile sys-FindNextFile sys2 ;
 ::FindClose sys-FindClose sys1 drop ;
 ::CreateProcess sys-CreateProcess sys10 ;
-::SetCurrentDirectory sys-SetCurrentDirectory sys1 ;
 
 #console-mode
 ##process-heap
@@ -85,6 +85,7 @@
 	
 	dup "GetConsoleMode" getproc 'sys-GetConsoleMode !
 	dup "SetConsoleMode" getproc 'sys-SetConsoleMode !
+	dup "ReadConsoleInputW" getproc 'sys-ReadConsoleInput !
 	dup "FlushConsoleInputBuffer" getproc 'sys-FlushConsoleInputBuffer !
 	dup "Sleep" getproc 'sys-Sleep !
 	dup "WaitForSingleObject" getproc 'sys-WaitForSingleObject ! 
@@ -110,15 +111,14 @@
 
 	dup "CreateProcess" getproc 'sys-CreateProcess	!
 	dup "GetTickCount" getproc 'sys-GetTickCount !
-	dup "SetCurrentDirectory" getproc 'sys-SetCurrentDirectory !
-	drop
 	
+	drop
 	AllocConsole 
 	-10 GetStdHandle 'stdin ! | STD_INPUT_HANDLE
 	-11 GetStdHandle 'stdout ! | STD_OUTPUT_HANDLE
 	-12 GetStdHandle 'stderr ! | STD_ERROR_HANDLE	
 	stdin 'console-mode GetConsoleMode drop	
-	stdin console-mode $1a neg and SetConsoleMode drop
+	stdin console-mode $1a neg and SetConsoleMode drop | 1a! ENABLE LINE
 	stdout 'console-mode GetConsoleMode drop	
 	stdout console-mode $4 or SetConsoleMode drop
 	

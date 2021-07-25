@@ -37,6 +37,7 @@
 
 #sys-SDL_GL_SetAttribute
 #sys-SDL_GL_CreateContext
+#sys-SDL_GL_DeleteContext
 #sys-SDL_GL_SetSwapInterval
 #sys-SDL_GL_SwapWindow
 
@@ -74,7 +75,8 @@
 
 ::SDL_GL_SetAttribute sys-SDL_GL_SetAttribute sys2 drop ;
 ::SDL_GL_CreateContext sys-SDL_GL_CreateContext sys1 ;
-::SDL_GL_SetSwapInterval sys-SDL_GL_SetSwapInterval sys1 ;
+::SDL_GL_DeleteContext sys-SDL_GL_DeleteContext sys1 drop ;
+::SDL_GL_SetSwapInterval sys-SDL_GL_SetSwapInterval sys1 drop ;
 ::SDL_GL_SwapWindow sys-SDL_GL_SwapWindow sys1 drop ;
 
 ::sdl2
@@ -111,6 +113,7 @@
 	
 	dup "SDL_GL_SetAttribute" getproc 'sys-SDL_GL_SetAttribute !
 	dup "SDL_GL_CreateContext" getproc 'sys-SDL_GL_CreateContext !
+	dup "SDL_GL_DeleteContext" getproc 'sys-SDL_GL_DeleteContext !
 	dup "SDL_GL_SetSwapInterval" getproc 'sys-SDL_GL_SetSwapInterval !
 	dup "SDL_GL_SwapWindow" getproc 'sys-SDL_GL_SwapWindow	!
 	drop

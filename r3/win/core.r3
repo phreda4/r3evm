@@ -1,6 +1,7 @@
 | SO core words
 | PHREDA 2021
 
+^r3/win/kernel32.r3
 ^r3/lib/str.r3
 	
 ::ms | ms --
@@ -57,40 +58,32 @@
 ::fnext | -- fdd/0
 	hfind 'fdd FindNextFile
 	1? ( drop 'fdd ; )
-	hfind FindClose ; 
+	hfind FindClose ;
 
 #cntf
-
+:type | str cnt --
+	stdout rot rot 0 0 WriteFile drop ;
+	
 ::load | 'from "filename" -- 'to
-| CreateFile eax,GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,FILE_FLAG_SEQUENTIAL_SCAN,0
 	$80000000 1 0 3 $8000000 0 CreateFile
-	0? ( drop ; )
-	swap
-| ReadFile,[hdir],[afile],$fffff,cntr,0	
+	-1 =? ( drop ; ) swap
 	( 2dup $ffff 'cntf 0 ReadFile drop
 		cntf + cntf 1? drop ) drop
-	swap CloseHandle
-	;
+	swap CloseHandle ;
 	
 ::save | 'from cnt "filename" -- 
-| CreateFile eax,GENERIC_WRITE,0,0,CREATE_ALWAYS,FILE_FLAG_SEQUENTIAL_SCAN,0
 	$40000000 0 0 2 $8000000 0 CreateFile
-	0? ( 3drop ; )
-| WriteFile,[hdir],edx,ecx,cntr,0
+	-1 =? ( 3drop ; )
 	dup >r rot rot 'cntf 0 WriteFile
 	r> swap 0? ( 2drop ; ) drop
-	CloseHandle 
-	;
+	CloseHandle ;
 	
 ::append | 'from cnt "filename" -- 
-| CreateFile eax,4,0,0,CREATE_ALWAYS,FILE_FLAG_SEQUENTIAL_SCAN,0
 	$4 0 0 2 $8000000 0 CreateFile
-	0? ( 3drop ; )
-| WriteFile,[hdir],edx,ecx,cntr,0
+	-1 =? ( 3drop ; )
 	dup >r rot rot 'cntf 0 WriteFile
 	r> swap 0? ( 2drop ; ) drop
-	CloseHandle 
-	;
+	CloseHandle ;
 
 |struct STARTUPINFO
 |  cb		  dd ?,?
