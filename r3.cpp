@@ -13,15 +13,17 @@
 #include <time.h>
 #include <string.h>
 
-#include <windows.h>
-
 #if defined(LINUX) || defined(RPI)
+
+#include <dlfcn.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 
-//#define strnicmp strncasecmp
+#else	// WINDOWS
+#include <windows.h>
+
 #endif
 
 //----------------------
@@ -1083,14 +1085,16 @@ next:
 		
 #if defined(LINUX) || defined(RPI)
 	case LOADLIB: // "" -- hmo
-		TOS=(int64_t)dlopen((char*)TOS,RTLD_NOW));goto next; //RTLD_LAZY 1 RTLD_NOW 2
+		TOS=(int64_t)dlopen((char*)TOS,RTLD_NOW);goto next; //RTLD_LAZY 1 RTLD_NOW 2
 	case GETPROCA: // hmo "" -- ad		
 		TOS=(int64_t)dlsym((void*)*NOS,(char*)TOS);NOS--;goto next;
+		
 #else	// WINDOWS
 	case LOADLIB: // "" -- hmo
 		TOS=(int64_t)LoadLibraryA((char*)TOS);goto next;
 	case GETPROCA: // hmo "" -- ad
 		TOS=(int64_t)GetProcAddress((HMODULE)*NOS,(char*)TOS);NOS--;goto next;
+		
 #endif
 		
 		 

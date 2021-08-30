@@ -16,7 +16,7 @@
 	stdout rot rot 0 0 WriteFile drop ;
 
 #irec 0 
-##codekey0 0 0
+##codekey 0 0
 
 ::getch | -- key
 	stdin 'irec 1 'kb ReadConsoleInput 
@@ -41,7 +41,7 @@
 	
 ::.print sprint count type ;
 
-::. count type ;
+|::. count type ;
 
 ::.home	"H" .[ ; | home
 ::.cls "2J" .[ ; | cls 
