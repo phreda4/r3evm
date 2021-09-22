@@ -41,7 +41,7 @@ int memcsize=0;
 int memc=0;
 int *memcode;
 
-int memdsize=0x100000;			// 1MB data 
+int memdsize=0xA00000;			// 10MB data 
 int memd=0;
 char *memdata;
 
@@ -417,11 +417,14 @@ void compilaCODE(char *str)
 int ex=0;
 closevar();
 if (*(str+1)==':') { ex=1;str++; } // exported
-if (*(str+1)<33) { boot=memc; }
 dicc[cntdicc].nombre=str+1;
 dicc[cntdicc].mem=memc;
 dicc[cntdicc].info=ex;	// 0x10 es dato
 cntdicc++;
+if (*(str+1)<33) { 
+	ex=boot;boot=memc; 
+	if (ex!=-1) { codetok((ex<<8)+CALL); } // call to prev boot code
+	}
 modo=1;
 }
 
@@ -757,8 +760,8 @@ char *syscom(char *str)
 {
 if (strnicmp(str,"|MEM ",5)==0) {	// memory in Kb
 	if (isNro(trim(str+5))) {
-		memdsize=nro<<10;
-		if (memdsize<1024)	memdsize=1<<10;
+		memdsize=nro<<20;
+		if (memdsize<1<<20)	memdsize=1<<20; // 1MB min
 		}
 	}	
 return nextcom(str);
@@ -768,9 +771,7 @@ return nextcom(str);
 void r3includes(char *str) 
 {
 if (str==0) return;
-if (*str=='.') {
-	
-	}
+//if (*str=='.') { }
 	
 int ninc;	
 while(*str!=0) {
@@ -839,6 +840,7 @@ memd=0;
  memcode=(int*)malloc(sizeof(int)*memcsize);
  memdata=(char*)malloc(memdsize);
 #endif
+
 
 // tokenize includes
 for (int i=0;i<cntstacki;i++) {

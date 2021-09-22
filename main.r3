@@ -57,5 +57,5 @@
 		) drop ;
 
 : 
-windows
+|windows
 main ;

@@ -74,7 +74,8 @@
 ##stdout
 ##stderr
 
-::windows
+|----- init code
+:
 	"KERNEL32.DLL" loadlib 
 	dup "AllocConsole" getproc 'sys-AllocConsole !
 	dup "ExitProcess" getproc 'sys-ExitProcess ! 
@@ -124,4 +125,3 @@
 	
 	GetProcessHeap 'process-heap !
 	;
-	
