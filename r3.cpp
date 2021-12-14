@@ -26,6 +26,9 @@
 
 #endif
 
+// for compile in 32bits
+#define BITS32
+
 //----------------------
 /*------COMPILER------*/
 //----------------------
@@ -895,6 +898,13 @@ return g;
 #define STACKSIZE 256
 int64_t stack[STACKSIZE];
 
+void printstack(int64_t *R){
+int64_t *RTOS=&stack[STACKSIZE-1];
+while (RTOS>=R) {
+	printf("%x ",*RTOS);
+	RTOS--;
+}
+}
 
 FILE *file;
 
@@ -917,11 +927,14 @@ register int64_t op=0;
 register int ip=boot;
 
 next:
-	op=memcode[ip++]; //	printcode(op);
+	op=memcode[ip++]; 
+	
+	printstack(RTOS);printf(" :%x:",ip);printcode(op);
 	
 	switch(op&0xff){
 	case FIN:ip=*RTOS;RTOS++;if (ip==0) return;
-			goto next; 							// ;
+//		printf("r:%x ip:%x\n",*RTOS,ip);
+		goto next; 							// ;
 	case LIT:NOS++;*NOS=TOS;TOS=op>>8;goto next;					// LIT1
 	case ADR:NOS++;*NOS=TOS;TOS=(int64_t)&memdata[op>>8];goto next;		// LIT adr
 	case CALL:RTOS--;*RTOS=ip;ip=(unsigned int)op>>8;goto next;	// CALL
@@ -973,9 +986,9 @@ next:
 	case SHR0:TOS=((uint64_t)*NOS)>>TOS;NOS--;goto next;	//SHR
 	case MOD:TOS=*NOS%TOS;NOS--;goto next;					//MOD
 	case DIVMOD:op=*NOS;*NOS=op/TOS;TOS=op%TOS;goto next;	//DIVMOD
-	case MULDIV:TOS=((__int128)(*(NOS-1))*(*NOS)/TOS);NOS-=2;goto next;	//MULDIV
-	case MULSHR:TOS=((__int128)(*(NOS-1)*(*NOS))>>TOS);NOS-=2;goto next;	//MULSHR
-	case CDIVSH:TOS=(__int128)((*(NOS-1)<<TOS)/(*NOS));NOS-=2;goto next;//CDIVSH
+	case MULDIV:TOS=((long long)(*(NOS-1))*(*NOS)/TOS);NOS-=2;goto next;	//MULDIV
+	case MULSHR:TOS=((long long)(*(NOS-1)*(*NOS))>>TOS);NOS-=2;goto next;	//MULSHR
+	case CDIVSH:TOS=(long long)((*(NOS-1)<<TOS)/(*NOS));NOS-=2;goto next;//CDIVSH
 	case NOT:TOS=~TOS;goto next;							//NOT
 	case NEG:TOS=-TOS;goto next;							//NEG
 	case ABS:op=(TOS>>63);TOS=(TOS+op)^op;goto next;		//ABS
@@ -1084,6 +1097,39 @@ next:
 		NOS-=2;TOS=*NOS;NOS--;goto next;
 	case MEM://"MEM"
 		NOS++;*NOS=TOS;TOS=(int64_t)&memdata[memd];goto next;
+
+#if defined(BITS32)
+
+	case LOADLIB: // "" -- hmo
+		TOS=(int)LoadLibraryA((char*)TOS);goto next;
+	case GETPROCA: // hmo "" -- ad
+		TOS=(int)GetProcAddress((HMODULE)*NOS,(char*)TOS);NOS--;goto next;
+	case SYSCALL0: // adr -- rs
+		TOS=(int)(* (int(*)())TOS)();goto next;
+	case SYSCALL1: // a0 adr -- rs 
+		TOS=(int)(* (int(*)(int))TOS)((int)*NOS);NOS--;
+		goto next;
+	case SYSCALL2: // a1 a0 adr -- rs 
+		TOS=(int)(* (int(*)(int,int))TOS)((int)*(NOS-1),(int)*NOS);NOS-=2;goto next;
+	case SYSCALL3: // a1 a0 adr -- rs 
+		TOS=(int)(* (int(*)(int,int,int))TOS)((int)*(NOS-2),(int)*(NOS-1),(int)*NOS);NOS-=3;goto next;
+	case SYSCALL4: // a1 a0 adr -- rs 
+		TOS=(int)(* (int(*)(int,int,int,int))TOS)((int)*(NOS-3),(int)*(NOS-2),(int)*(NOS-1),(int)*NOS);NOS-=4;goto next;
+	case SYSCALL5: // a1 a0 adr -- rs 
+		TOS=(int)(* (int(*)(int,int,int,int,int))TOS)((int)*(NOS-4),(int)*(NOS-3),(int)*(NOS-2),(int)*(NOS-1),(int)*NOS);NOS-=5;goto next;
+	case SYSCALL6: // a1 a0 adr -- rs 
+		TOS=(int)(* (int(*)(int,int,int,int,int,int))TOS)(*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=6;goto next;
+	case SYSCALL7: // a1 a0 adr -- rs 
+		TOS=(int)(* (int(*)(int,int,int,int,int,int,int))TOS)(*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=7;goto next;
+	case SYSCALL8: // a1 a0 adr -- rs 
+		TOS=(int)(* (int(*)(int,int,int,int,int,int,int,int))TOS)(*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=8;goto next;
+	case SYSCALL9: // a1 a0 adr -- rs 
+		TOS=(int)(* (int(*)(int,int,int,int,int,int,int,int,int))TOS)(*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=9;goto next;
+	case SYSCALL10: // a1 a0 adr -- rs 
+		TOS=(int)(* (int(*)(int,int,int,int,int,int,int,int,int,int))TOS)(*(NOS-9),*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=10;goto next;
+
+
+#else // 64 bits
 		
 #if defined(LINUX) || defined(RPI)
 	case LOADLIB: // "" -- hmo
@@ -1123,6 +1169,7 @@ next:
 	case SYSCALL10: // a1 a0 adr -- rs 
 		TOS=(int64_t)(* (int64_t(*)(int64_t,int64_t,int64_t,int64_t,int64_t,int64_t,int64_t,int64_t,int64_t,int64_t))TOS)(*(NOS-9),*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=10;goto next;
 
+#endif
 /* -- DEBUG
 	case DOT:printf("%llx ",TOS);TOS=*NOS;NOS--;goto next;
 	case DOTS:printf((char*)TOS);TOS=*NOS;NOS--;goto next;
@@ -1146,9 +1193,9 @@ next:
 	case SHR01:TOS=(uint64_t)TOS>>(op>>8);goto next;
 	case MOD1:TOS=TOS%(op>>8);goto next;
 	case DIVMOD1:op>>=8;NOS++;*NOS=TOS/op;TOS=TOS%op;goto next;	//DIVMOD
-	case MULDIV1:op>>=8;TOS=(__int128)(*NOS)*TOS/op;NOS--;goto next;		//MULDIV
-	case MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;goto next;	//MULSHR
-	case CDIVSH1:op>>=8;TOS=(__int128)((*NOS)<<op)/TOS;NOS--;goto next;	//CDIVSH
+	case MULDIV1:op>>=8;TOS=(long long)(*NOS)*TOS/op;NOS--;goto next;		//MULDIV
+	case MULSHR1:op>>=8;TOS=((long long)(*NOS)*TOS)>>op;NOS--;goto next;	//MULSHR
+	case CDIVSH1:op>>=8;TOS=(long long)((*NOS)<<op)/TOS;NOS--;goto next;	//CDIVSH
 	case IFL1:if ((op<<32>>48)<=TOS) ip+=(op<<48>>56);goto next;	//IFL
 	case IFG1:if ((op<<32>>48)>=TOS) ip+=(op<<48>>56);goto next;	//IFG
 	case IFE1:if ((op<<32>>48)!=TOS) ip+=(op<<48>>56);goto next;	//IFN
