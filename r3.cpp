@@ -199,7 +199,7 @@ void dumpcode()
 printf("code\n");
 printf("boot:%d\n",boot);
 for(int i=1;i<memc;i++) {
-	printf("%d.",i);
+	printf("%x:",i);
 	printcode(memcode[i]);
 	}
 printf("\n");
@@ -934,7 +934,8 @@ register int ip=boot;
 next:
 	op=memcode[ip++]; 
 	
-//	printstack(RTOS);printf(" :%x:",ip);printcode(op);
+//	printstack(RTOS);
+//printf("%x:%x:",ip,TOS);printcode(op);
 	
 	switch(op&0xff){
 	case FIN:ip=*RTOS;RTOS++;if (ip==0) return;
@@ -1106,9 +1107,9 @@ next:
 
 #if defined(LINUX) || defined(RPI)
 	case LOADLIB: // "" -- hmo
-		TOS=(int64_t)dlopen((char*)TOS,RTLD_NOW);goto next; //RTLD_LAZY 1 RTLD_NOW 2
+		TOS=(int)dlopen((char*)TOS,RTLD_NOW);goto next; //RTLD_LAZY 1 RTLD_NOW 2
 	case GETPROCA: // hmo "" -- ad		
-		TOS=(int64_t)dlsym((void*)*NOS,(char*)TOS);NOS--;goto next;
+		TOS=(int)dlsym((void*)*NOS,(char*)TOS);NOS--;goto next;
 		
 #else	// WINDOWS
 	case LOADLIB: // "" -- hmo
