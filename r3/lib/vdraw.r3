@@ -13,7 +13,7 @@
 ::vget! | 'get --
 	'vecg ! ;
 
-::vsize | w h --
+::vsize! | w h --
 	'maxh ! 'maxw ! ;
 
 #xa #ya
@@ -91,10 +91,10 @@
 
 ::vfill | c x y --
 	2dup vecg ex pick3 =? ( 4drop ; )
-	'cf ! rot 'ink !
+	'cf ! rot drop |'ink !
 	here dup 'herel !
 	!+ !+	| x y
- 	( herel >? 8 - dup @+ swap @	| adr y x
+ 	( herel >? 16 - dup @+ swap @	| adr y x
  		firstx	| adr y x1
 		fillline
  		) drop ;

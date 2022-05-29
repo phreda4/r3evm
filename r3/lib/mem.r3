@@ -1,17 +1,18 @@
 | PHREDA - 2019
 | Memory words
 
+^r3/win/core.r3
 ^r3/lib/str.r3
 
-|--- free memory
+|---- free memory
+
 ##here 0
 
 #memmap * 512
 #memmap> 'memmap
 
 ::mark | --
-	here 0? ( mem dup 'here ! nip )
-	memmap> !+ 'memmap> ! ;
+	here memmap> !+ 'memmap> ! ;
 
 ::empty | --
 	memmap> 'memmap =? ( drop mem 'here ! ; )
@@ -22,6 +23,9 @@
 
 ::sizemem | -- size
 	here memmap> 8 - @ - ;
+	
+::memsize | -- mem size
+	memmap> 8 - @ here over - ;
 
 #inc 0
 ::savememinc | "" --
@@ -37,7 +41,7 @@
 ::appendmem | "" --
 	memmap> 8 - @ here over - rot append ;
 
-|---
+|---- conv to mem
 ::, here d!+ 'here ! ;
 ::,c here c!+ 'here ! ;
 ::,q here !+ 'here ! ;
@@ -54,13 +58,12 @@
 ::,b .b ,s ;
 ::,f .f ,s ;
 
-::,ln ,s
 ::,cr 13 ,c ;
 ::,eol 0 ,c ;
 ::,sp 32 ,c ;
 ::,nl 13 ,c 10 ,c ;
 
-|--------------------------------------
+|---- print to mem
 :c0	| 'p
 	;
 :c1	| a,q
@@ -103,7 +106,11 @@
 ::,print | p p .. "" --
 	( c@+ 1? ,emit ) 2drop ;
 
-#buff * 4096
+|---- print to buff
+#buff * 4096 | 4k limit
 
 ::sprint | p p .. "" -- adr
 	mark 'buff 'here ! ,print ,eol empty 'buff ;
+	
+|---- init here with free mem	
+: mem 'here ! ;

@@ -112,7 +112,7 @@ const char *r3bas[]={
 "LOADLIB","GETPROC",
 "SYS0","SYS1","SYS2","SYS3","SYS4","SYS5",
 "SYS6","SYS7","SYS8","SYS9","SYS10",
-//"SYS6F1",
+"SYS6F1",
 
 //".",".S",
 
@@ -160,7 +160,7 @@ MEM,
 LOADLIB,GETPROCA,
 SYSCALL0,SYSCALL1,SYSCALL2,SYSCALL3,SYSCALL4,SYSCALL5,
 SYSCALL6,SYSCALL7,SYSCALL8,SYSCALL9,SYSCALL10,
-//SYSCALL6F1,
+SYSCALL6F1,
 //DOT,DOTS,
 
 ENDWORD, // !! cut the dicc !!!
@@ -1109,9 +1109,9 @@ next:
 
 #if defined(LINUX) || defined(RPI)
 	case LOADLIB: // "" -- hmo
-		TOS=(int)dlopen((char*)TOS,RTLD_NOW);goto next; //RTLD_LAZY 1 RTLD_NOW 2
+		TOS=(int64_t)dlopen((char*)TOS,RTLD_NOW);goto next; //RTLD_LAZY 1 RTLD_NOW 2
 	case GETPROCA: // hmo "" -- ad		
-		TOS=(int)dlsym((void*)*NOS,(char*)TOS);NOS--;goto next;
+		TOS=(int64_t)dlsym((void*)*NOS,(char*)TOS);NOS--;goto next;
 		
 #else	// WINDOWS
 	case LOADLIB: // "" -- hmo
@@ -1144,10 +1144,11 @@ next:
 		TOS=(int)(* (int(*)(int,int,int,int,int,int,int,int,int))TOS)(*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=9;goto next;
 	case SYSCALL10: // a1 a0 adr -- rs 
 		TOS=(int)(* (int(*)(int,int,int,int,int,int,int,int,int,int))TOS)(*(NOS-9),*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=10;goto next;
-/*
+
 	case SYSCALL6F1:
-		TOS=(int)(* (int(*)(float,int,int,int,int,int,int))TOS)(((float)*(NOS-6))/65535.0,*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=7;goto next;
-*/
+		TOS=(int)(* (int(*)(int,int,int,int,int,int,double))TOS)(*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*NOS,((double)TOS/(double)(1<<16))
+		);NOS-=7;goto next;
+
 /* -- DEBUG
 	case DOT:printf("%llx ",TOS);TOS=*NOS;NOS--;goto next;
 	case DOTS:printf((char*)TOS);TOS=*NOS;NOS--;goto next;

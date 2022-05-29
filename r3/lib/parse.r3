@@ -217,3 +217,4 @@
 		rot <>? ( 3drop 0 ; ) | r adr a
 		drop swap )
 	2drop ;
+	

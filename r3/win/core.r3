@@ -4,6 +4,8 @@
 ^r3/win/kernel32.r3
 ^r3/lib/str.r3
 	
+#process-heap
+
 ::ms | ms --
 	Sleep ;
 	
@@ -16,23 +18,28 @@
 ::resize |( a n -- a ior ) 
 	process-heap rot rot 0 rot HeapReAlloc ;
 
+::msec | -- msec
+	GetTickCount ;
+	
 |----------
 #sistime 0 0 | 16 bytes
 
-::time | -- h m s
+::time | -- hms
 	'sistime GetLocalTime
 	'sistime 8 + @
-	dup $ffff and 
-	swap 16 >> dup $ffff and 
-	swap 16 >> $ffff and
+	dup 32 >> $ffff and 
+	over 16 >> $ffff and 
+	rot $ffff and
+	8 << or 8 << or 
 	;
 	
-::date | -- y m d
+::date | -- ymd
 	'sistime GetLocalTime
 	'sistime @
-	dup $ffff and 
-	swap 16 >> dup $ffff and
-	swap 24 >> $ffff and
+	dup 48 >> $ffff and 
+	over 16 >> $ffff and
+	rot $ffff and
+	8 << or 8 << or
 	;
 	
 #fdd * 260
@@ -61,8 +68,6 @@
 	hfind FindClose ;
 
 #cntf
-:type | str cnt --
-	stdout rot rot 0 0 WriteFile drop ;
 	
 ::load | 'from "filename" -- 'to
 	$80000000 1 0 3 $8000000 0 CreateFile
@@ -118,5 +123,10 @@
 ::sys | "" --
 	'sinfo 0 100 cfill
 	68 'sinfo d!
-	0 swap 0 0 0 $8000000 0 0 'sinfo 'pinfo CreateProcess drop
+	0 swap 0 0 1 0 0 0 'sinfo 'pinfo CreateProcess drop
+	pinfo -1 WaitForSingleObject
+	;
+	
+:
+	GetProcessHeap 'process-heap !
 	;

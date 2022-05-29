@@ -1,7 +1,5 @@
-| funciones aleatorias
+| numeros aleatorios
 | PHREDA 2010
-
-^r3/lib/sys.r3
 
 ##seed8 12345
 
@@ -13,56 +11,25 @@
   'seed8 !
   $ff and ;
 
+##seed $a3b195354a39b70d
 
-##seed 495090497
-
-::rand | -- r32
-  seed 3141592621 * 1 + dup 'seed ! ;
+::rand | -- rand
+  seed $da942042e4dd58b5 * 1 + dup 'seed ! ;
 
 ::rerand | --
-  time msec + 'seed ! ;
+  time $a3b195354a39b70d * msec + 'seed ! ;
 
+::randmax | max -- rand
+	rand 
+	1 >>> | only positive
+	63 *>> ;
   
-|--- Multiply-with-carry random
-
-#listr 1 2 3 4 5
-
-::mrand | -- xx
-	'listr
-	@+ 5115 * swap
-	@+ 1776 * rot + swap
-	@+ 1492 * rot + swap
-	@+ 11111111 * rot + swap
-	@ +
-	'listr dup 4 - 4 move
-	dup 'listr !
-	dup 31 >> 'listr 16 + !
-	;
-
-::mseed | seed --
-  'listr swap
-  0 ( 5 <? >r
-    29943829 * 1 -
-    dup rot !+ swap
-    r> 1 + ) 3drop ;
-
-|------
-#nseed
-#rgecx
-
-::random | -- r
-	rgecx $a2348705 xor nseed xor
-	dup 'nseed +! dup 'rgecx !
-	;
-
-
 |---- xorshift
-#(rnd) 2463534242
+::rnd | -- rand
+    seed dup 13 << xor dup 7 >> xor dup 17 << xor dup 'seed ! ;
 
-::rndseed
-	'(rnd) ! ;
-::rnd | -- n
-    (rnd) dup 13 << xor dup 17 >> xor dup 5 << xor dup '(rnd) ! ;
+::rndmax | max -- rand
+	rand 1 >>> 63 *>> ;
 
 |---- xorshit128+
 #state0 1
