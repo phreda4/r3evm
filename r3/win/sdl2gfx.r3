@@ -38,9 +38,9 @@
 	dup 0 0 'w 'h SDL_QueryTexture >r
 	swap 'rec d!+ d!+ h w rot d!+ d!
 	
-	"prev call " .print
-	SDLrenderer r> 0 'rec 0 0 0.2 SDL_RenderCopyEx 
-	"ok call" .print
+	|" prev " .print
+	SDLrenderer r> 0 'rec 0 0 45.0 SDL_RenderCopyEx 
+	|" ok " .print
 	;
 
 	
