@@ -112,18 +112,19 @@ const char *r3bas[]={
 "LOADLIB","GETPROC",
 "SYS0","SYS1","SYS2","SYS3","SYS4","SYS5",
 "SYS6","SYS7","SYS8","SYS9","SYS10",
-//"SYS6F1",
 
 //".",".S",
 
 "",// !!cut the dicc!!!
+/*
 "JMP","JMPR","LIT2","LIT3",	// internal only
 "AND_L","OR_L","XOR_L",		// OPTIMIZATION WORDS
 "+_L","-_L","*_L","/_L",
 "<<_L",">>_L",">>>_L",
-"MOD_L","/MOD_L","*/_L","*>>_L","<</_L",
+"MOD_L","/MOD_L","* /_L","*>>_L","<</_L",
 "<?_L",">?_L","=?_L",">=?_L","<=?_L","<>?_L","AN?_L","NA?_L",
 
+*/
 };
 
 //------ enumaration for table jump
@@ -160,7 +161,6 @@ MEM,
 LOADLIB,GETPROCA,
 SYSCALL0,SYSCALL1,SYSCALL2,SYSCALL3,SYSCALL4,SYSCALL5,
 SYSCALL6,SYSCALL7,SYSCALL8,SYSCALL9,SYSCALL10,
-//SYSCALL6F1,
 //DOT,DOTS,
 
 ENDWORD, // !! cut the dicc !!!
@@ -169,7 +169,19 @@ AND1,OR1,XOR1,		// OPTIMIZATION WORDS
 ADD1,SUB1,MUL1,DIV1,
 SHL1,SHR1,SHR01,
 MOD1,DIVMOD1,MULDIV1,MULSHR1,CDIVSH1,
-IFL1,IFG1,IFE1,IFGE1,IFLE1,IFNE1,IFAND1,IFNAND1
+IFL1,IFG1,IFE1,IFGE1,IFLE1,IFNE1,IFAND1,IFNAND1,
+SHLR,SHLAR,
+FECHa,CFECHa,WFECHa,DFECHa,
+STORa,CSTORa,WSTORa,DSTORa,
+FECH1,FECH2,FECH3,
+CFECH1,CFECH2,CFECH3,
+WFECH1,WFECH2,WFECH3,
+DFECH1,DFECH2,DFECH3,
+STOR1,STOR2,STOR3,
+CSTOR1,CSTOR2,CSTOR3,
+WSTOR1,WSTOR2,WSTOR3,
+DSTOR1,DSTOR2,DSTOR3
+
 };
 
 //////////////////////////////////////
@@ -351,15 +363,10 @@ return s;
 }
 
 // advance to next string ("), admit "" for insert " in a string, multiline is ok too
-char *nextstr(char *s)
+char *nextstr(char *s) 
 {
 s++;
-while (*s!=0)	{
-	if (*s==34) { 
-		s++;if (*s!=34) { 
-			s++;break; } }
-	s++;
-	}
+while (*s!=0) { if (*s==34) { s++;if (*s!=34) { s++;break; } } s++; }
 return s;
 }
 
@@ -368,9 +375,8 @@ int isBas(char *p)
 {    
 nro=0;
 char **m=(char**)r3bas;
-while (**m!=0) {
-  if (strequal(*m,p)) return -1;
-  *m++;nro++; }
+while (**m!=0) { if (strequal(*m,p)) return -1; 
+	*m++;nro++; }
 return 0;  
 };
 
@@ -579,20 +585,30 @@ if (n==2) { blockOut();return; }	//)	salto
 if (n==3) { anonIn();return; }		//[	salto:etiqueta
 if (n==4) { anonOut();return; }		//]	etiqueta;push
 
-int token=memcode[memc-1];
+///////////////////////// OPTIMIZATION
+// CONSTANT FOLDING
 
+// INLINE
+
+int token=memcode[memc-1];
 // optimize conditional jump to short version
 if (n>=IFL && n<=IFNAND && (token&0xff)==LIT && (token<<8>>16)==(token>>8)) { 
 	memcode[memc-1]=((token<<8)&0xffff0000)|(n-IFL+IFL1);
 	return; 
 	}
-
-// optimize operation with constant
+// optimize operation with constant (NRO OP)
 if (n>=AND && n<=CDIVSH && (token&0xff)==LIT && lastblock!=memc) { 
 	memcode[memc-1]=(token^LIT)|(n-ADD+ADD1);
 	return; 
 	}
 
+// SHLR  (>>)(<<)
+// SHLAR  (>>)(and)
+// cte + @ c@ w@ d@ 
+// cte + ! c! w! d!
+// 1|2|3 << + @ c@ w@ d@ 
+// 1|2|3 << + ! c! w! d!
+///////////////////////// OPTIMIZATION
 codetok(n);	
 }
 
@@ -675,8 +691,6 @@ while(*str!=0) {
 		case 0x27:	// $27 ' Direccion	// 'ADR
 			nro=isWord(str+1);
 			if (nro<0) { 
-//				if (isBas(str)) // 'ink allow compile replace
-//					{ compilaMAC(nro);str=nextw(str);break; }
 				seterror(str,"adr not found");return 0; 
 				}
 			compilaADDR(nro);str=nextw(str);break;		
@@ -1144,11 +1158,6 @@ next:
 		TOS=(int)(* (int(*)(int,int,int,int,int,int,int,int,int))TOS)(*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=9;goto next;
 	case SYSCALL10: // a1 a0 adr -- rs 
 		TOS=(int)(* (int(*)(int,int,int,int,int,int,int,int,int,int))TOS)(*(NOS-9),*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=10;goto next;
-/*
-	case SYSCALL6F1:
-		TOS=(int)(* (int(*)(int,int,int,int,int,int,double))TOS)(*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),((double)(*NOS)/(1<<16))	);
-		NOS-=7;goto next;
-*/
 /* -- DEBUG
 	case DOT:printf("%llx ",TOS);TOS=*NOS;NOS--;goto next;
 	case DOTS:printf((char*)TOS);TOS=*NOS;NOS--;goto next;
@@ -1183,6 +1192,49 @@ next:
 	case IFNE1:if ((op<<32>>48)==TOS) ip+=(op<<48>>56);goto next;//IFNO
 	case IFAND1:if (!((op<<32>>48)&TOS)) ip+=(op<<48>>56);goto next;//IFNA
 	case IFNAND1:if ((op<<32>>48)&TOS) ip+=(op<<48>>56);goto next;//IFAN
+
+	// signed and unsigned transformation
+	case SHLR:TOS=(TOS<<((op>>8)&0xff))>>(op>>16);goto next; // SHLR  (>>)(<<)
+	case SHLAR:TOS=(TOS<<((op>>8)&0xff))&(op>>16);goto next; // SHRAND  (>>)(and)
+	// cte + @ c@ w@ d@ 
+	case FECHa:TOS=*(int64_t*)(TOS+(op>>16));goto next;//+@
+	case CFECHa:TOS=*(char*)(TOS+(op>>16));goto next;//1<<+C@
+	case WFECHa:TOS=*(int16_t*)(TOS+(op>>16));goto next;//1<<+W@
+	case DFECHa:TOS=*(int32_t*)(TOS+(op>>16));goto next;//1<<+D@
+	// cte + ! c! w! d!
+	case STORa:*(int64_t*)(TOS+(op>>16))=(int64_t)*NOS;NOS--;TOS=*NOS;NOS--;goto next;// !
+	case CSTORa:*(char*)(TOS+(op>>16))=(char)*NOS;NOS--;TOS=*NOS;NOS--;goto next;//C!
+	case WSTORa:*(int16_t*)(TOS+(op>>16))=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//W!		
+	case DSTORa:*(int32_t*)(TOS+(op>>16))=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//D!
+	// 1|2|3 << + @ c@ w@ d@ 
+	case FECH1:TOS=*(int64_t*)(TOS<<1+(*NOS));NOS--;goto next;//1<<+@
+	case FECH2:TOS=*(int64_t*)(TOS<<2+(*NOS));NOS--;goto next;//2<<+@
+	case FECH3:TOS=*(int64_t*)(TOS<<3+(*NOS));NOS--;goto next;//3<<+@
+	case CFECH1:TOS=*(char*)(TOS<<1+(*NOS));NOS--;goto next;//1<<+C@
+	case CFECH2:TOS=*(char*)(TOS<<2+(*NOS));NOS--;goto next;//2<<+C@
+	case CFECH3:TOS=*(char*)(TOS<<3+(*NOS));NOS--;goto next;//3<<+C@
+	case WFECH1:TOS=*(int16_t*)(TOS<<1+(*NOS));NOS--;goto next;//1<<+W@
+	case WFECH2:TOS=*(int16_t*)(TOS<<2+(*NOS));NOS--;goto next;//2<<+W@
+	case WFECH3:TOS=*(int16_t*)(TOS<<3+(*NOS));NOS--;goto next;//3<<+W@
+	case DFECH1:TOS=*(int32_t*)(TOS<<1+(*NOS));NOS--;goto next;//1<<+D@
+	case DFECH2:TOS=*(int32_t*)(TOS<<2+(*NOS));NOS--;goto next;//2<<+D@
+	case DFECH3:TOS=*(int32_t*)(TOS<<3+(*NOS));NOS--;goto next;//3<<+D@
+	// 1|2|3 << + ! c! w! d!
+	case STOR1:*(int64_t*)(TOS<<1+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;// 1<<+!
+	case STOR2:*(int64_t*)(TOS<<2+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;// 2<<+!
+	case STOR3:*(int64_t*)(TOS<<3+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;// 3<<+!
+	case CSTOR1:*(char*)(TOS<<1+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//1<<+C!
+	case CSTOR2:*(char*)(TOS<<2+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//2<<+C!
+	case CSTOR3:*(char*)(TOS<<3+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//3<<+C!
+	case WSTOR1:*(int16_t*)(TOS<<1+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//1<<+W!
+	case WSTOR2:*(int16_t*)(TOS<<2+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//2<<+W!
+	case WSTOR3:*(int16_t*)(TOS<<3+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//3<<+W!
+	case DSTOR1:*(int32_t*)(TOS<<1+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//1<<+D!
+	case DSTOR2:*(int32_t*)(TOS<<2+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//2<<+D!
+	case DSTOR3:*(int32_t*)(TOS<<3+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//3<<+D!
+	// or!
+	// and!
+	// xor!
 	}
 }
 
@@ -1190,11 +1242,11 @@ next:
 ////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[])
 {
-char filename[1024];
+char *filename;
 if (argc>1) 
-	strcpy(filename,argv[1]); 
+	filename=argv[1]; 
 else 
-	strcpy(filename,"main.r3");
+	filename="main.r3";
 if (!r3compile(filename)) return -1;
 //dumpdicc();
 //dumpcode();

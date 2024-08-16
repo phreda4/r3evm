@@ -37,10 +37,6 @@
 ::Imager | x y img --		
 	dup 0 0 'w 'h SDL_QueryTexture >r
 	swap 'rec d!+ d!+ h w rot d!+ d!
-	
-	|" prev " .print
-	SDLrenderer r> 0 'rec 0 0 45.0 SDL_RenderCopyEx 
-	|" ok " .print
 	;
 
 	
