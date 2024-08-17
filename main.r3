@@ -1,12 +1,12 @@
-
-#var 1 2 3 4
-##var2 2
-
-:coso1 2 2 + ;
-::more + ;
-:coso 1 2 * 4 + 2 / 25 sqrt + more ;
-::coso2 1? ( 2 ; ) 1 ;
-:main 'var var2 1 << + @ coso2 ;
-
+|^r3/win/console.r3
+:test1
+|	$ff randmax 16 << "%f" .println
+	|5493296869561066546
+	$ff
+	2746648434780533273 
+	63 *>> |"%f" .println
+	;
+	
 : 
-main 1 + ;
+test1
+;
