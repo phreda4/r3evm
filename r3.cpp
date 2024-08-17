@@ -553,7 +553,7 @@ if (solvejmp(from,memc)) { // salta
 	}
 level--;	
 if (level<0) {
-	printf("ERROR bad )\n");
+	fprintf(stderr,"ERROR bad )\n");
 	}
 lastblock=memc;
 }
@@ -574,7 +574,7 @@ memcode[from]|=(memc<<8);	// patch jmp
 codetok((from+1)<<8|LIT);
 level--;	
 if (level<0) {
-	printf("ERROR bad )\n");
+	fprintf(stderr,"ERROR bad )\n");
 	}
 }
 
@@ -608,7 +608,7 @@ switch(n) {
 	case SHR: t=lite(tok2)>>lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
 	case SHR0: t=(unsigned __int64)(lite(tok2))>>lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
 	case MOD: t=lite(tok2)%lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	//case DIVMOD: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;\
+	//case DIVMOD: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
 	//case MULDIV: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
 	//case MULSHR: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
 	//case CDIVSH: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
@@ -659,9 +659,10 @@ if (n==SHR && (tokpre&0xff)==LIT && (tokpre2&0xff)==SHL1) {
 	memc--;
 	return; 	
 	}
-// SHLAR  (>>)(and)
-if (n==AND && (tokpre&0xff)==LIT && (tokpre2&0xff)==SHR1) {
-	memcode[memc-2]=((tokpre<<8)&0xff0000)|(tokpre2&0xff00)|SHLAR;
+// SHLAR  (>>)(and) 18 bit mask 
+if (n==AND && (tokpre&0xff)==LIT && (tokpre2&0xff)==SHR1 && (tokpre&0xfc000000)==0) {
+	
+	memcode[memc-2]=((tokpre<<6)&0xffffc000)|(tokpre2&0x3f00)|SHLAR;
 	memc--;
 	return; 	
 	}
@@ -741,11 +742,11 @@ for (char *p=src;p<cerror;p++)
 	} else if (*p==13) { if (*(p+1)==10) p++;
 		line++;lc=p+1; }
 *nextcr(lc)=0; // put 0 in the end of line
-printf("in: ");printword(name);printf("\n\n");	
-printf("%s\n",lc);
-for(char *p=lc;p<cerror;p++) if (*p==9) printf("\t"); else printf(" ");
-printf("^-");
-printf("ERROR %s, line %d\n\n",werror,line);	
+fprintf(stderr,"in: %s \n\n",name);;	
+fprintf(stderr,"%s\n",lc);
+for(char *p=lc;p<cerror;p++) if (*p==9) fprintf(stderr,"\t"); else fprintf(stderr," ");
+fprintf(stderr,"^-");
+fprintf(stderr,"ERROR %s, line %d\n\n",werror,line);	
 }
 
 // |WEB| emscripten only
@@ -1042,7 +1043,6 @@ next:
 	
 	switch(op&0xff){
 	case FIN:ip=*RTOS;RTOS++;if (ip==0) return;
-//		printf("r:%x ip:%x\n",*RTOS,ip);
 		goto next; 							// ;
 	case LIT:NOS++;*NOS=TOS;TOS=op>>8;goto next;					// LIT1
 	case ADR:NOS++;*NOS=TOS;TOS=(__int64)&memdata[op>>8];goto next;		// LIT adr
@@ -1062,7 +1062,8 @@ next:
 	case IFAND:if (!(TOS&*NOS)) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFNA
 	case IFNAND:if (TOS&*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFAN
 	case IFBT:if (*(NOS-1)>TOS||*(NOS-1)<*NOS) {ip+=(op>>8);} 
-		TOS=*(NOS-1);NOS-=2;goto next;//BTW (need bit trick) 	//(TOS-*(NOS-1))|(*(NOS-1)-*NOS)>0
+		TOS=*(NOS-1);NOS-=2;goto next;//BTW (need bit trick) 	
+		//((unsigned __int64)*(NOS-1)-*NOS)>(TOS-(*NOS))
 	case DUP:NOS++;*NOS=TOS;goto next;				//DUP
 	case DROP:TOS=*NOS;NOS--;goto next;				//DROP
 	case OVER:NOS++;*NOS=TOS;TOS=*(NOS-1);goto next;	//OVER
@@ -1087,11 +1088,11 @@ next:
 	case AND:TOS&=*NOS;NOS--;goto next;					//AND
 	case OR:TOS|=*NOS;NOS--;goto next;					//OR
 	case XOR:TOS^=*NOS;NOS--;goto next;					//XOR
-	case NAND:TOS&=~(*NOS);NOS--;goto next;					//NAND
+	case NAND:TOS=(~TOS)&(*NOS);NOS--;goto next;		//NAND
 	case ADD:TOS=*NOS+TOS;NOS--;goto next;				//SUMA
 	case SUB:TOS=*NOS-TOS;NOS--;goto next;				//RESTA
 	case MUL:TOS=*NOS*TOS;NOS--;goto next;				//MUL
-	case DIV:TOS=(*NOS/TOS);NOS--;goto next;				//DIV
+	case DIV:TOS=(*NOS/TOS);NOS--;goto next;			//DIV
 	case SHL:TOS=*NOS<<TOS;NOS--;goto next;				//SAl
 	case SHR:TOS=*NOS>>TOS;NOS--;goto next;				//SAR
 	case SHR0:TOS=((unsigned __int64)*NOS)>>TOS;NOS--;goto next;	//SHR
@@ -1284,7 +1285,7 @@ next:
 	case IFNAND1:if ((op>>16)&TOS) ip+=(op<<48>>56);goto next;//IFAN
 	// signed and unsigned transformation
 	case SHLR:TOS=(TOS<<((op>>8)&0xff))>>(op>>16);goto next; // SHLR  (>>)(<<)
-	case SHLAR:TOS=(TOS>>((op>>8)&0xff))&(op>>16);goto next; // SHRAND  (>>)(and)
+	case SHLAR:TOS=(TOS>>((op>>8)&0x3f))&((unsigned)op>>14);goto next; // SHRAND  (>>)(and)
 	// cte + @ c@ w@ d@ 
 	case FECHa:TOS=*(__int64*)(TOS+(op>>8));goto next;//+ @
 	case CFECHa:TOS=*(char*)(TOS+(op>>8));goto next;//+C@
