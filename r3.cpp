@@ -72,6 +72,29 @@ void iniA(void) { cntstacka=0; }
 void pushA(int n) { stacka[cntstacka++]=n; }
 int popA(void) { return stacka[--cntstacka]; }
 
+typedef __INT64_TYPE__ int64_t;
+typedef __UINT64_TYPE__ uint64_t;
+typedef __INT32_TYPE__ int32_t;
+typedef __UINT32_TYPE__ uint32_t;
+typedef __INT16_TYPE__ int16_t;
+typedef __UINT16_TYPE__ uint16_t;
+
+#define iclz(x) __builtin_clz(x)
+
+// http://www.devmaster.net/articles/fixed-point-optimizations/
+static inline int64_t isqrt(int64_t value)
+{
+if (value==0) return 0;
+int bshft = (63-iclz(value))>>1;  // spot the difference!
+int64_t g = 0;
+int64_t b = 1<<bshft;
+do {
+	int64_t temp = (g+g+b)<<bshft;
+	if (value >= temp) { g += b;value -= temp;	}
+	b>>=1;
+} while (bshft--);
+return g;
+}
 //----- internal tokens, replace 8 first names
 const char *r3asm[]={
 ";","LIT1","ADR","CALL","VAR"
@@ -84,9 +107,9 @@ const char *r3bas[]={
 "0?","1?","+?","-?", 								
 "<?",">?","=?",">=?","<=?","<>?","AND?","NAND?","BT?",
 "DUP","DROP","OVER","PICK2","PICK3","PICK4","SWAP","NIP",
-"ROT","2DUP","2DROP","3DROP","4DROP","2OVER","2SWAP",
+"ROT","-ROT","2DUP","2DROP","3DROP","4DROP","2OVER","2SWAP",
 ">R","R>","R@",
-"AND","OR","XOR",
+"AND","OR","XOR","NAND",
 "+","-","*","/",
 "<<",">>",">>>",
 "MOD","/MOD","*/","*>>","<</",
@@ -114,17 +137,26 @@ const char *r3bas[]={
 "SYS6","SYS7","SYS8","SYS9","SYS10",
 
 //".",".S",
-
 "",// !!cut the dicc!!!
-/*
+/**/
 "JMP","JMPR","LIT2","LIT3",	// internal only
-"AND_L","OR_L","XOR_L",		// OPTIMIZATION WORDS
+"AND_L","OR_L","XOR_L","NAND_L", // OPTIMIZATION WORDS
 "+_L","-_L","*_L","/_L",
 "<<_L",">>_L",">>>_L",
 "MOD_L","/MOD_L","* /_L","*>>_L","<</_L",
 "<?_L",">?_L","=?_L",">=?_L","<=?_L","<>?_L","AN?_L","NA?_L",
-
-*/
+"<<>>_",">>AND_",
+"+@_","+C@_","+W@_","+D@_",
+"+!_","+!C_","+!W_","+!D_",
+"1<<+@","2<<+@","3<<+@",
+"1<<+@C","2<<+@C","3<<+@C",
+"1<<+@W","2<<+@W","3<<+@W",
+"1<<+@D","2<<+@D","3<<+@D",
+"1<<+!","2<<+!","3<<+!",
+"1<<+!C","2<<+!C","3<<+!C",
+"1<<+!W","2<<+!W","3<<+!W",
+"1<<+!D","2<<+!D","3<<+!D"
+/**/
 };
 
 //------ enumaration for table jump
@@ -134,9 +166,9 @@ EX,
 ZIF,UIF,PIF,NIF,
 IFL,IFG,IFE,IFGE,IFLE,IFNE,IFAND,IFNAND,IFBT,
 DUP,DROP,OVER,PICK2,PICK3,PICK4,SWAP,NIP,
-ROT,DUP2,DROP2,DROP3,DROP4,OVER2,SWAP2,
+ROT,MROT,DUP2,DROP2,DROP3,DROP4,OVER2,SWAP2,
 TOR,RFROM,ERRE,
-AND,OR,XOR,
+AND,OR,XOR,NAND,
 ADD,SUB,MUL,DIV,
 SHL,SHR,SHR0,
 MOD,DIVMOD,MULDIV,MULSHR,CDIVSH,
@@ -163,9 +195,9 @@ SYSCALL0,SYSCALL1,SYSCALL2,SYSCALL3,SYSCALL4,SYSCALL5,
 SYSCALL6,SYSCALL7,SYSCALL8,SYSCALL9,SYSCALL10,
 //DOT,DOTS,
 
-ENDWORD, // !! cut the dicc !!!
+//ENDWORD, // !! cut the dicc !!!
 JMP,JMPR,LIT2,LIT3,	// internal
-AND1,OR1,XOR1,		// OPTIMIZATION WORDS
+AND1,OR1,XOR1,NAND1,		// OPTIMIZATION WORDS
 ADD1,SUB1,MUL1,DIV1,
 SHL1,SHR1,SHR01,
 MOD1,DIVMOD1,MULDIV1,MULSHR1,CDIVSH1,
@@ -201,8 +233,8 @@ if ((n&0xff)<5 && n!=0) {
 	printf(r3bas[n&0xff]);printf(" >> %d",n>>8);
 } else if ((n&0xff)>=IFL1 && (n&0xff)<=IFNAND1) {	
 	printf(r3bas[n&0xff]);printf(" %d",n>>16);printf(" >> %d",n<<16>>24);
-} else if ((n&0xff)>ENDWORD ) {
-	printf(r3bas[n&0xff]);printf(" %d",n>>8);	
+} else if ((n&0xff)>SYSCALL10 ) {
+	printf(r3bas[(n&0xff)+1]);printf(" %d",n>>8);	
 } else 
 	printf(r3bas[n&0xff]);
 printf("\n");
@@ -211,7 +243,7 @@ printf("\n");
 void dumpcode()
 {
 printf("code\n");
-printf("boot:%d\n",boot);
+printf("boot:%x\n",boot);
 for(int i=1;i<memc;i++) {
 	printf("%x:",i);
 	printcode(memcode[i]);
@@ -238,8 +270,8 @@ printf("diccionario\n");
 for(int i=0;i<cntdicc;i++) {
 	printf("%d. ",i);
 	printword(dicc[i].nombre);
-	printf("%d ",dicc[i].mem);	
-	printf("%d \n",dicc[i].info);	
+	printf("%x ",dicc[i].mem);	
+	printf("%x \n",dicc[i].info);	
 	}
 }
 
@@ -250,13 +282,6 @@ for(int i=0;i<cntdicc;i++) {
 
 // scan for a valid number begin in *p char
 // return number in global var "nro"
-
-typedef __INT64_TYPE__ int64_t;
-typedef __UINT64_TYPE__ uint64_t;
-typedef __INT32_TYPE__ int32_t;
-typedef __UINT32_TYPE__ uint32_t;
-typedef __INT16_TYPE__ int16_t;
-typedef __UINT16_TYPE__ uint16_t;
 
 int64_t nro=0;
 
@@ -414,7 +439,7 @@ if (*(str+1)=='#') { ex=1;str++; } // exported
 dicc[cntdicc].nombre=str+1;
 memd+=memd&3; // align data!!! (FILL break error)
 dicc[cntdicc].mem=memd;
-dicc[cntdicc].info=ex+0x10;	// 0x10 es dato
+dicc[cntdicc].info=ex|0x10;	// 0x10 es dato
 cntdicc++;
 modo=2;
 }
@@ -434,6 +459,7 @@ if (*(str+1)<33) {
 	if (ex!=-1) { codetok((ex<<8)+CALL); } // call to prev boot code
 	}
 modo=1;
+lastblock=memc;
 }
 
 // store in datamemory a string
@@ -569,14 +595,54 @@ if (n==4) modo=2; // ]
 if (n==MUL) modo=3; // * reserva bytes Qword Dword Kbytes
 }
 
+int lite(int tok) { return (tok>>8); }
+int fit(int n) { return ((n<<8>>8)==n);}
+void back(int n) { memcode[memc-2]=(n<<8)|LIT;memc--; }
+void back1(int n) { memcode[memc-1]=(n<<8)|LIT; }
+
+int constfold(int n,int tok1,int tok2) // TOS,NOS
+{ int t;
+switch(n) {
+	case AND: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	case OR: t=lite(tok1)|lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	case XOR: t=lite(tok1)^lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	case NAND: t=(~lite(tok1))&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	case ADD: t=lite(tok1)+lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	case SUB: t=lite(tok2)-lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	case MUL: t=lite(tok1)*lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	case DIV: t=lite(tok2)/lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	case SHL: t=lite(tok2)<<lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	case SHR: t=lite(tok2)>>lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	case SHR0: t=(uint64_t)(lite(tok2))>>lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	case MOD: t=lite(tok2)%lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	//case DIVMOD: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;\
+	//case MULDIV: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	//case MULSHR: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	//case CDIVSH: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	case NOT: t=~lite(tok1);if (fit(t)) { back1(t);return 1; } break;
+	case NEG: t=-lite(tok1);if (fit(t)) { back1(t);return 1; } break;
+	case ABS: t=lite(tok1);if (t<0)t=-t;if (fit(t)) { back1(t);return 1; } break;
+	case CSQRT: t=isqrt(lite(tok1));if (fit(t)) { back1(t);return 1; } break;
+	case CLZ: t=iclz(lite(tok1));if (fit(t)) { back1(t);return 1; } break;
+	}
+	
+return 0;
+}
 // compile word from base diccionary
 void compilaMAC(int n) 
 {
+int tokpre=(lastblock==memc)?0:memcode[memc-1];
+int tokpre2=(lastblock==memc-1)?0:memcode[memc-2];
 if (modo>1) { dataMAC(n);return; }
 if (n==0) { 					// ;
-	if (level==0) modo=0; 
-	if ((memcode[memc-1]&0xff)==CALL && lastblock!=memc) { // avoid jmp to block
-		memcode[memc-1]=(memcode[memc-1]^CALL)|JMP; // call->jmp avoid ret
+	if (level==0) { 
+		modo=0; 
+		if (memc-dicc[cntdicc-1].mem<4) dicc[cntdicc-1].info|=2; // INLINE (until 5 tokens)
+	} else {
+		dicc[cntdicc-1].info|=4; // multi ;
+		}
+	if ((tokpre&0xff)==CALL) { // avoid jmp to block
+		memcode[memc-1]=(tokpre^CALL)|JMP; // call->jmp avoid ret
 		return;
 		}
 	}
@@ -584,38 +650,83 @@ if (n==1) { blockIn();return; }		//(	etiqueta
 if (n==2) { blockOut();return; }	//)	salto
 if (n==3) { anonIn();return; }		//[	salto:etiqueta
 if (n==4) { anonOut();return; }		//]	etiqueta;push
-
 ///////////////////////// OPTIMIZATION
 // CONSTANT FOLDING
-
-// INLINE
-
-int token=memcode[memc-1];
+if (n>=AND && n<=CLZ && (tokpre&0xff)==LIT) {
+	if (constfold(n,tokpre,tokpre2)==1) return;
+	}
 // optimize conditional jump to short version
-if (n>=IFL && n<=IFNAND && (token&0xff)==LIT && (token<<8>>16)==(token>>8)) { 
-	memcode[memc-1]=((token<<8)&0xffff0000)|(n-IFL+IFL1);
+if (n>=IFL && n<=IFNAND && (tokpre&0xff)==LIT && (tokpre<<8>>16)==(tokpre>>8)) { 
+	memcode[memc-1]=((tokpre<<8)&0xffff0000)|(n-IFL+IFL1);
 	return; 
+	}
+// SHLR  (<<)(>>)
+if (n==SHR && (tokpre&0xff)==LIT && (tokpre2&0xff)==SHL1) {
+	memcode[memc-2]=((tokpre<<8)&0xff0000)|(tokpre2&0xff00)|SHLR;
+	memc--;
+	return; 	
+	}
+// SHLAR  (>>)(and)
+if (n==AND && (tokpre&0xff)==LIT && (tokpre2&0xff)==SHR1) {
+	memcode[memc-2]=((tokpre<<8)&0xff0000)|(tokpre2&0xff00)|SHLAR;
+	memc--;
+	return; 	
 	}
 // optimize operation with constant (NRO OP)
-if (n>=AND && n<=CDIVSH && (token&0xff)==LIT && lastblock!=memc) { 
-	memcode[memc-1]=(token^LIT)|(n-ADD+ADD1);
+//if (n>=AND && n<=CDIVSH && (tokpre&0xff)==LIT && lastblock!=memc) { 
+if (n>=AND && n<=CDIVSH && (tokpre&0xff)==LIT) { 
+	memcode[memc-1]=(tokpre^LIT)|(n-ADD+ADD1);
 	return; 
 	}
-
-// SHLR  (>>)(<<)
-// SHLAR  (>>)(and)
-// cte + @ c@ w@ d@ 
-// cte + ! c! w! d!
-// 1|2|3 << + @ c@ w@ d@ 
+// 1|2|3 << + @ c@ w@ d@
+if (n>=FECH && n<=DFECH && (tokpre&0xff)==ADD && (tokpre2&0xff)==SHL1 && (tokpre2>>8)<4 && (tokpre2>>8)>0) {
+	memcode[memc-2]=FECH1+((n-FECH)*3)+(tokpre2>>8)-1; // 0 1 2 3 * + 1 2 3 
+	memc--;
+	return;
+	}
+// cte + @ c@ w@ d@ 	
+if (n>=FECH && n<=DFECH && (tokpre&0xff)==ADD1) {
+	memcode[memc-1]=(tokpre^ADD1)|(n-FECH+FECHa);
+	return;
+	}
 // 1|2|3 << + ! c! w! d!
+if (n>=STOR && n<=DSTOR && (tokpre&0xff)==ADD && (tokpre2&0xff)==SHL1 && (tokpre2>>8)<4 && (tokpre2>>8)>0) {
+	memcode[memc-2]=STOR1+((n-STOR)*3)+(tokpre2>>8)-1; // 0 1 2 3 * + 1 2 3 
+	memc--;
+	return;
+	}
+// cte + ! c! w! d!
+if (n>=STOR && n<=DSTOR && (tokpre&0xff)==ADD1) {
+	memcode[memc-1]=(tokpre^ADD1)|(n-STOR+STORa);
+	return;
+	}
+	
 ///////////////////////// OPTIMIZATION
 codetok(n);	
+}
+
+void compilainline(int memt) 
+{
+//printf("INLINE %x :\n",memt);
+int i;
+for(i=memt;(memcode[i]!=0)&&(memcode[i]&0xff)!=JMP;i++) {
+	//printf("INLINE %d\n",dicc[n].mem);
+//	printf("%x ",memc);printcode(memcode[i]);
+	codetok(memcode[i]);
+	}
+if ((memcode[i]&0xff)==JMP) {
+	codetok((memcode[i]^JMP)|CALL);
+//	printf("%x ",memc);printcode(memcode[i]);
+	}
+//printf("\n");
 }
 
 // compile word
 void compilaWORD(int n) 
 {
 if (modo>1) { datanro(n);return; }
+//printf("COMPILA %x (%x)\n",dicc[n].mem,dicc[n].info);
+if ((dicc[n].info&6)==2) { compilainline(dicc[n].mem);return; } // INLINE, no ;;
 codetok((dicc[n].mem<<8)+CALL+((dicc[n].info>>4)&1));
 }
 
@@ -888,22 +999,7 @@ return -1;
 //----------------------
 /*--------RUNER--------*/
 //----------------------
-#define iclz(x) __builtin_clz(x)
 
-// http://www.devmaster.net/articles/fixed-point-optimizations/
-static inline int64_t isqrt(int64_t value)
-{
-if (value==0) return 0;
-int bshft = (63-iclz(value))>>1;  // spot the difference!
-int64_t g = 0;
-int64_t b = 1<<bshft;
-do {
-	int64_t temp = (g+g+b)<<bshft;
-	if (value >= temp) { g += b;value -= temp;	}
-	b>>=1;
-} while (bshft--);
-return g;
-}
 
 //---------------------------//
 // TOS..DSTACK--> <--RSTACK  //
@@ -985,6 +1081,7 @@ next:
 	case SWAP:op=*NOS;*NOS=TOS;TOS=op;goto next;		//SWAP
 	case NIP:NOS--;goto next; 						//NIP
 	case ROT:op=TOS;TOS=*(NOS-1);*(NOS-1)=*NOS;*NOS=op;goto next;	//ROT
+	case MROT:op=TOS;TOS=*(NOS);*NOS=*(NOS-1);*(NOS-1)=op;goto next;	//-ROT
 	case DUP2:op=*NOS;NOS++;*NOS=TOS;NOS++;*NOS=op;goto next;//DUP2
 	case DROP2:NOS--;TOS=*NOS;NOS--;goto next;				//DROP2
 	case DROP3:NOS-=2;TOS=*NOS;NOS--;goto next;				//DROP3
@@ -999,6 +1096,7 @@ next:
 	case AND:TOS&=*NOS;NOS--;goto next;					//AND
 	case OR:TOS|=*NOS;NOS--;goto next;					//OR
 	case XOR:TOS^=*NOS;NOS--;goto next;					//XOR
+	case NAND:TOS&=~(*NOS);NOS--;goto next;					//NAND
 	case ADD:TOS=*NOS+TOS;NOS--;goto next;				//SUMA
 	case SUB:TOS=*NOS-TOS;NOS--;goto next;				//RESTA
 	case MUL:TOS=*NOS*TOS;NOS--;goto next;				//MUL
@@ -1012,14 +1110,14 @@ next:
 	case MULSHR:TOS=((long long)(*(NOS-1)*(*NOS))>>TOS);NOS-=2;goto next;	//MULSHR
 	case CDIVSH:TOS=(long long)((*(NOS-1)<<TOS)/(*NOS));NOS-=2;goto next;//CDIVSH
 	case NOT:TOS=~TOS;goto next;							//NOT
-	case NEG:TOS=-TOS;goto next;							//NEG
-	case ABS:op=(TOS>>63);TOS=(TOS+op)^op;goto next;		//ABS
-	case CSQRT:TOS=isqrt(TOS);goto next;					//CSQRT
-	case CLZ:TOS=iclz(TOS);goto next;					//CLZ
-	case FECH:TOS=*(int64_t*)TOS;goto next;//@
-	case CFECH:TOS=*(char*)TOS;goto next;//C@
-	case WFECH:TOS=*(int16_t*)TOS;goto next;//W@	
-	case DFECH:TOS=*(int32_t*)TOS;goto next;//D@		
+	case NEG:TOS=-TOS;goto next;					//NEG
+	case ABS:if(TOS<0)TOS=-TOS;goto next;			//ABS
+	case CSQRT:TOS=isqrt(TOS);goto next;			//CSQRT
+	case CLZ:TOS=iclz(TOS);goto next;				//CLZ
+	case FECH:TOS=*(int64_t*)TOS;goto next;		//@
+	case CFECH:TOS=*(char*)TOS;goto next;		//C@
+	case WFECH:TOS=*(int16_t*)TOS;goto next;	//W@
+	case DFECH:TOS=*(int32_t*)TOS;goto next;	//D@
 	case FECHPLUS:NOS++;*NOS=TOS+8;TOS=*(int64_t*)TOS;goto next;//@+
 	case CFECHPLUS:NOS++;*NOS=TOS+1;TOS=*(char*)TOS;goto next;// C@+
 	case WFECHPLUS:NOS++;*NOS=TOS+2;TOS=*(int16_t*)TOS;goto next;//W@+			
@@ -1162,7 +1260,7 @@ next:
 	case DOT:printf("%llx ",TOS);TOS=*NOS;NOS--;goto next;
 	case DOTS:printf((char*)TOS);TOS=*NOS;NOS--;goto next;
 */	
-	case ENDWORD: goto next;
+	//case ENDWORD: goto next;
 //----------------- ONLY INTERNAL
 	case JMP:ip=(op>>8);goto next;//JMP							// JMP
 	case JMPR:ip+=(op>>8);goto next;//JMP						// JMPR	
@@ -1172,6 +1270,7 @@ next:
 	case AND1:TOS&=op>>8;goto next;
 	case OR1:TOS|=op>>8;goto next;
 	case XOR1:TOS^=op>>8;goto next;
+	case NAND1:TOS&=~(op>>8);goto next;
 	case ADD1:TOS+=op>>8;goto next;
 	case SUB1:TOS-=op>>8;goto next;
 	case MUL1:TOS*=op>>8;goto next;
@@ -1192,46 +1291,45 @@ next:
 	case IFNE1:if ((op<<32>>48)==TOS) ip+=(op<<48>>56);goto next;//IFNO
 	case IFAND1:if (!((op<<32>>48)&TOS)) ip+=(op<<48>>56);goto next;//IFNA
 	case IFNAND1:if ((op<<32>>48)&TOS) ip+=(op<<48>>56);goto next;//IFAN
-
 	// signed and unsigned transformation
 	case SHLR:TOS=(TOS<<((op>>8)&0xff))>>(op>>16);goto next; // SHLR  (>>)(<<)
 	case SHLAR:TOS=(TOS<<((op>>8)&0xff))&(op>>16);goto next; // SHRAND  (>>)(and)
 	// cte + @ c@ w@ d@ 
-	case FECHa:TOS=*(int64_t*)(TOS+(op>>16));goto next;//+@
-	case CFECHa:TOS=*(char*)(TOS+(op>>16));goto next;//1<<+C@
-	case WFECHa:TOS=*(int16_t*)(TOS+(op>>16));goto next;//1<<+W@
-	case DFECHa:TOS=*(int32_t*)(TOS+(op>>16));goto next;//1<<+D@
+	case FECHa:TOS=*(int64_t*)(TOS+(op>>8));goto next;//+ @
+	case CFECHa:TOS=*(char*)(TOS+(op>>8));goto next;//+C@
+	case WFECHa:TOS=*(int16_t*)(TOS+(op>>8));goto next;//+W@
+	case DFECHa:TOS=*(int32_t*)(TOS+(op>>8));goto next;//+D@
 	// cte + ! c! w! d!
-	case STORa:*(int64_t*)(TOS+(op>>16))=(int64_t)*NOS;NOS--;TOS=*NOS;NOS--;goto next;// !
-	case CSTORa:*(char*)(TOS+(op>>16))=(char)*NOS;NOS--;TOS=*NOS;NOS--;goto next;//C!
-	case WSTORa:*(int16_t*)(TOS+(op>>16))=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//W!		
-	case DSTORa:*(int32_t*)(TOS+(op>>16))=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//D!
+	case STORa:*(int64_t*)(TOS+(op>>8))=(int64_t)*NOS;NOS--;TOS=*NOS;NOS--;goto next;// + !
+	case CSTORa:*(char*)(TOS+(op>>8))=(char)*NOS;NOS--;TOS=*NOS;NOS--;goto next;//+ C!
+	case WSTORa:*(int16_t*)(TOS+(op>>8))=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//+ W!
+	case DSTORa:*(int32_t*)(TOS+(op>>8))=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//+ D!
 	// 1|2|3 << + @ c@ w@ d@ 
-	case FECH1:TOS=*(int64_t*)(TOS<<1+(*NOS));NOS--;goto next;//1<<+@
-	case FECH2:TOS=*(int64_t*)(TOS<<2+(*NOS));NOS--;goto next;//2<<+@
-	case FECH3:TOS=*(int64_t*)(TOS<<3+(*NOS));NOS--;goto next;//3<<+@
-	case CFECH1:TOS=*(char*)(TOS<<1+(*NOS));NOS--;goto next;//1<<+C@
-	case CFECH2:TOS=*(char*)(TOS<<2+(*NOS));NOS--;goto next;//2<<+C@
-	case CFECH3:TOS=*(char*)(TOS<<3+(*NOS));NOS--;goto next;//3<<+C@
-	case WFECH1:TOS=*(int16_t*)(TOS<<1+(*NOS));NOS--;goto next;//1<<+W@
-	case WFECH2:TOS=*(int16_t*)(TOS<<2+(*NOS));NOS--;goto next;//2<<+W@
-	case WFECH3:TOS=*(int16_t*)(TOS<<3+(*NOS));NOS--;goto next;//3<<+W@
-	case DFECH1:TOS=*(int32_t*)(TOS<<1+(*NOS));NOS--;goto next;//1<<+D@
-	case DFECH2:TOS=*(int32_t*)(TOS<<2+(*NOS));NOS--;goto next;//2<<+D@
-	case DFECH3:TOS=*(int32_t*)(TOS<<3+(*NOS));NOS--;goto next;//3<<+D@
+	case FECH1:TOS=*(int64_t*)((TOS<<1)+(*NOS));NOS--;goto next;//1<<+@
+	case FECH2:TOS=*(int64_t*)((TOS<<2)+(*NOS));NOS--;goto next;//2<<+@
+	case FECH3:TOS=*(int64_t*)((TOS<<3)+(*NOS));NOS--;goto next;//3<<+@
+	case CFECH1:TOS=*(char*)((TOS<<1)+(*NOS));NOS--;goto next;//1<<+C@
+	case CFECH2:TOS=*(char*)((TOS<<2)+(*NOS));NOS--;goto next;//2<<+C@
+	case CFECH3:TOS=*(char*)((TOS<<3)+(*NOS));NOS--;goto next;//3<<+C@
+	case WFECH1:TOS=*(int16_t*)((TOS<<1)+(*NOS));NOS--;goto next;//1<<+W@
+	case WFECH2:TOS=*(int16_t*)((TOS<<2)+(*NOS));NOS--;goto next;//2<<+W@
+	case WFECH3:TOS=*(int16_t*)((TOS<<3)+(*NOS));NOS--;goto next;//3<<+W@
+	case DFECH1:TOS=*(int32_t*)((TOS<<1)+(*NOS));NOS--;goto next;//1<<+D@
+	case DFECH2:TOS=*(int32_t*)((TOS<<2)+(*NOS));NOS--;goto next;//2<<+D@
+	case DFECH3:TOS=*(int32_t*)((TOS<<3)+(*NOS));NOS--;goto next;//3<<+D@
 	// 1|2|3 << + ! c! w! d!
-	case STOR1:*(int64_t*)(TOS<<1+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;// 1<<+!
-	case STOR2:*(int64_t*)(TOS<<2+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;// 2<<+!
-	case STOR3:*(int64_t*)(TOS<<3+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;// 3<<+!
-	case CSTOR1:*(char*)(TOS<<1+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//1<<+C!
-	case CSTOR2:*(char*)(TOS<<2+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//2<<+C!
-	case CSTOR3:*(char*)(TOS<<3+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//3<<+C!
-	case WSTOR1:*(int16_t*)(TOS<<1+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//1<<+W!
-	case WSTOR2:*(int16_t*)(TOS<<2+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//2<<+W!
-	case WSTOR3:*(int16_t*)(TOS<<3+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//3<<+W!
-	case DSTOR1:*(int32_t*)(TOS<<1+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//1<<+D!
-	case DSTOR2:*(int32_t*)(TOS<<2+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//2<<+D!
-	case DSTOR3:*(int32_t*)(TOS<<3+(*NOS))=*(NOS-1);TOS=*(NOS-1);NOS-=2;goto next;//3<<+D!
+	case STOR1:*(int64_t*)((TOS<<1)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=2;goto next;// 1<<+!
+	case STOR2:*(int64_t*)((TOS<<2)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=2;goto next;// 2<<+!
+	case STOR3:*(int64_t*)((TOS<<3)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=2;goto next;// 3<<+!
+	case CSTOR1:*(char*)((TOS<<1)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=2;goto next;//1<<+C!
+	case CSTOR2:*(char*)((TOS<<2)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=2;goto next;//2<<+C!
+	case CSTOR3:*(char*)((TOS<<3)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=2;goto next;//3<<+C!
+	case WSTOR1:*(int16_t*)((TOS<<1)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=2;goto next;//1<<+W!
+	case WSTOR2:*(int16_t*)((TOS<<2)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=2;goto next;//2<<+W!
+	case WSTOR3:*(int16_t*)((TOS<<3)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=2;goto next;//3<<+W!
+	case DSTOR1:*(int32_t*)((TOS<<1)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=2;goto next;//1<<+D!
+	case DSTOR2:*(int32_t*)((TOS<<2)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=2;goto next;//2<<+D!
+	case DSTOR3:*(int32_t*)((TOS<<3)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=2;goto next;//3<<+D!
 	// or!
 	// and!
 	// xor!
