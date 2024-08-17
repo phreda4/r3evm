@@ -1010,7 +1010,7 @@ while (RTOS>=R) {
 void printstackd(__int64 *T){
 __int64 *TOS=stack;
 while (TOS<=T) {
-	printf("%d ",*TOS);
+	printf("%lld ",*TOS);
 	TOS++;
 }
 }
@@ -1038,8 +1038,7 @@ register int ip=boot;
 next:
 	op=memcode[ip++]; 
 	
-//	printstack(RTOS);
-//printf("%x|%x: %llx |",ip,op,TOS);printcode(op);
+//printstackd(NOS);printf("%d |%x: %llx |",TOS,ip,op);printcode(op);
 	
 	switch(op&0xff){
 	case FIN:ip=*RTOS;RTOS++;if (ip==0) return;
@@ -1227,27 +1226,27 @@ next:
 		
 		 
 	case SYSCALL0: // adr -- rs
-		TOS=(int)(* (int(*)())TOS)();goto next;
+		TOS=(__int64)(* (__int64(*)())TOS)();goto next;
 	case SYSCALL1: // a0 adr -- rs 
-		TOS=(int)(* (int(*)(int))TOS)(*NOS);NOS--;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64))TOS)(*NOS);NOS--;goto next;
 	case SYSCALL2: // a1 a0 adr -- rs 
-		TOS=(int)(* (int(*)(int,int))TOS)(*(NOS-1),*NOS);NOS-=2;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64))TOS)(*(NOS-1),*NOS);NOS-=2;goto next;
 	case SYSCALL3: // a1 a0 adr -- rs 
-		TOS=(int)(* (int(*)(int,int,int))TOS)(*(NOS-2),*(NOS-1),*NOS);NOS-=3;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64))TOS)(*(NOS-2),*(NOS-1),*NOS);NOS-=3;goto next;
 	case SYSCALL4: // a1 a0 adr -- rs 
-		TOS=(int)(* (int(*)(int,int,int,int))TOS)(*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=4;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64))TOS)(*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=4;goto next;
 	case SYSCALL5: // a1 a0 adr -- rs 
-		TOS=(int)(* (int(*)(int,int,int,int,int))TOS)(*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=5;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64))TOS)(*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=5;goto next;
 	case SYSCALL6: // a1 a0 adr -- rs 
-		TOS=(int)(* (int(*)(int,int,int,int,int,int))TOS)(*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=6;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64))TOS)(*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=6;goto next;
 	case SYSCALL7: // a1 a0 adr -- rs 
-		TOS=(int)(* (int(*)(int,int,int,int,int,int,int))TOS)(*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=7;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64))TOS)(*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=7;goto next;
 	case SYSCALL8: // a1 a0 adr -- rs 
-		TOS=(int)(* (int(*)(int,int,int,int,int,int,int,int))TOS)(*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=8;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))TOS)(*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=8;goto next;
 	case SYSCALL9: // a1 a0 adr -- rs 
-		TOS=(int)(* (int(*)(int,int,int,int,int,int,int,int,int))TOS)(*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=9;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))TOS)(*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=9;goto next;
 	case SYSCALL10: // a1 a0 adr -- rs 
-		TOS=(int)(* (int(*)(int,int,int,int,int,int,int,int,int,int))TOS)(*(NOS-9),*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=10;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))TOS)(*(NOS-9),*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=10;goto next;
 /* -- DEBUG
 	case DOT:printf("%llx ",TOS);TOS=*NOS;NOS--;goto next;
 	case DOTS:printf((char*)TOS);TOS=*NOS;NOS--;goto next;
@@ -1272,17 +1271,17 @@ next:
 	case SHR01:TOS=(unsigned __int64)TOS>>(op>>8);goto next;
 	case MOD1:TOS=TOS%(op>>8);goto next;
 	case DIVMOD1:op>>=8;NOS++;*NOS=TOS/op;TOS=TOS%op;goto next;	//DIVMOD
-	case MULDIV1:op>>=8;TOS=((__int128)(*NOS)*TOS)/op;NOS--;goto next;		//MULDIV
+	case MULDIV1:op>>=8;TOS=(__int128)(*NOS)*TOS/op;NOS--;goto next;		//MULDIV
 	case MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;goto next;	//MULSHR
-	case CDIVSH1:op>>=8;TOS=((__int128)(*NOS)<<op)/TOS;NOS--;goto next;	//CDIVSH
-	case IFL1:if ((op<<32>>48)<=TOS) ip+=(op<<48>>56);goto next;	//IFL
-	case IFG1:if ((op<<32>>48)>=TOS) ip+=(op<<48>>56);goto next;	//IFG
-	case IFE1:if ((op<<32>>48)!=TOS) ip+=(op<<48>>56);goto next;	//IFN
-	case IFGE1:if ((op<<32>>48)>TOS) ip+=(op<<48>>56);goto next;	//IFGE
-	case IFLE1:if ((op<<32>>48)<TOS) ip+=(op<<48>>56);goto next;	//IFLE
-	case IFNE1:if ((op<<32>>48)==TOS) ip+=(op<<48>>56);goto next;//IFNO
-	case IFAND1:if (!((op<<32>>48)&TOS)) ip+=(op<<48>>56);goto next;//IFNA
-	case IFNAND1:if ((op<<32>>48)&TOS) ip+=(op<<48>>56);goto next;//IFAN
+	case CDIVSH1:op>>=8;TOS=(__int128)((*NOS)<<op)/TOS;NOS--;goto next;	//CDIVSH
+	case IFL1:if ((op>>16)<=TOS) ip+=(op<<48>>56);goto next;	//IFL <<32>>49
+	case IFG1:if ((op>>16)>=TOS) ip+=(op<<48>>56);goto next;	//IFG
+	case IFE1:if ((op>>16)!=TOS) ip+=(op<<48>>56);goto next;	//IFN
+	case IFGE1:if ((op>>16)>TOS) ip+=(op<<48>>56);goto next;	//IFGE
+	case IFLE1:if ((op>>16)<TOS) ip+=(op<<48>>56);goto next;	//IFLE
+	case IFNE1:if ((op>>16)==TOS) ip+=(op<<48>>56);goto next;//IFNO
+	case IFAND1:if (!((op>>16)&TOS)) ip+=(op<<48>>56);goto next;//IFNA
+	case IFNAND1:if ((op>>16)&TOS) ip+=(op<<48>>56);goto next;//IFAN
 	// signed and unsigned transformation
 	case SHLR:TOS=(TOS<<((op>>8)&0xff))>>(op>>16);goto next; // SHLR  (>>)(<<)
 	case SHLAR:TOS=(TOS>>((op>>8)&0xff))&(op>>16);goto next; // SHRAND  (>>)(and)
@@ -1292,10 +1291,10 @@ next:
 	case WFECHa:TOS=*(__int16*)(TOS+(op>>8));goto next;//+W@
 	case DFECHa:TOS=*(__int32*)(TOS+(op>>8));goto next;//+D@
 	// cte + ! c! w! d!
-	case STORa:*(__int64*)(TOS+(op>>8))=*NOS;NOS--;TOS=*(NOS-1);NOS-=2;goto next;// + !
-	case CSTORa:*(char*)(TOS+(op>>8))=*NOS;NOS--;TOS=*(NOS-1);NOS-=2;goto next;//+ C!
-	case WSTORa:*(__int16*)(TOS+(op>>8))=*NOS;NOS--;TOS=*(NOS-1);NOS-=2;goto next;//+ W!
-	case DSTORa:*(__int32*)(TOS+(op>>8))=*NOS;NOS--;TOS=*(NOS-1);NOS-=2;goto next;//+ D!
+	case STORa:*(__int64*)(TOS+(op>>8))=*NOS;TOS=*(NOS-1);NOS-=2;goto next;// + !
+	case CSTORa:*(char*)(TOS+(op>>8))=*NOS;TOS=*(NOS-1);NOS-=2;goto next;//+ C!
+	case WSTORa:*(__int16*)(TOS+(op>>8))=*NOS;TOS=*(NOS-1);NOS-=2;goto next;//+ W!
+	case DSTORa:*(__int32*)(TOS+(op>>8))=*NOS;TOS=*(NOS-1);NOS-=2;goto next;//+ D!
 	// 1|2|3 << + @ c@ w@ d@ 
 	case FECH1:TOS=*(__int64*)((TOS<<1)+(*NOS));NOS--;goto next;//1<<+@
 	case FECH2:TOS=*(__int64*)((TOS<<2)+(*NOS));NOS--;goto next;//2<<+@
