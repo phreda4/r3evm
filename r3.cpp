@@ -150,7 +150,8 @@ const char *r3bas[]={
 "1<<+!","2<<+!","3<<+!",
 "1<<+!C","2<<+!C","3<<+!C",
 "1<<+!W","2<<+!W","3<<+!W",
-"1<<+!D","2<<+!D","3<<+!D"
+"1<<+!D","2<<+!D","3<<+!D",
+"AA1","BA1"
 /**/
 #endif
 };
@@ -207,7 +208,8 @@ DFECH1,DFECH2,DFECH3,
 STOR1,STOR2,STOR3,
 CSTOR1,CSTOR2,CSTOR3,
 WSTOR1,WSTOR2,WSTOR3,
-DSTOR1,DSTOR2,DSTOR3
+DSTOR1,DSTOR2,DSTOR3,
+AA1,BA1
 };
 
 //////////////////////////////////////
@@ -704,7 +706,12 @@ if (n>=STOR && n<=DSTOR && (tokpre&0xff)==ADD1) {
 	memcode[memc-1]=(tokpre^ADD1)|(n-STOR+STORa);
 	return;
 	}
-	
+// cte a+ b+
+if ((tokpre&0xff)==LIT && (n==AA||n==BA)) {
+	memcode[memc-1]=(tokpre^LIT)|((n==AA)?AA1:BA1);
+	return;
+	}
+
 ///////////////////////// OPTIMIZATION
 codetok(n);	
 }
@@ -1329,6 +1336,8 @@ next:
 	case DSTOR1:*(__int32*)((TOS<<1)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;//1<<+D!
 	case DSTOR2:*(__int32*)((TOS<<2)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;//2<<+D!
 	case DSTOR3:*(__int32*)((TOS<<3)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;//3<<+D!
+	case AA1:REGA+=(op>>8);goto next;//LIT A+ 	
+	case BA1:REGB+=(op>>8);goto next;//LIT B+ 	
 	// or!
 	// and!
 	// xor!
