@@ -5,6 +5,7 @@
 //  with cell size of 64 bits, 
 //
 
+//#define DEBUG
 //#define LINUX
 //#define RPI   // Tested on a Raspberry PI 4
 
@@ -98,7 +99,7 @@ const char *r3bas[]={
 ";","(",")","[","]",
 "EX",
 "0?","1?","+?","-?", 								
-"<?",">?","=?",">=?","<=?","<>?","AND?","NAND?","BT?",
+"<?",">?","=?",">=?","<=?","<>?","AND?","NAND?","IN?",
 "DUP","DROP","OVER","PICK2","PICK3","PICK4","SWAP","NIP",
 "ROT","-ROT","2DUP","2DROP","3DROP","4DROP","2OVER","2SWAP",
 ">R","R>","R@",
@@ -131,9 +132,10 @@ const char *r3bas[]={
 
 //".",".S",
 "",// !!cut the dicc!!!
+#ifdef DEBUG
 /**/
-"JMP","JMPR","LIT2","LIT3",	// internal only
-"AND_L","OR_L","XOR_L","NAND_L", // OPTIMIZATION WORDS
+"JMP","JMPR","LIT2","LIT3","LITF",	// internal only
+"AND_L","OR_L","XOR_L","NAND_L",	// OPTIMIZATION WORDS
 "+_L","-_L","*_L","/_L",
 "<<_L",">>_L",">>>_L",
 "MOD_L","/MOD_L","* /_L","*>>_L","<</_L",
@@ -150,6 +152,7 @@ const char *r3bas[]={
 "1<<+!W","2<<+!W","3<<+!W",
 "1<<+!D","2<<+!D","3<<+!D"
 /**/
+#endif
 };
 
 //------ enumaration for table jump
@@ -187,9 +190,8 @@ LOADLIB,GETPROCA,
 SYSCALL0,SYSCALL1,SYSCALL2,SYSCALL3,SYSCALL4,SYSCALL5,
 SYSCALL6,SYSCALL7,SYSCALL8,SYSCALL9,SYSCALL10,
 //DOT,DOTS,
-
 //ENDWORD, // !! cut the dicc !!!
-JMP,JMPR,LIT2,LIT3,	// internal
+JMP,JMPR,LIT2,LIT3,LITF,	// internal
 AND1,OR1,XOR1,NAND1,		// OPTIMIZATION WORDS
 ADD1,SUB1,MUL1,DIV1,
 SHL1,SHR1,SHR01,
@@ -206,12 +208,12 @@ STOR1,STOR2,STOR3,
 CSTOR1,CSTOR2,CSTOR3,
 WSTOR1,WSTOR2,WSTOR3,
 DSTOR1,DSTOR2,DSTOR3
-
 };
 
 //////////////////////////////////////
 // DEBUG -- remove when all work ok
 //////////////////////////////////////
+#ifdef DEBUG
 void printword(char *s)
 {
 while (*s>32) putchar(*s++);
@@ -238,7 +240,7 @@ void dumpcode()
 printf("code\n");
 printf("boot:%x\n",boot);
 for(int i=1;i<memc;i++) {
-	printf("%x:",i);
+	printf("%x:%x:",i,memcode[i]);
 	printcode(memcode[i]);
 	}
 printf("\n");
@@ -267,7 +269,7 @@ for(int i=0;i<cntdicc;i++) {
 	printf("%x \n",dicc[i].info);	
 	}
 }
-
+#endif
 
 //////////////////////////////////////
 // Compiler: from text to dwordcodes
@@ -430,7 +432,7 @@ int ex=0;
 closevar();
 if (*(str+1)=='#') { ex=1;str++; } // exported
 dicc[cntdicc].nombre=str+1;
-//memd+=memd&3; // align data!!! (FILL break error)
+//memd+=memd&3; // align data!!!
 dicc[cntdicc].mem=memd;
 dicc[cntdicc].info=ex|0x10;	// 0x10 es dato
 cntdicc++;
@@ -506,6 +508,14 @@ if (modo>1) { datanro(n);return; }
 int token=n;
 codetok((token<<8)|LIT); 
 if ((token<<8>>8)==n) return;
+/* FAST but insegure for optimization */
+/*
+memc--;
+memcode[memc++]=LITF; 
+*(__int64*)&memcode[memc]=n;
+memc+=2;
+*/
+/* SLOW but not false token */
 token=n>>24;
 codetok((token<<8)|LIT2); 
 if ((token<<8>>8)==(n>>24)) return;
@@ -701,18 +711,13 @@ codetok(n);
 
 void compilainline(int memt) 
 {
-//printf("INLINE %x :\n",memt);
 int i;
 for(i=memt;(memcode[i]!=0)&&(memcode[i]&0xff)!=JMP;i++) {
-	//printf("INLINE %d\n",dicc[n].mem);
-//	printf("%x ",memc);printcode(memcode[i]);
 	codetok(memcode[i]);
 	}
 if ((memcode[i]&0xff)==JMP) {
 	codetok((memcode[i]^JMP)|CALL);
-//	printf("%x ",memc);printcode(memcode[i]);
 	}
-//printf("\n");
 }
 
 // compile word
@@ -741,12 +746,13 @@ for (char *p=src;p<cerror;p++)
 		line++;lc=p+1;
 	} else if (*p==13) { if (*(p+1)==10) p++;
 		line++;lc=p+1; }
-*nextcr(lc)=0; // put 0 in the end of line
-fprintf(stderr,"in: %s \n\n",name);;	
+*nextcr(lc)=0; // 0 in end of line
+lc=name;while(unsigned(*lc)>31) { lc++; } *lc=0; // 0 in end of name
+fprintf(stderr,"in: %s \n\n",name);
 fprintf(stderr,"%s\n",lc);
 for(char *p=lc;p<cerror;p++) if (*p==9) fprintf(stderr,"\t"); else fprintf(stderr," ");
 fprintf(stderr,"^-");
-fprintf(stderr,"ERROR %s, line %d\n\n",werror,line);	
+fprintf(stderr,"ERROR %s\nline %d char %d\n\n",werror,line,cerror-lc);	
 }
 
 // |WEB| emscripten only
@@ -1000,6 +1006,7 @@ return -1;
 #define STACKSIZE 256
 __int64 stack[STACKSIZE];
 
+#ifdef DEBUG
 void printstack(__int64 *R){
 __int64 *RTOS=&stack[STACKSIZE-1];
 while (RTOS>=R) {
@@ -1015,8 +1022,7 @@ while (TOS<=T) {
 	TOS++;
 }
 }
-
-FILE *file;
+#endif
 
 void memset32(unsigned __int32 *dest, unsigned __int32 val, unsigned __int32 count)
 { while (count--) *dest++ = val; }
@@ -1043,10 +1049,10 @@ next:
 	
 	switch(op&0xff){
 	case FIN:ip=*RTOS;RTOS++;if (ip==0) return;
-		goto next; 							// ;
+		goto next; 													// ;
 	case LIT:NOS++;*NOS=TOS;TOS=op>>8;goto next;					// LIT1
-	case ADR:NOS++;*NOS=TOS;TOS=(__int64)&memdata[op>>8];goto next;		// LIT adr
-	case CALL:RTOS--;*RTOS=ip;ip=(unsigned int)op>>8;goto next;	// CALL
+	case ADR:NOS++;*NOS=TOS;TOS=(__int64)&memdata[op>>8];goto next;	// LIT adr
+	case CALL:RTOS--;*RTOS=ip;ip=(unsigned int)op>>8;goto next;		// CALL
 	case VAR:NOS++;*NOS=TOS;TOS=*(__int64*)&memdata[op>>8];goto next;// VAR
 	case EX:RTOS--;*RTOS=ip;ip=TOS;TOS=*NOS;NOS--;goto next;		//EX
 	case ZIF:if (TOS!=0) {ip+=(op>>8);}; goto next;//ZIF
@@ -1061,9 +1067,7 @@ next:
 	case IFNE:if (TOS==*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFNO
 	case IFAND:if (!(TOS&*NOS)) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFNA
 	case IFNAND:if (TOS&*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFAN
-	case IFBT:if (*(NOS-1)>TOS||*(NOS-1)<*NOS) {ip+=(op>>8);} 
-		TOS=*(NOS-1);NOS-=2;goto next;//BTW (need bit trick) 	
-		//((unsigned __int64)*(NOS-1)-*NOS)>(TOS-(*NOS))
+	case IFBT:if ((unsigned __int64)(*(NOS-1)-*NOS)>(unsigned __int64)(TOS-(*NOS))){ip+=(op>>8);} TOS=*(NOS-1);NOS-=2;goto next;
 	case DUP:NOS++;*NOS=TOS;goto next;				//DUP
 	case DROP:TOS=*NOS;NOS--;goto next;				//DROP
 	case OVER:NOS++;*NOS=TOS;TOS=*(NOS-1);goto next;	//OVER
@@ -1252,12 +1256,13 @@ next:
 	case DOT:printf("%llx ",TOS);TOS=*NOS;NOS--;goto next;
 	case DOTS:printf((char*)TOS);TOS=*NOS;NOS--;goto next;
 */	
-	//case ENDWORD: goto next;
+//	case ENDWORD: goto next;
 //----------------- ONLY INTERNAL
 	case JMP:ip=(op>>8);goto next;//JMP							// JMP
 	case JMPR:ip+=(op>>8);goto next;//JMP						// JMPR	
 	case LIT2:TOS=(TOS&0xffffff)|((op>>8)<<24);goto next;		// LIT ....xxxxxxaaaaaa
 	case LIT3:TOS=(TOS&0xffffffffffff)|((op>>8)<<48);goto next;	// LIT xxxx......aaaaaa	
+	case LITF:NOS++;*NOS=TOS;TOS=*(__int64*)(&memcode[ip]);ip+=2;goto next; // insegure for optimization
 //----------------- OPTIMIZED WORD
 	case AND1:TOS&=op>>8;goto next;
 	case OR1:TOS|=op>>8;goto next;
@@ -1284,8 +1289,8 @@ next:
 	case IFAND1:if (!((op>>16)&TOS)) ip+=(op<<48>>56);goto next;//IFNA
 	case IFNAND1:if ((op>>16)&TOS) ip+=(op<<48>>56);goto next;//IFAN
 	// signed and unsigned transformation
-	case SHLR:TOS=(TOS<<((op>>8)&0xff))>>(op>>16);goto next; // SHLR  (>>)(<<)
-	case SHLAR:TOS=(TOS>>((op>>8)&0x3f))&((unsigned)op>>14);goto next; // SHRAND  (>>)(and)
+	case SHLR:TOS=(TOS<<((op>>8)&0xff))>>(op>>16);goto next; // SHLR  ( << >>) extend sign
+	case SHLAR:TOS=(TOS>>((op>>8)&0x3f))&((unsigned)op>>14);goto next; // SHRAND  (>> and) unsigned
 	// cte + @ c@ w@ d@ 
 	case FECHa:TOS=*(__int64*)(TOS+(op>>8));goto next;//+ @
 	case CFECHa:TOS=*(char*)(TOS+(op>>8));goto next;//+C@
