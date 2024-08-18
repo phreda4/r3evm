@@ -17,8 +17,8 @@ The last version when tokenize the code make some changes for gain speed.
 
 - Constant folding: if you code "2 2 +" really in the machine load "4".
 - Inline short words: if you definition is short, like ":getxy * + ;" this word is not called, the tokenize write the tokens "* +" instead of "CALL getxy"
-- Tail Call: if a word end with a word, the token use is "JMP" not "CALL" then one lever in return stack is saved, and the recursion is a loop for this case !
-- hidden tokens: there are a lot of hidden token with specific optimization for common operations, for example  "12 +" really is one token, not two. Or "3 << + @" is a token too.
+- Tail call: if a word end with a word, the token use is "JMP" not "CALL" then one level in return stack is saved, and, for this, the recursion is convert in a loop.
+- Hidden tokens: there are a lot of hidden token with specific optimization for common operations, for example  "12 +" really is one token, not two. Or "3 << + @" is one token, etc.
 
 All this optimiations are made without intervencion, the tokenizer is automatic and not require programmer indication.
 
