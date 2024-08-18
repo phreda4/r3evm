@@ -747,12 +747,13 @@ for (char *p=src;p<cerror;p++)
 	} else if (*p==13) { if (*(p+1)==10) p++;
 		line++;lc=p+1; }
 *nextcr(lc)=0; // 0 in end of line
-lc=name;while(unsigned(*lc)>31) { lc++; } *lc=0; // 0 in end of name
-fprintf(stderr,"in: %s \n\n",name);
+//lc=name;while((unsigned char)*lc>31) { lc++; } *lc=0; // 0 in end of name
+*nextcr(name)=0;
+fprintf(stderr,"\nERROR\nFILE:%s LINE:%d CHAR:%d\n\n",name,line,cerror-lc);	
 fprintf(stderr,"%s\n",lc);
 for(char *p=lc;p<cerror;p++) if (*p==9) fprintf(stderr,"\t"); else fprintf(stderr," ");
 fprintf(stderr,"^-");
-fprintf(stderr,"ERROR %s\nline %d char %d\n\n",werror,line,cerror-lc);	
+fprintf(stderr,"%s\n",werror);	
 }
 
 // |WEB| emscripten only
@@ -823,13 +824,14 @@ return -1;
 }
 
 // open, alloc and load file to string in memory
-char *openfile(char *filename)
+char *openfile(char *from,char *filename)
 {
 long len;
 char *buff;
 FILE *f=fopen(filename,"rb");
-if (!f) {
-	printf("FILE %s not found\n",filename);
+if (!f) { 
+	*nextcr(from)=0;
+	fprintf(stderr,"\nERROR\nFILE:%s LINE:%d CHAR:%d\n\n%s not found\n",from,cerror,cerror,filename);
 	cerror=(char*)1;
 	return 0;
 	}
@@ -848,7 +850,7 @@ void *data=mmap(0,len,PROT_READ,MAP_PRIVATE,fd,0);
 }
 
 // include logic, not load many times
-int isinclude(char *str)
+int isinclude(char* from,char *str)
 {
 char filename[1024];
 char *fn=filename;	
@@ -868,7 +870,7 @@ for (int i=0;i<cntincludes;i++){
 	if (strequal(includes[i].nombre,ns)) return -1;
 	}
 includes[cntincludes].nombre=ns; // ./coso y coso son distintos !!
-includes[cntincludes].str=openfile(filename); 
+includes[cntincludes].str=openfile(from,filename); 
 cntincludes++;	
 return cntincludes-1;
 }
@@ -895,7 +897,7 @@ return nextcom(str);
 }
 
 // resolve includes, recursive definition
-void r3includes(char *str) 
+void r3includes(char *from,char *str) 
 {
 if (str==0) return;
 //if (*str=='.') { }
@@ -905,9 +907,9 @@ while(*str!=0) {
 	str=trim(str);
 	switch (*str) {
 		case '^':	// include
-			ninc=isinclude(str+1);
+			ninc=isinclude(from,str+1);
 			if (ninc>=0) {
-				r3includes(includes[ninc].str);
+				r3includes(includes[ninc].nombre,includes[ninc].str);
 				stacki[cntstacki++]=ninc;
 				}
 			str=nextcr(str);
@@ -941,12 +943,12 @@ while (path<aa) { if (*aa=='/'||*aa=='\\') { *aa=0;break; } aa--; }
  
 //printf("*%s*",path);
 
-sourcecode=openfile(name);
+sourcecode=openfile(name,name);
 if (sourcecode==0) return 0;
 memcsize=0;
 cntincludes=0;
 cntstacki=0;
-r3includes(sourcecode); // load includes
+r3includes(name,sourcecode); // load includes
 
 if (cerror!=0) return 0;
 //dumpinc();
@@ -979,7 +981,7 @@ for (int i=0;i<cntstacki;i++) {
 	}
 // last tokenizer		
 if (!r3token(sourcecode)) {
-	printerror(name,sourcecode);
+	printerror(path,sourcecode);
 	return 0;
 	}
 
