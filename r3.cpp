@@ -555,7 +555,7 @@ void blockOut(void)
 int from=popA();
 int dist=memc-from;
 if (solvejmp(from,memc)) { // salta
-	codetok((-(dist+1)<<8)+JMPR); 	// jmpr
+	codetok((-(dist+1)<<8)|JMPR); 	// jmpr
 } else { // patch if	
 	if ((memcode[from-1]&0xff)>=IFL1 && (memcode[from-1]&0xff)<=IFNAND1) { 
 		memcode[from-1]|=(dist<<8)&0xff00;	// byte dir
@@ -564,9 +564,6 @@ if (solvejmp(from,memc)) { // salta
 		}
 	}
 level--;	
-if (level<0) {
-	fprintf(stderr,"ERROR bad )\n");
-	}
 lastblock=memc;
 }
 
@@ -575,7 +572,7 @@ void anonIn(void)
 {
 pushA(memc);
 codetok(JMP);	
-level++;	
+level++;
 }
 
 // end anonymous definition, save adress in stack
@@ -585,9 +582,6 @@ int from=popA();
 memcode[from]|=(memc<<8);	// patch jmp
 codetok((from+1)<<8|LIT);
 level--;	
-if (level<0) {
-	fprintf(stderr,"ERROR bad )\n");
-	}
 }
 
 // dicc base in data definition
@@ -673,7 +667,6 @@ if (n==SHR && (tokpre&0xff)==LIT && (tokpre2&0xff)==SHL1) {
 	}
 // SHLAR  (>>)(and) 18 bit mask 
 if (n==AND && (tokpre&0xff)==LIT && (tokpre2&0xff)==SHR1 && (tokpre&0xfc000000)==0) {
-	
 	memcode[memc-2]=((tokpre<<6)&0xffffc000)|(tokpre2&0x3f00)|SHLAR;
 	memc--;
 	return; 	
@@ -756,11 +749,10 @@ for (char *p=src;p<cerror;p++)
 *nextcr(lc)=0; // 0 in end of line
 //lc=name;while((unsigned char)*lc>31) { lc++; } *lc=0; // 0 in end of name
 *nextcr(name)=0;
-fprintf(stderr,"\nERROR\nFILE:%s LINE:%d CHAR:%d\n\n",name,line,cerror-lc);	
-fprintf(stderr,"%s\n",lc);
+fprintf(stderr,"FILE:%s LINE:%d CHAR:%d\n\n",name,line,cerror-lc);	
+fprintf(stderr,"%4d|%s\n     ",line,lc);
 for(char *p=lc;p<cerror;p++) if (*p==9) fprintf(stderr,"\t"); else fprintf(stderr," ");
-fprintf(stderr,"^-");
-fprintf(stderr,"%s\n",werror);	
+fprintf(stderr,"^- %s\n",werror);	
 }
 
 // |WEB| emscripten only
@@ -809,15 +801,15 @@ while(*str!=0) {
 			compilaDATA(str);str=nextw(str);break;	
 		case 0x27:	// $27 ' Direccion	// 'ADR
 			nro=isWord(str+1);
-			if (nro<0) { 
-				seterror(str,(char*)"adr not found");return 0; 
-				}
+			if (nro<0) { seterror(str,(char*)"adr not found");return 0; }
 			compilaADDR(nro);str=nextw(str);break;		
 		default:
-			if (isNro(str)||isNrof(str)) 
-				{ compilaLIT(nro);str=nextw(str);break; }
-			if (isBas(str)) 
-				{ compilaMAC(nro);str=nextw(str);break; }
+			if (isNro(str)||isNrof(str)) { 
+				compilaLIT(nro);str=nextw(str);break; }
+			if (isBas(str)) { 
+				compilaMAC(nro);str=nextw(str);
+				if (level<0) { seterror(str,(char*)"Bad block");return 0; }
+				break; }
 			nro=isWord(str);
 			if (nro<0) { seterror(str,(char*)"word not found");return 0; }
 			if (modo==1) 
@@ -838,7 +830,7 @@ char *buff;
 FILE *f=fopen(filename,"rb");
 if (!f) { 
 	*nextcr(from)=0;
-	fprintf(stderr,"\nERROR\nFILE:%s LINE:%d CHAR:%d\n\n%s not found\n",from,cerror,cerror,filename);
+	fprintf(stderr,"FILE:%s LINE:%d CHAR:%d\n\n%s not found\n",from,cerror,cerror,filename);
 	cerror=(char*)1;
 	return 0;
 	}
