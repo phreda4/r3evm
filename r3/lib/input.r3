@@ -71,7 +71,7 @@
 	<home> =? ( padi> 'pad> ! ) <end> =? ( padf> 'pad> ! )
 	<tab> =? ( nextfoco )
 	<ret> =? ( nextfoco )
-	<shift> =? ( 1 'mshift ! ) >shift< =? ( 0 'mshift ! )
+|	<shift> =? ( 1 'mshift ! ) >shift< =? ( 0 'mshift ! )
 |	<dn> =? ( nextfoco ) <up> =? ( prevfoco )
 	drop
 	;
@@ -122,7 +122,7 @@
 	<le> =? ( kizq ) <ri> =? ( kder )
 	<home> =? ( padi> 'pad> ! ) <end> =? ( padf> 'pad> ! )
 |	<tab> =? ( ktab )
-	<shift> =? ( 1 'mshift ! ) >shift< =? ( 0 'mshift ! )
+|	<shift> =? ( 1 'mshift ! ) >shift< =? ( 0 'mshift ! )
 	drop
 	;
 
@@ -143,27 +143,35 @@
 :iniinputi
 	pick2 'cmax ! ;
 
-:knro
-|	char 0? ( drop ; ) $30 <? ( drop ; ) $39 >? ( drop ; )
-	$30
-	$30 -
-	cmax @ 10 * + cmax ! ;
+:knro |
+	$30 <? ( drop ; ) $39 >? ( drop ; )
+	$30 - cmax @ 10 * + cmax ! ;
 
 :proinputi
-	knro
+	0 bcursor
+	SDLchar 1? ( knro ; ) drop
 	SDLkey
 	<back> =? ( cmax @ 10 / cmax ! )
 	<del> =? ( cmax @ 10 / cmax ! )
-|	<tab> =? ( ktab )
-|	<ret> =? ( ktab )
-	drop
-	cursor ;
+	<tab> =? ( nextfoco )
+	<ret> =? ( nextfoco )
+	drop ;
 
 |************************************
 ::inputint | 'var --
 	'proinputi 'iniinputi w/foco
-	'clickfoco onClick
-	@ "%d" sprint bprint
+	|'clickfoco onClick
+	@ " %d" sprint bprint
 	;
 
 
+|************************************
+::tbtn | 'ev "text" --
+	brect 
+	|$ff00 SDLColor 
+	2over 1 - swap 1 - swap 2over 2 + swap 2 + swap SDLRect
+	guiBox
+	[ xr1 yr1 xr2 pick2 - yr2 pick2 - SDLFRect ; ] guiI
+	bprint
+	onClick
+	;

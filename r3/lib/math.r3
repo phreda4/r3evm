@@ -31,6 +31,8 @@
 ::ceil	| a -- a
 	$ffff + 16 >> ;
 
+::int. 16 >> ;
+
 ::sign | v -- v s
 	dup 63 >> 1 or ;
 
@@ -87,7 +89,7 @@
 	8 >> ;
 
 ::average | x y -- v
-	2dup xor 1 >> rot rot and + ;
+	2dup xor 1 >> -rot and + ;
 
 ::min	| a b -- m
 	over - dup 63 >> and + ;
@@ -107,35 +109,38 @@
 ::clamp0max | v max -- v
 	swap over - dup 63 >> and + dup neg 63 >> and ;
 
+::clamps16 | v -- (signed 16bits)v
+	-326768 32767 in? ( ; ) 
+	63 >> $7fff xor ;
+	
 ::between | v min max -- -(out)/+(in)
-	pick2 - rot rot - or ;
+	pick2 - -rot - or ;
 
-:sq
-	pick2 <=? ( swap 1 + >r - r> ; ) drop ;
-
-::sqrt. | n -- v
-	1 <? ( drop 0 ; )
-	0 0 rot | root remhi remlo | 15 + bits/2+1
-	24 ( 1? 1 - >r
-		dup 30 >> $3 and	| ro rh rl rnh
-		rot 2 << or			| ro rl rh
-		swap 2 << swap
-		rot 1 << dup 1 << 1 +		| rl rh ro td
-		sq | rl rh ro
-		swap rot r> )
-    3drop ;
-
+::sqrt. | v -- r
+	dup 1.0 ( over <? + 1 >> 2dup 16 <</ ) drop nip ;	
+	
+| CLZ don't wrk on 64 bits!
+::clzl
+	0 swap
+	$ffffffff00000000 nand? ( 32 << swap 32 + swap )
+	$ffff000000000000 nand? ( 16 << swap 16 + swap )
+	$ff00000000000000 nand? ( 8 << swap 8 + swap )
+	$f000000000000000 nand? ( 4 << swap 4 + swap )
+	$c000000000000000 nand? ( 2 << swap 2 + swap )
+	$8000000000000000 nand? ( swap 1 + swap )
+	drop ;	
+	
 | http://www.quinapalus.com/efunc.html
 
-:l1 over dup 1 >> + +? ( rot drop swap $67cd - ; ) drop ;
-:l2 over dup 2 >> + +? ( rot drop swap $3920 - ; ) drop ;
-:l3 over dup 3 >> + +? ( rot drop swap $1e27 - ; ) drop ;
-:l4 over dup 4 >> + +? ( rot drop swap $f85 - ; ) drop ;
-:l5 over dup 5 >> + +? ( rot drop swap $7e1 - ; ) drop ;
-:l6 over dup 6 >> + +? ( rot drop swap $3f8 - ; ) drop ;
-:l7 over dup 7 >> + +? ( rot drop swap $1fe - ; ) drop ;
+:l1 over dup 1 >> + +? ( -rot nip $67cd - ; ) drop ;
+:l2 over dup 2 >> + +? ( -rot nip $3920 - ; ) drop ;
+:l3 over dup 3 >> + +? ( -rot nip $1e27 - ; ) drop ;
+:l4 over dup 4 >> + +? ( -rot nip $f85 - ; ) drop ;
+:l5 over dup 5 >> + +? ( -rot nip $7e1 - ; ) drop ;
+:l6 over dup 6 >> + +? ( -rot nip $3f8 - ; ) drop ;
+:l7 over dup 7 >> + +? ( -rot nip $1fe - ; ) drop ;
 
-::ln. | x --r
+::ln. | x -- r
 	-? ( $80000000 nip ; )
 	$a65af swap | y x
 	$8000 <? ( 16 << swap $b1721 - swap )
@@ -147,23 +152,41 @@
 	l1 l2 l3 l4 l5 l6 l7
 	$80000000 rot -
 	15 >> - ;
+	
+	
+::log2fix | x -- log
+	0? ( ; )
+	0 swap | y x
+	( $10000 <? 1 << swap $10000 - swap )
+	( $20000 >=? 1 >> swap $10000 + swap )
+	$8000 ( 1? swap | y z b
+		dup 16 >> *	| y b z
+		$20000 >=? ( 1 >> rot pick2 + -rot )
+		swap 1 >> ) 2drop ;
 
-:ex1 over $58b91 - +? ( rot drop swap 8 << ; ) drop ;
-:ex2 over $2c5c8 - +? ( rot drop swap 4 << ; ) drop ;
-:ex3 over $162e4 - +? ( rot drop swap 2 << ; ) drop ;
-:ex4 over $b172 - +? ( rot drop swap 1 << ; ) drop ;
-:ex5 over $67cd - +? ( rot drop swap dup 1 >> + ; ) drop ;
-:ex6 over $3920 - +? ( rot drop swap dup 2 >> + ; ) drop ;
-:ex7 over $1e27 - +? ( rot drop swap dup 3 >> + ; ) drop ;
-:ex8 over $f85 - +? ( rot drop swap dup 4 >> + ; ) drop ;
-:ex9 over $7e1 - +? ( rot drop swap dup 5 >> + ; ) drop ;
-:exa over $3f8 - +? ( rot drop swap dup 6 >> + ; ) drop ;
-:exb over $1fe - +? ( rot drop swap dup 7 >> + ; ) drop ;
+::lnfix |#INV_LOG2_10_Q1DOT31 $268826a1
+	log2fix $268826a1 31 *>> ;
+	
+::log10fix |#INV_LOG2_E_Q1DOT31  $58b90bfc
+	log2fix $58b90bfc 31 *>> ;	
+	
+
+:ex1 over $58b91 - +? ( -rot nip 8 << ; ) drop ;
+:ex2 over $2c5c8 - +? ( -rot nip 4 << ; ) drop ;
+:ex3 over $162e4 - +? ( -rot nip 2 << ; ) drop ;
+:ex4 over $b172 - +? ( -rot nip 1 << ; ) drop ;
+:ex5 over $67cd - +? ( -rot nip dup 1 >> + ; ) drop ;
+:ex6 over $3920 - +? ( -rot nip dup 2 >> + ; ) drop ;
+:ex7 over $1e27 - +? ( -rot nip dup 3 >> + ; ) drop ;
+:ex8 over $f85 - +? ( -rot nip dup 4 >> + ; ) drop ;
+:ex9 over $7e1 - +? ( -rot nip dup 5 >> + ; ) drop ;
+:exa over $3f8 - +? ( -rot nip dup 6 >> + ; ) drop ;
+:exb over $1fe - +? ( -rot nip dup 7 >> + ; ) drop ;
 
 :xp
 	swap -? ( $b1721 + swap 16 >> ; ) swap ;
 
-::exp. | x --  r
+::exp. | x -- r
 	1.0 | x y
 	xp
 	ex1 ex2 ex3 ex4 ex5 ex6
@@ -183,7 +206,7 @@
 	1 swap | base r exp
 	( 1?
 		1 and? ( >r over * r> )
-		1 >> rot dup * rot rot )
+		1 >> rot dup * -rot )
 	drop nip
 	;
 
@@ -196,8 +219,15 @@
 
 ::bswap32 | v -- vs ; 32 bits
 	dup 8 >> $ff00ff and
-	swap 8 << $ff00ff00 and or
+	swap $ff00ff and 8 << or
 	dup 16 >>> swap 16 << or ;
+
+::bswap64 | v -- vs
+	dup 8 >> $ff00ff00ff00ff and
+	swap $ff00ff00ff00ff and 8 << or
+	dup 16 >> $ffff0000ffff and
+	swap $ffff0000ffff and 16 << or
+	dup 32 >>> swap 32 << or ;		
 
 | next pow2
 ::nextpow2 | v -- p2
@@ -239,3 +269,38 @@
 ::1000*		1 << dup 2 << +
 ::100*		1 << dup 2 << +
 ::10*		1 << dup 2 << + ;
+
+|- shift with sign
+:shift
+	-? ( neg >> ; ) << ;
+
+|--- integer to floating point
+::i2fp | i -- fp
+	0? ( ; )
+	dup 63 >> swap	| sign i
+	over + over xor | sign abs(i) 
+	dup clz 8 - 	| s i shift
+	swap over shift 	| s shift i
+	150 rot - 23 << | s i m
+	swap $7fffff and or 
+	swap $80000000 and or 
+	;
+
+|--- fixed point to floating point	
+::f2fp | f.p -- fp
+	0? ( ; )
+	dup 63 >> swap	| sign i
+	over + over xor | sign abs(i) 
+	dup clz 8 - 	| s i shift
+	swap over shift 	| v s shift i
+	134 rot - 23 << | s i m | 16 - (fractional part)
+	swap $7fffff and or 
+	swap $80000000 and or 
+	;
+	
+|--- floating point	to fixed point (32 bit but sign bit in 64)
+::fp2f | fp -- fixed point
+	dup $7fffff and $800000 or
+	over 23 >> $ff and 134 - 
+	shift 
+	swap 63 >> - ;

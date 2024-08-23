@@ -208,62 +208,39 @@
 	0 swap c! ;
 
 |--------------------------------
-:conadj | adjust console
-	.getconsoleinfo
-	.alsb .showc .insc
-	evtmouse
-	;
-
-:checkerror
-	mark
-	here dup "mem/error.mem" load
-	over =? ( 2drop empty ; ) 
-	0 swap c!
-	.cr .bred .white 
-	" * ERROR * " .println
-	.reset
-	.println
-	.bblue .white
-	"<ESC> to continue..." .println
-	waitesc
-	empty
-	;
-	
 :runfile
 	actual -? ( drop ; )
 	getinfo $7 and 2 <? ( drop ; ) drop
 	.reset .cls
-	"mem/error.mem" delete
 	'path
-|WIN| "cmd /c r3 ""%s/%s"" 2>mem/error.mem"
+|WIN| "r3 ""%s/%s"""
 |LIN| "./r3lin ""%s/%s"""
 |RPI| "./r3rpi ""%s/%s"""
 |MAC| "./r3mac %s/%s"
-	sprint sys
-	checkerror
-
-	conadj ;
+	sprint 
+	sys
+	evtmouse
+	;
 
 :r3info
 |WIN| "r3 r3/editor/r3info.r3"
 |LIN| "./r3lin r3/editor/r3info.r3"
 |RPI| "./r3rpi r3/editor/r3info.r3"
-	sys 
-	conadj ;
+	sys ;
 
 :r3edit
 |WIN| "r3 r3/editor/code-edit.r3"
 |LIN| "./r3lin r3/editor/code-edit.r3"
 |RPI| "./r3rpi r3/editor/code-edit.r3"
 |MAC| "./r3mac r3/editor/code-edit.r3"
-	sys 
-	conadj ;
-
+	sys ;
+	
 |--------------------------------
 :editfile
 	actual getname 'path "%s/%s" sprint 'name strcpy
 	'name 1024 "mem/main.mem" save
-	|r3info
+	
+	r3info
 	|cerror 1? ( drop ; ) drop	
 	r3edit
 	;
@@ -277,7 +254,6 @@
 |RPI| "./r3rpi r3/editor/map-edit.r3"
 |MAC| "./r3mac r3/editor/map-edit.r3"
 	sys
-	conadj
 	;
 
 :editbmap
@@ -289,33 +265,19 @@
 |RPI| "./r3rpi r3/editor/bmap-edit.r3"
 |MAC| "./r3mac r3/editor/bmap-edit.r3"
 	sys
-	conadj
 	;
 	
 :f2edit
 	actual -? ( drop ; )
 	|getinfo $3 and 2 <>? ( drop ; ) drop
-	getname 
+	actual getname 
 	".r3" =pos 1? ( 2drop editfile ; ) drop
 	".map" =pos 1? ( 2drop editmap ; ) drop
 	".bmap" =pos 1? ( 2drop editbmap ; ) drop
 	| ".png"
 	drop
 	;
-
-:r3d4
-	actual -? ( drop ; )
-	getname 
-	".r3" =pos 0? ( 2drop ; ) drop
-	'path "%s/%s" sprint 'name strcpy
-	'name 1024 "mem/main.mem" save
-|WIN| "r3 r3/d4/r3d4-e.r3"
-|LIN| "./r3lin r3/d4/r3d4-e.r3"
-|RPI| "./r3rpi r3/d4/r3d4-e.r3"
-|MAC| "./r3mac r3/d4/r3d4-e.r3"
-	sys 
-	conadj ;
-
+	
 |--------------------------------
 |===================================
 #newprg1 "| r3 sdl program
@@ -356,9 +318,9 @@
 |RPI| "./r3rpi r3/editor/map-edit.r3"
 |MAC| "./r3mac r3/editor/map-edit.r3"
 	sys
+
 	rebuild
 	loadm
-	conadj
 	;
 
 	
@@ -447,6 +409,7 @@
 	>=? ( dup linesv - 1 + 'pagina ! ) drop
 	setactual ;
 
+
 |--------------------------------
 #filecolor 1 2 3 4 
 
@@ -476,9 +439,9 @@
 		1 + ) drop ;
 
 :drawsrc	
-	source 0? ( drop ; ) drop
+	source 0? ( drop ; ) 
 	235 ,bc 
-	40 2 linesv cols 41 - source code-print
+	>r 40 2 linesv cols 41 - r> code-print
 	;
 	
 :screen
@@ -513,11 +476,9 @@
 	$4f =? ( fend )
 	
 	$3b =? ( fenter )
-	$3c =? ( f2edit )
+	$3c =? ( f2edit ) |editfile  )
 	$3d =? ( newfile )
 	|$3e =? ( newfolder ) | f4 - new folder
-	$3F =? ( r3d4 ) | F5 - NEW VERSION
-	
 	drop 
 	;
 
@@ -539,6 +500,8 @@
 |---------------------------------
 :main
 	rebuild
+	evtmouse
+	evsize	
 	loadm
 	( exit 0? drop
 		screen
@@ -547,10 +510,6 @@
 		$2 =? ( evmouse )
 		$4 =? ( evsize )
 		drop ) drop
-	savem 
-	;
+	savem ;
 
-: |<<<<<<<<<<<<<<< BOOT
-conadj evsize
-main 
-.masb ;
+: main ;

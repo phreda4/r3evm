@@ -1,8 +1,8 @@
 | PHREDA - 2019
 | Memory words
 
-^r3/win/core.r3
 ^r3/lib/str.r3
+^r3/win/core.r3
 
 |---- free memory
 
@@ -45,11 +45,12 @@
 ::, here d!+ 'here ! ;
 ::,c here c!+ 'here ! ;
 ::,q here !+ 'here ! ;
+::,w here w!+ 'here ! ;
 ::,s here swap
 	( c@+ 1? rot c!+ swap ) 2drop 'here ! ;
-::,w here swap
+::,word here swap
 	( c@+ $ff and 32 >? rot c!+ swap ) 2drop 'here ! ;
-::,l here swap
+::,line here swap
 	( c@+ 1?
 		10 =? ( 3 + ) 13 =? ( 2drop 'here ! ; )
 		rot c!+ swap ) 2drop 'here ! ;
@@ -57,6 +58,8 @@
 ::,h .h ,s ;
 ::,b .b ,s ;
 ::,f .f ,s ;
+::,ifp i2fp , ;
+::,ffp f2fp , ;
 
 ::,cr 13 ,c ;
 ::,eol 0 ,c ;
@@ -79,7 +82,7 @@
 :c6	| f,v		(%f) punto fijo
 	swap .f ,s ;
 :c7	| ..w		(%w) palabra
-	swap 0? ( drop ; ) ,w ;
+	swap 0? ( drop ; ) ,word ;
 :c8	| h..		(%h) hexa
 	swap .h ,s ;
 :c9	| i,y		(%i) parte entera fixed
@@ -89,7 +92,7 @@
 :cb	| k,		(%k) caracter
 	swap ,c ;
 :cc	| l,		(%l) linea
-	swap 0? ( drop ; ) ,l ;
+	swap 0? ( drop ; ) ,line ;
 :cd	| m,}
 	;
 :ce	| .	| cr	(%.) finlinea
@@ -111,6 +114,15 @@
 
 ::sprint | p p .. "" -- adr
 	mark 'buff 'here ! ,print ,eol empty 'buff ;
+	
+::sprintln | p p .. "" -- adr
+	mark 'buff 'here ! ,print 10 ,c 13 ,c ,eol empty 'buff ;
+
+::sprintc | p p .. "" -- adr c
+	mark 'buff 'here ! ,print ,eol here empty 'buff swap over - ;
+	
+::sprintlnc | p p .. "" -- adr c
+	mark 'buff 'here ! ,print 10 ,c 13 ,c ,eol here empty 'buff swap over - ;
 	
 |---- init here with free mem	
 : mem 'here ! ;

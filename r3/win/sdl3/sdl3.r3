@@ -1,5 +1,6 @@
-| SDL2.dll
-|
+| SDL3.dll
+| IMHO adding float parameters is not a good idea 
+| pause this dev
 ^r3/win/kernel32.r3
 ^r3/win/core.r3
 ^r3/win/console.r3
@@ -7,13 +8,12 @@
 
 #sys-SDL_Init 
 #sys-SDL_Quit 
-#sys-SDL_GetNumVideoDisplays 
+#sys-SDL_ShowWindow
+
 #sys-SDL_CreateWindow 
 #sys-SDL_SetWindowFullscreen
-#sys-SDL_RenderSetLogicalSize
 #sys-SDL_GetWindowSurface 
 #sys-SDL_RaiseWindow
-#sys-SDL_GetWindowSize
 #sys-SDL_ShowCursor 
 #sys-SDL_UpdateWindowSurface 
 #sys-SDL_DestroyWindow 
@@ -23,8 +23,8 @@
 #sys-SDL_DestroyRenderer 
 #sys-SDL_UpdateTexture 
 #sys-SDL_RenderClear
-#sys-SDL_RenderCopy 
-#sys-SDL_RenderCopyEx
+|#sys-SDL_RenderCopy 
+|#sys-SDL_RenderCopyEx
 #sys-SDL_RenderPresent 
 #sys-SDL_SetRenderDrawColor
 #sys-SDL_GetRenderDrawColor
@@ -54,8 +54,6 @@
 #sys-SDL_Delay
 #sys-SDL_PollEvent	
 #sys-SDL_GetTicks
-|#sys-SDL_StartTextInput	
-|#sys-SDL_StopTextInput
 
 #sys-SDL_RWFromFile
 
@@ -72,14 +70,79 @@
 #sys-SDL_SetTextureAlphaMod
 #sys-SDL_SetHint
 
-::SDL_Init sys-SDL_Init sys1 drop ;
+#names
+"SDL_Init"
+"SDL_Quit"
+"SDL_ShowWindow"
+
+"SDL_CreateWindow"
+"SDL_SetWindowFullscreen"
+"SDL_GetWindowSurface"
+"SDL_RaiseWindow"
+"SDL_ShowCursor"
+"SDL_UpdateWindowSurface"
+"SDL_DestroyWindow"
+"SDL_CreateRenderer"
+"SDL_CreateTexture"
+"SDL_DestroyTexture"
+"SDL_DestroyRenderer"
+"SDL_UpdateTexture"
+"SDL_RenderClear"
+|"SDL_RenderCopy"
+|"SDL_RenderCopyEx"
+"SDL_RenderPresent"
+"SDL_SetRenderDrawColor"
+"SDL_GetRenderDrawColor"
+"SDL_CreateTextureFromSurface"
+"SDL_QueryTexture"
+"SDL_CreateRGBSurface"
+"SDL_LockSurface"
+"SDL_UnlockSurface"
+"SDL_BlitSurface"
+"SDL_SetSurfaceBlendMode"
+"SDL_FreeSurface"
+"SDL_LockTexture"
+"SDL_UnlockTexture"
+"SDL_RenderSetLogicalSize"
+"SDL_SetRenderDrawBlendMode"
+"SDL_SetTextureBlendMode"
+"SDL_ConvertSurfaceFormat"
+
+"SDL_RenderDrawPoint"
+"SDL_RenderDrawLine"
+"SDL_RenderDrawRect"
+"SDL_RenderFillRect"
+"SDL_RenderGeometry"
+"SDL_RenderReadPixels"
+"SDL_RenderSetClipRect"
+
+"SDL_Delay"
+"SDL_PollEvent	"
+"SDL_GetTicks"
+
+"SDL_RWFromFile"
+
+"SDL_GL_SetAttribute"
+"SDL_GL_CreateContext"
+"SDL_GL_DeleteContext"
+"SDL_GL_SetSwapInterval"
+"SDL_GL_SwapWindow"
+"SDL_GL_MakeCurrent"
+"SDL_GL_LoadLibrary"
+"SDL_GL_GetProcAddress"
+
+"SDL_SetTextureColorMod"
+"SDL_SetTextureAlphaMod"
+"SDL_SetHint"
+
+
+::SDL_Init sys-SDL_Init sys1 ;
 ::SDL_Quit sys-SDL_Quit sys0 drop ;
-::SDL_GetNumVideoDisplays sys-SDL_GetNumVideoDisplays sys0 ;
-::SDL_CreateWindow sys-SDL_CreateWindow sys6 ;
+::SDL_ShowWindow sys-SDL_ShowWindow sys1 drop ;
+
+::SDL_CreateWindow sys-SDL_CreateWindow sys4 ;
 ::SDL_SetWindowFullscreen sys-SDL_SetWindowFullscreen sys2 drop ;
-::SDL_RenderSetLogicalSize sys-SDL_RenderSetLogicalSize sys3 drop ;
 ::SDL_RaiseWindow sys-SDL_RaiseWindow sys1 drop ;
-::SDL_GetWindowSize sys-SDL_GetWindowSize sys3 drop ;
 ::SDL_GetWindowSurface sys-SDL_GetWindowSurface sys1 ;
 ::SDL_ShowCursor sys-SDL_ShowCursor sys1 drop ;
 ::SDL_UpdateWindowSurface sys-SDL_UpdateWindowSurface sys1 drop ;
@@ -93,8 +156,8 @@
 ::SDL_DestroyRenderer sys-SDL_DestroyRenderer sys1 drop ;
 ::SDL_UpdateTexture sys-SDL_UpdateTexture sys4 ;
 ::SDL_RenderClear sys-SDL_RenderClear sys1 drop ;
-::SDL_RenderCopy sys-SDL_RenderCopy sys4 drop ;
-::SDL_RenderCopyEx sys-SDL_RenderCopyEx sys7 drop ; |sys6f1 drop ;
+|::SDL_RenderCopy sys-SDL_RenderCopy sys4 drop ;
+|::SDL_RenderCopyEx sys-SDL_RenderCopyEx sys7 drop ; |sys6f1 drop ;
 ::SDL_RenderPresent sys-SDL_RenderPresent sys1 drop ;
 ::SDL_CreateTextureFromSurface sys-SDL_CreateTextureFromSurface sys2 ;
 ::SDL_SetRenderDrawColor sys-SDL_SetRenderDrawColor sys5 drop ; 
@@ -142,98 +205,66 @@
 
 |----------------------------------------------------------
 	
-##SDL_windows
-##SDLrenderer
-
+##sdlwin
+##sdlscr
 ##sw
 ##sh
 
-::SDLinit | "titulo" w h --
-	'sh ! 'sw !
-	$3231 SDL_init 
-	$1FFF0000 dup sw sh $0 SDL_CreateWindow dup 'SDL_windows !
-	-1 0 SDL_CreateRenderer 'SDLrenderer !
-	SDL_windows SDL_RaiseWindow
+##SDL_INIT_TIMER     $00000001
+##SDL_INIT_AUDIO     $00000010
+##SDL_INIT_VIDEO     $00000020
+##SDL_INIT_JOYSTICK  $00000200
+##SDL_INIT_HAPTIC    $00001000
+##SDL_INIT_GAMEPAD   $00002000
+##SDL_INIT_EVENTS    $00004000
+##SDL_INIT_SENSOR    $00008000
+##SDL_INIT_CAMERA    $00010000
+
+##SDL_WINDOW_FULLSCREEN         $00000001 |window is in fullscreen mode
+##SDL_WINDOW_OPENGL             $00000002 |window usable with OpenGL context
+##SDL_WINDOW_OCCLUDED           $00000004 |window is occluded
+##SDL_WINDOW_HIDDEN             $00000008 |window is neither mapped onto the desktop nor shown in the taskbar/dock/window list; SDL_ShowWindow() is required for it to become visible
+##SDL_WINDOW_BORDERLESS         $00000010 |no window decoration
+##SDL_WINDOW_RESIZABLE          $00000020 |window can be resized
+##SDL_WINDOW_MINIMIZED          $00000040 |window is minimized
+##SDL_WINDOW_MAXIMIZED          $00000080 |window is maximized
+##SDL_WINDOW_MOUSE_GRABBED      $00000100 |window has grabbed mouse input
+##SDL_WINDOW_INPUT_FOCUS        $00000200 |window has input focus
+##SDL_WINDOW_MOUSE_FOCUS        $00000400 |window has mouse focus
+##SDL_WINDOW_EXTERNAL           $00000800 |window not created by SDL
+##SDL_WINDOW_HIGH_PIXEL_DENSITY $00002000 |window uses high pixel density back buffer if possible
+##SDL_WINDOW_MOUSE_CAPTURE      $00004000 |window has mouse captured (unrelated to MOUSE_GRABBED)
+##SDL_WINDOW_ALWAYS_ON_TOP      $00008000 |window should always be above others
+##SDL_WINDOW_UTILITY            $00020000 |window should be treated as a utility window, not showing in the task bar and window list
+##SDL_WINDOW_TOOLTIP            $00040000 |window should be treated as a tooltip and does not get mouse or keyboard focus, requires a parent window
+##SDL_WINDOW_POPUP_MENU         $00080000 |window should be treated as a popup menu, requires a parent window
+##SDL_WINDOW_KEYBOARD_GRABBED   $00100000 |window has grabbed keyboard input
+##SDL_WINDOW_VULKAN             $10000000 |window usable for Vulkan surface
+##SDL_WINDOW_METAL              $20000000 |window usable for Metal view
+##SDL_WINDOW_TRANSPARENT        $40000000 |window with transparent buffer
+##SDL_WINDOW_NOT_FOCUSABLE      $80000000 |window should not be focusable
+
+##SDL_RENDERER_PRESENTVSYNC $00000004  | Present is synchronized with the refresh rate 
+
+::SDLInit | "" w h --
+	SDL_INIT_AUDIO SDL_INIT_VIDEO or SDL_INIT_EVENTS or SDL_Init 1? ( 4drop ; ) drop
+	2dup 'sh ! 'sw !
+	0 SDL_CreateWindow 'sdlwin !
+	sdlwin SDL_ShowWindow
+	sdlwin 0 SDL_RENDERER_PRESENTVSYNC
+	SDL_CreateRenderer 'sdlscr !
 	;
 
-::SDLmini | "titulo" w h --
-	'sh ! 'sw !
-	$3231 SDL_init 
-	$1FFF0000 dup sw sh $0 SDL_CreateWindow dup 'SDL_windows !
-	-1 0 SDL_CreateRenderer 'SDLrenderer !
-	;
-
-|int displays=SDL_GetNumVideoDisplays()-1;
-|	window=SDL_CreateWindow(title,
-|		SDL_WINDOWPOS_CENTERED_DISPLAY(displays),
-|		SDL_WINDOWPOS_CENTERED_DISPLAY(displays),XRES,YRES,
-|		SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_SHOWN);
-|	screen = SDL_GetWindowSurface(window);
-|	XRES=screen->w;
-|	YRES=screen->h;
-
-::SDLinitScr | "titulo" display w h --
-	'sh ! 'sw !
-	$3231 SDL_init 
-	$2fff0000 or dup 
-|	$1FFF0000 dup
-	sw sh $0 SDL_CreateWindow dup 'SDL_windows !
-	dup -1 0 SDL_CreateRenderer 'SDLrenderer !
-	SDL_RaiseWindow
-	;
-	
-::sdlinitR | "titulo" w h -- | resize windows
-	'sh ! 'sw !
-	$3231 SDL_init 
-	$1FFF0000 dup sw sh $20 SDL_CreateWindow dup 'SDL_windows !
-	-1 0 SDL_CreateRenderer 'SDLrenderer !
-	SDL_windows SDL_RaiseWindow
-	;
-
-::SDLfull | --
-	SDL_windows 1 SDL_SetWindowFullscreen ;
-	
-::SDLframebuffer | w h -- texture
-	>r >r SDLrenderer $16362004 1 r> r> SDL_CreateTexture ;
-	
-::SDLblend	
-	SDLrenderer 1 SDL_SetRenderDrawBlendMode ;
-	
-| SDL_WINDOW_FULLSCREEN = 0x00000001,
-| SDL_WINDOW_OPENGL = 0x00000002,
-| SDL_WINDOW_SHOWN = 0x00000004,
-| SDL_WINDOW_HIDDEN = 0x00000008,
-| SDL_WINDOW_BORDERLESS = 0x00000010,
-| SDL_WINDOW_RESIZABLE = 0x00000020,
-| SDL_WINDOW_MINIMIZED = 0x00000040,
-| SDL_WINDOW_MAXIMIZED = 0x00000080,
-| SDL_WINDOW_INPUT_GRABBED = 0x00000100,
-| SDL_WINDOW_INPUT_FOCUS = 0x00000200,
-| SDL_WINDOW_MOUSE_FOCUS = 0x00000400,
-| SDL_WINDOW_FULLSCREEN_DESKTOP = ( SDL_WINDOW_FULLSCREEN | 0x00001000 ),
-| SDL_WINDOW_FOREIGN = 0x00000800,
-| SDL_WINDOW_ALLOW_HIGHDPI = 0x00002000,
-| SDL_WINDOW_MOUSE_CAPTURE = 0x00004000,
-| SDL_WINDOW_ALWAYS_ON_TOP = 0x00008000,
-| SDL_WINDOW_SKIP_TASKBAR = 0x00010000,
-| SDL_WINDOW_UTILITY = 0x00020000,
-| SDL_WINDOW_TOOLTIP = 0x00040000,
-| SDL_WINDOW_POPUP_MENU = 0x00080000,
-| SDL_WINDOW_VULKAN = 0x10000000
-  
 ::SDLquit
-	SDLrenderer SDL_DestroyRenderer
-	SDL_windows SDL_DestroyWindow 
+	sdlscr SDL_DestroyRenderer
+	sdlwin SDL_DestroyWindow 
 	SDL_Quit ;
 	
-##SDLevent * 56 
+##SDLevent * 128
 
 ##SDLkey
 ##SDLchar
-##SDLx ##SDLy ##SDLb ##SDLw
-
-:changews | change windowsize
-	SDL_windows 'sw 'sh SDL_GetWindowSize ;
+##SDLx ##SDLy ##SDLb
 	
 ::SDLupdate
 	0 'SDLkey !
@@ -241,15 +272,13 @@
 	10 SDL_delay
 	( 'SDLevent SDL_PollEvent 1? drop 
 		'SDLevent d@ 
-		$200 =? ( drop changews  ; ) | WINDOWEVENT
-		$300 =? ( drop 'SDLevent 20 + d@ dup $ffff and swap 16 >> or 'SDLkey ! ; ) |#SDL_KEYDOWN $300 
-		$301 =? ( drop 'SDLevent 20 + d@ dup $ffff and swap 16 >> or $1000 or 'SDLkey ! ; ) |#SDL_KEYUP $301 
-		$303 =? ( drop 'SDLevent 12 + c@ 'SDLchar ! ; ) |#SDL_TEXTINPUT	$303 |Keyboard text input
-		|$400 =? ( drop 'SDLevent 20 + d@+ 'SDLx ! d@ 'SDLy ! ; ) |#SDL_MOUSEMOTION	$400 Mouse moved
-		$400 =? ( drop 'SDLevent 20 + @ dup $ffff and 'SDLx ! 32 >> 'SDLy ! ; ) |#SDL_MOUSEMOTION	$400 Mouse moved
-		$401 =? ( drop 'SDLevent 16 + c@ 1 - 1 swap << SDLb or 'SDLb ! ; ) |#SDL_MOUSEBUTTONDOWN $401 pressed
-		$402 =? ( drop 'SDLevent 16 + c@ 1 - 1 swap << not SDLb and 'SDLb ! ; ) |#SDL_MOUSEBUTTONUP $402 released
-		$403 =? ( drop 'SDLevent 20 + d@ 'SDLw ! ; ) |#SDL_MOUSEWHEEL $403 Mouse wheel motion
+		$300 =? ( drop 'SDLevent 32 + d@ dup $ffff and swap 16 >> or 'SDLkey ! ; ) |#SDL_KEYDOWN $300 
+		$301 =? ( drop 'SDLevent 32 + d@ dup $ffff and swap 16 >> or $1000 or 'SDLkey ! ; ) |#SDL_KEYUP $301 
+		$303 =? ( drop 'SDLevent 20 + c@ 'SDLchar ! ; ) |#SDL_TEXTINPUT	$303 |Keyboard text input
+		$400 =? ( drop 'SDLevent 28 + d@+ fp2f 16 >> 'SDLx ! d@ fp2f 16 >> 'SDLy ! ; ) |#SDL_MOUSEMOTION	$400 Mouse moved
+		$401 =? ( drop 'SDLevent 24 + c@ 1 - 1 swap << SDLb or 'SDLb ! ; ) |#SDL_MOUSEBUTTONDOWN $401 pressed
+		$402 =? ( drop 'SDLevent 24 + c@ 1 - 1 swap << not SDLb and 'SDLb ! ; ) |#SDL_MOUSEBUTTONUP $402 released
+				| #SDL_MOUSEWHEEL $403 Mouse wheel motion
 		drop
 		) drop ;			
 		
@@ -276,23 +305,33 @@
 	1 '.exit ! ;
 	
 ::SDLredraw | -- 
-	SDLrenderer SDL_RenderPresent ;	
+	sdlscr SDL_RenderPresent ;	
 	
+:rgb23 | rgb -- r g b
+	dup 16 >> $ff and swap dup 8 >> $ff and swap $ff and ;
+
+:rgb24 | argb -- r g b
+	dup 16 >> $ff and swap dup 8 >> $ff and swap dup $ff and swap 24 >> $ff and ;
+	
+::SDLColor | col --
+	sdlscr swap rgb23 $ff SDL_SetRenderDrawColor ;
+	
+::SDLcls | color --
+	SDLColor sdlscr SDL_RenderClear ;	
 	
 |------- BOOT
 :
-	"SDL2.DLL" loadlib
+	"SDL3.DLL" loadlib
 	dup "SDL_Init" getproc 'sys-SDL_Init !
 	dup "SDL_Quit" getproc 'sys-SDL_Quit !
-	dup "SDL_GetNumVideoDisplays" getproc 'sys-SDL_GetNumVideoDisplays !
+	dup "SDL_ShowWindow" getproc 'sys-SDL_ShowWindow !
+	
 	dup "SDL_CreateWindow" getproc 'sys-SDL_CreateWindow !
 	dup "SDL_SetWindowFullscreen" getproc 'sys-SDL_SetWindowFullscreen !
-	dup "SDL_RenderSetLogicalSize" getproc 'sys-SDL_RenderSetLogicalSize !
 	dup "SDL_GetWindowSurface" getproc 'sys-SDL_GetWindowSurface !
 	dup "SDL_ShowCursor" getproc 'sys-SDL_ShowCursor !
 	
 	dup "SDL_RaiseWindow" getproc 'sys-SDL_RaiseWindow !
-	dup "SDL_GetWindowSize" getproc 'sys-SDL_GetWindowSize !
 	dup "SDL_UpdateWindowSurface" getproc 'sys-SDL_UpdateWindowSurface !
 	dup "SDL_DestroyWindow" getproc 'sys-SDL_DestroyWindow !
 	dup "SDL_CreateRenderer" getproc 'sys-SDL_CreateRenderer !
@@ -301,8 +340,8 @@
 	dup "SDL_DestroyRenderer" getproc 'sys-SDL_DestroyRenderer !
 	dup "SDL_UpdateTexture" getproc 'sys-SDL_UpdateTexture !
 	dup "SDL_RenderClear" getproc 'sys-SDL_RenderClear !
-	dup "SDL_RenderCopy" getproc 'sys-SDL_RenderCopy !
-	dup "SDL_RenderCopyEx" getproc 'sys-SDL_RenderCopyEx !
+|	dup "SDL_RenderCopy" getproc 'sys-SDL_RenderCopy !
+|	dup "SDL_RenderCopyEx" getproc 'sys-SDL_RenderCopyEx !
 	dup "SDL_RenderPresent" getproc 'sys-SDL_RenderPresent !
 	dup "SDL_CreateTextureFromSurface" getproc 'sys-SDL_CreateTextureFromSurface !
 	dup "SDL_QueryTexture" getproc 'sys-SDL_QueryTexture !
@@ -347,4 +386,7 @@
 	dup "SDL_GL_GetProcAddress" getproc 'sys-SDL_GL_GetProcAddress !
 	
 	drop
+|	'names 'sys-SDL_Init
+|	( 'sys-SDL_SetHint <? swap dup .print >>0 swap @+ " %h ) " .print ) 2drop
+|	getch getch
 	;

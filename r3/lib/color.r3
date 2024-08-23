@@ -1,6 +1,8 @@
 | Color
 | PHREDA 2020
 |-----------------------------------------
+^r3/lib/math.r3
+
 ::colavg | a b -- c
 	2dup xor $fefefefe and 1 >> >r or r> - ;
 
@@ -18,10 +20,10 @@
 	pick2 $ff00ff and
 	over - pick2 * 8 >> +
 	$ff00ff and >r
-	rot $ff00 and
-	rot $ff00 and
+	rot $ff00ff00 and
+	rot $ff00ff00 and
 	over - rot * 8 >> +
-	$ff00 and r> or ;
+	$ff00ff00 and r> or ;
 
 |--- diferencia de color
 ::diffrgb2 | a b -- v
@@ -54,7 +56,7 @@
 
 :h0 ;				|v, n, m
 :h1 >r swap r> ;	|n, v, m
-:h2 rot rot ;		|m, v, n
+:h2 -rot ;		|m, v, n
 :h3 swap rot ;		|m, n, v
 :h4 rot ;			|n, m, v
 :h5 swap ;			|v, m, n
@@ -196,3 +198,8 @@
 	dup $f and dup 4 << or swap
 	dup $f0 and 4 << dup 4 << or swap
 	$f00 and 8 << dup 4 << or or or ;
+	
+::bgr2rgb | BGR -- RGB
+	dup $ff00 and 
+	over $ff and 16 << or 
+	swap 16 >> $ff and or ;	
