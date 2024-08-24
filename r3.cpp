@@ -712,12 +712,10 @@ if ((n==MULSHR || n==CDIVSH) && (tokpre==((16<<8)|LIT))) {
 	return; 	
 	}
 // optimize operation with constant (NRO OP)
-//if (n>=AND && n<=CDIVSH && (tokpre&0xff)==LIT && lastblock!=memc) { 
 if (n>=AND && n<=CDIVSH && (tokpre&0xff)==LIT) { 
 	memcode[memc-1]=(tokpre^LIT)|(n-ADD+ADD1);
 	return; 
 	}
-	
 if (n>=FECH && n<=DFECH) {
 	if ((tokpre&0xff)==ADD1) { // cte + @ c@ w@ d@ 	
 		memcode[memc-1]=(tokpre^ADD1)|(n-FECH+FECHa);
@@ -728,8 +726,7 @@ if (n>=FECH && n<=DFECH) {
 		memc--;
 		return;
 		}
-	}
-		
+	}		
 if (n>=STOR && n<=DSTOR) {
 	if ((tokpre&0xff)==ADD1) { // cte + ! c! w! d!
 		memcode[memc-1]=(tokpre^ADD1)|(n-STOR+STORa);
@@ -747,7 +744,6 @@ if ((tokpre&0xff)==LIT && (n==AA||n==BA)) {
 	return;
 	}
 // 'adr !..+!
-
 if (n>=FECH && n<=DINCSTOR) {
 	if ((tokpre&0xff)==ADR) {
 		memcode[memc-1]=(tokpre^ADR)|(n-FECH+AFECH);
@@ -758,6 +754,11 @@ if (n>=FECH && n<=DINCSTOR) {
 		return;
 		}
 	}
+// ALWAYS VAR SYSCALL !!!
+if (n>=SYSCALL0 && n<=SYSCALL10 && (tokpre&0xff)==VAR) {
+	memcode[memc-1]=(tokpre^VAR)|n;
+	return;
+	} // show error if not??
 
 ///////////////////////// OPTIMIZATION
 codetok(n);	
@@ -1292,27 +1293,38 @@ next:
 #endif
 		 
 	case SYSCALL0: // adr -- rs
-		TOS=(__int64)(* (__int64(*)())TOS)();goto next;
+		op=*(__int64*)&memdata[op>>8];
+		NOS++;*NOS=TOS;TOS=(__int64)(* (__int64(*)())op)();goto next;
 	case SYSCALL1: // a0 adr -- rs 
-		TOS=(__int64)(* (__int64(*)(__int64))TOS)(*NOS);NOS--;goto next;
-	case SYSCALL2: // a1 a0 adr -- rs 
-		TOS=(__int64)(* (__int64(*)(__int64,__int64))TOS)(*(NOS-1),*NOS);NOS-=2;goto next;
+		op=*(__int64*)&memdata[op>>8];
+		TOS=(__int64)(* (__int64(*)(__int64))op)(TOS);goto next;
+	case SYSCALL2: // a0 adr -- rs 
+		op=*(__int64*)&memdata[op>>8];
+		TOS=(__int64)(* (__int64(*)(__int64,__int64))op)(*NOS,TOS);NOS--;goto next;
 	case SYSCALL3: // a1 a0 adr -- rs 
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64))TOS)(*(NOS-2),*(NOS-1),*NOS);NOS-=3;goto next;
+		op=*(__int64*)&memdata[op>>8];
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64))op)(*(NOS-1),*NOS,TOS);NOS-=2;goto next;
 	case SYSCALL4: // a1 a0 adr -- rs 
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64))TOS)(*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=4;goto next;
+		op=*(__int64*)&memdata[op>>8];
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64))op)(*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=3;goto next;
 	case SYSCALL5: // a1 a0 adr -- rs 
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64))TOS)(*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=5;goto next;
+		op=*(__int64*)&memdata[op>>8];
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64))op)(*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=4;goto next;
 	case SYSCALL6: // a1 a0 adr -- rs 
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64))TOS)(*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=6;goto next;
+		op=*(__int64*)&memdata[op>>8];
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=5;goto next;
 	case SYSCALL7: // a1 a0 adr -- rs 
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64))TOS)(*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=7;goto next;
+		op=*(__int64*)&memdata[op>>8];
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=6;goto next;
 	case SYSCALL8: // a1 a0 adr -- rs 
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))TOS)(*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=8;goto next;
+		op=*(__int64*)&memdata[op>>8];
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=7;goto next;
 	case SYSCALL9: // a1 a0 adr -- rs 
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))TOS)(*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=9;goto next;
+		op=*(__int64*)&memdata[op>>8];
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=8;goto next;
 	case SYSCALL10: // a1 a0 adr -- rs 
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))TOS)(*(NOS-9),*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS);NOS-=10;goto next;
+		op=*(__int64*)&memdata[op>>8];
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=9;goto next;
 /* -- DEBUG
 	case DOT:printf("%llx ",TOS);TOS=*NOS;NOS--;goto next;
 	case DOTS:printf((char*)TOS);TOS=*NOS;NOS--;goto next;
