@@ -6,6 +6,7 @@
 | field 1|field 2|..|field 3^
 |
 |
+^r3/win/console.r3
 
 ##rowdb
 #flds * 512
@@ -17,7 +18,7 @@
 :FNAME | adr -- adrname
 	44 + ;
 
-:getnfilename | n "path" -- filename/0
+::getnfilename | n "path" -- filename/0
 	"%s/*" sprint
 	ffirst drop fnext drop
 	( fnext 0? ( nip ; ) swap 1? 1 - nip ) drop
@@ -131,3 +132,11 @@
 		$7c =? ( 2drop 0 swap c! ; )
 	 	$5e =? ( 2drop 0 swap c! ; ) | ^
 		rot c!+ ) nip swap c! ;
+		
+::cpydbfldn | max 'fld 'str --
+	>b >a 
+	( 1? 1 -
+		ca@+ 0? ( cb! drop ; )
+		$7c =? ( 2drop 0 cb! ; )
+	 	$5e =? ( 2drop 0 cb! ; ) | ^
+		cb!+ ) cb! ;		

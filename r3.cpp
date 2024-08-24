@@ -226,7 +226,14 @@ AFECH,ACFECH,AWFECH,ADFECH,
 AFECHPLUS,ACFECHPLUS,AWFECHPLUS,ADFECHPLUS,
 ASTOR,ACSTOR,AWSTOR,ADSTOR,
 ASTOREPLUS,ACSTOREPLUS,AWSTOREPLUS,ADSTOREPLUS,
-AINCSTOR,ACINCSTOR,AWINCSTOR,ADINCSTOR
+AINCSTOR,ACINCSTOR,AWINCSTOR,ADINCSTOR,
+
+VFECH,VCFECH,VWFECH,VDFECH,
+VFECHPLUS,VCFECHPLUS,VWFECHPLUS,VDFECHPLUS,
+VSTOR,VCSTOR,VWSTOR,VDSTOR,
+VSTOREPLUS,VCSTOREPLUS,VWSTOREPLUS,VDSTOREPLUS,
+VINCSTOR,VCINCSTOR,VWINCSTOR,VDINCSTOR
+
 };
 
 //////////////////////////////////////
@@ -261,6 +268,7 @@ printf("boot:%x\n",boot);
 for(int i=1;i<memc;i++) {
 	printf("%x:%x:",i,memcode[i]);
 	printcode(memcode[i]);
+	if ((memcode[i]&0xff)>=AFECH) printf("***\n");
 	}
 printf("\n");
 }
@@ -494,7 +502,7 @@ void compilaSTR(char *str)
 {
 str++;
 int ini=datasave(str);	
-if (modo<2) codetok((ini<<8)+ADR); // lit data
+if (modo<2) codetok((ini<<8)|ADR); // lit data
 }
 
 // Store in datamemory a number or reserve mem
@@ -652,7 +660,7 @@ return 0;
 void compilaMAC(int n) 
 {
 int tokpre=(lastblock==memc)?0:memcode[memc-1];
-int tokpre2=(lastblock==(memc-1))?0:memcode[memc-2];
+int tokpre2=(lastblock>=(memc-1))?0:memcode[memc-2];
 if (modo>1) { dataMAC(n);return; }
 if (n==0) { 					// ;
 	if (level==0) { 
@@ -739,10 +747,18 @@ if ((tokpre&0xff)==LIT && (n==AA||n==BA)) {
 	return;
 	}
 // 'adr !..+!
-if (n>=FECH && n<=DINCSTOR && (tokpre&0xff)==ADR) {
-	memcode[memc-1]=(tokpre^ADR)|(n-FECH+AFECH);
-	return;
+
+if (n>=FECH && n<=DINCSTOR) {
+	if ((tokpre&0xff)==ADR) {
+		memcode[memc-1]=(tokpre^ADR)|(n-FECH+AFECH);
+		return;
+		}
+	if ((tokpre&0xff)==VAR) {
+		memcode[memc-1]=(tokpre^VAR)|(n-FECH+VFECH);
+		return;
+		}
 	}
+
 ///////////////////////// OPTIMIZATION
 codetok(n);	
 }
@@ -1091,7 +1107,7 @@ next:
 	op=memcode[ip++]; 
 	
 #ifdef DEBUG	
-printstackd(NOS);printf("%d |%x: %x |",TOS,ip,op);printcode(op);
+//printstackd(NOS);printf("%d |%x: %x |",TOS,ip,op);printcode(op);
 #endif
 	
 	switch(op&0xff){
@@ -1389,10 +1405,10 @@ printstackd(NOS);printf("%d |%x: %x |",TOS,ip,op);printcode(op);
 	case AWFECH:NOS++;*NOS=TOS;TOS=*(__int16*)&memdata[op>>8];goto next;	//W@
 	case ADFECH:NOS++;*NOS=TOS;TOS=*(__int32*)&memdata[op>>8];goto next;	//D@
 	
-	case AFECHPLUS: op=(__int64)&memdata[op>>8];NOS++;*NOS=op+8;TOS=*(__int64*)op;goto next;//@+
-	case ACFECHPLUS:op=(__int64)&memdata[op>>8];NOS++;*NOS=op+1;TOS=*(char*)op;goto next;// C@+
-	case AWFECHPLUS:op=(__int64)&memdata[op>>8];NOS++;*NOS=op+2;TOS=*(__int16*)op;goto next;//W@+			
-	case ADFECHPLUS:op=(__int64)&memdata[op>>8];NOS++;*NOS=op+4;TOS=*(__int32*)op;goto next;//D@+		
+	case AFECHPLUS: op=(__int64)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+8;TOS=*(__int64*)op;goto next;//@+
+	case ACFECHPLUS:op=(__int64)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+1;TOS=*(char*)op;goto next;// C@+
+	case AWFECHPLUS:op=(__int64)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+2;TOS=*(__int16*)op;goto next;//W@+			
+	case ADFECHPLUS:op=(__int64)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+4;TOS=*(__int32*)op;goto next;//D@+		
 	
 	case ASTOR: *(__int64*)&memdata[op>>8]=TOS;TOS=*NOS;NOS--;goto next;// !
 	case ACSTOR:*(char*)&memdata[op>>8]=TOS;TOS=*NOS;NOS--;goto next;//C!
@@ -1410,6 +1426,30 @@ printstackd(NOS);printf("%d |%x: %x |",TOS,ip,op);printcode(op);
 	case ADINCSTOR:*(__int32*)&memdata[op>>8]+=TOS;TOS=*NOS;NOS--;goto next;//D+!
 	// var MEM
 	//*(__int64*)&memdata[op>>8]
+	case VFECH: op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;TOS=*(__int64*)op;goto next;	//@
+	case VCFECH:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;TOS=*(char*)op;goto next;		//C@
+	case VWFECH:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;TOS=*(__int16*)op;goto next;	//W@
+	case VDFECH:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;TOS=*(__int32*)op;goto next;	//D@
+	
+	case VFECHPLUS: op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+8;TOS=*(__int64*)op;goto next;//@+
+	case VCFECHPLUS:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+1;TOS=*(char*)op;goto next;// C@+
+	case VWFECHPLUS:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+2;TOS=*(__int16*)op;goto next;//W@+			
+	case VDFECHPLUS:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+4;TOS=*(__int32*)op;goto next;//D@+		
+	
+	case VSTOR: op=*(__int64*)&memdata[op>>8];*(__int64*)op=TOS;TOS=*NOS;NOS--;goto next;// !
+	case VCSTOR:op=*(__int64*)&memdata[op>>8];*(char*)op=TOS;TOS=*NOS;NOS--;goto next;//C!
+	case VWSTOR:op=*(__int64*)&memdata[op>>8];*(__int16*)op=TOS;TOS=*NOS;NOS--;goto next;//W!		
+	case VDSTOR:op=*(__int64*)&memdata[op>>8];*(__int32*)op=TOS;TOS=*NOS;NOS--;goto next;//D!
+	
+	case VSTOREPLUS: op=*(__int64*)&memdata[op>>8];*(__int64*)op=TOS;TOS=op+8;goto next;// !+
+	case VCSTOREPLUS:op=*(__int64*)&memdata[op>>8];*(char*)op=TOS;TOS=op+1;goto next;//C!+
+	case VWSTOREPLUS:op=*(__int64*)&memdata[op>>8];*(__int16*)op=TOS;TOS=op+2;goto next;//W!+	
+	case VDSTOREPLUS:op=*(__int64*)&memdata[op>>8];*(__int32*)op=TOS;TOS=op+4;goto next;//D!+
+	
+	case VINCSTOR: op=*(__int64*)&memdata[op>>8];*(__int64*)op+=TOS;TOS=*NOS;NOS--;goto next;//+!
+	case VCINCSTOR:op=*(__int64*)&memdata[op>>8];*(char*)op+=TOS;TOS=*NOS;NOS--;goto next;//C+!
+	case VWINCSTOR:op=*(__int64*)&memdata[op>>8];*(__int16*)op+=TOS;TOS=*NOS;NOS--;goto next;//W+!	
+	case VDINCSTOR:op=*(__int64*)&memdata[op>>8];*(__int32*)op+=TOS;TOS=*NOS;NOS--;goto next;//D+!
 
 	}
 }

@@ -7,33 +7,28 @@
 
 ^r3/win/SDL2image.r3
 
-
 #textobj | textparse
 #textmtl
 
-##verl	| vertices
-#verl>
-##nver
+##verl #verl> ##nver 	| vertices
+##facel	#facel> ##nface | faces (tri or quad)
+##norml #norml> #nnorm	| normal
+##texl #texl> ##ntex	| texture coord
+##paral #paral> #npara	| parametros
+##colorl #colorl> ##ncolor 	| colores
 
-##facel	| faces
-#facel>
-##nface
+|---------
+::]face | nro -- FACE ( p1 p2 p3 color)
+	5 << facel + ;
 
-##norml	| normal
-#norml>
-#nnorm
+::]vert | nro -- vertex 
+	5 << verl + ;
 
-##texl	| text
-#texl>
-#ntex
+::]norm | nro -- normal
+	24 * norml + ;
 
-##paral	| parametros
-#paral>
-#npara
-
-#ncolor	| colores
-##colorl
-#colorl>
+::]uv | nro -- uv 
+	24 * texl + ;
 
 |-----------------------------
 :vert	| vertices (x,y,z[,w=1])
@@ -74,26 +69,26 @@
 
 :searchcol | str -- nro
 	0 ( ncolor <?
-		|dup "%d." .print
 		dup 4 << colorl + @ 0? ( 3drop -1 ; )
-		pick2
-		|2dup "%w %w" .println
-		=pre 1? ( 2drop nip ; )
+		pick2 =pre 1? ( 2drop nip ; )
 		2drop 1 + ) 2drop -1 ;
+		
+:unusedcol
+	ncolor ( 1? 1 -
+		dup 4 << colorl + @ 0? ( -1 'ncolor +! ) drop
+		) drop ;
+			
 
 :uface
-	?sint
+	trim ?sint
 	-? ( verl> verl - 5 >> 1 + + )
-	'nv ! dup 1 - c@
-	32 <? ( drop 1 - ; ) 33 <? ( drop ; ) drop
-	?sint
+	'nv ! dup 1 - c@ 33 <? ( drop 1 - ; ) drop
+	trim ?sint
 	-? ( texl> texl - 24 / 1 + + )
-	'nt ! dup 1 - c@
-	32 <? ( drop 1 - ; ) 33 <? ( drop ; ) drop
-	?sint
+	'nt ! dup 1 - c@ 33 <? ( drop 1 - ; ) drop
+	trim ?sint
 	-? ( norml> norml - 24 / 1 + + )
-	'nn ! dup 1 - c@
-	32 <? ( drop 1 - ; ) drop
+	'nn ! dup 1 - c@ 33 <? ( drop 1 - ; ) drop
 	;
 
 :4to
@@ -104,48 +99,34 @@
 	16 + @+ b!+ @+ b!+           | vert 2
 	colornow b!+ ;
 
+:pack nn 20 << nt or 20 << nv or ; | 4 | 20 nn|20 nt | 20 nv
+	
+| formato normal|texture|vertice  - 20 bits c/u 
 :face	| face nvert( v/t/n  v//n v/t  v)??
-	2 + trim
+	>>sp
 	facel> >b
-	| solo tres
-	uface
-	nv b!+ nt 32 << nn or b!+
-	uface
-	nv b!+ nt 32 << nn or b!+
-   	uface
-	nv b!+ nt 32 << nn or b!+
+	| solo tres 
+	uface pack b!+ uface pack b!+ uface pack b!+
 	colornow b!+
 	| manejar aca si hay cuatro
 |	4to
 	b> 'facel> !
 	;
-:smoo	| 1/off
-	2 + trim
-	;
-:onam	| o [object name]
-	2 + trim
-	;
-:gman	| g [group name]
-	2 + trim
-	;
-
+	
 :usmt	| usemtl [material name]
-	6 + trim
-	dup "%l" sprint 
-|	dup .println
-	searchcol 'colornow !
-	;
+	>>sp trim dup "%w" sprint searchcol 'colornow ! ;
 
 :parseline
-	"vt" =pre 1? ( drop texc ; ) drop	| textcoor (u, v [,w])
-	"vn" =pre 1? ( drop norm ; ) drop	| normales (x,y,z)
-	"vp" =pre 1? ( drop pspa ; ) drop	| param space ( u [,v] [,w] )
-	"v" =pre 1? ( drop vert ; ) drop	| vertices (x,y,z[,w=1])
-	"f" =pre 1? ( drop face ; ) drop	| face nvert( v/t/n  v//n v/t  v)??
-	"s" =pre 1? ( drop smoo ; ) drop	| 1/off
-	"o" =pre 1? ( drop onam ; ) drop	| o [object name]
-	"g" =pre 1? ( drop gman ; ) drop	| g [group name]
-	"mtllib" =pre 1? ( drop ; ) drop	| mtllib [external .mtl file name]
+|	dup "%l" .println .input
+	"vt" =pre 1? ( drop dup texc drop ; ) drop	| textcoor (u, v [,w])
+	"vn" =pre 1? ( drop dup norm drop ; ) drop	| normales (x,y,z)
+	"vp" =pre 1? ( drop dup pspa drop ; ) drop	| param space ( u [,v] [,w] )
+	"v" =pre 1? ( drop dup vert drop ; ) drop	| vertices (x,y,z[,w=1])
+	"f" =pre 1? ( drop dup face drop ; ) drop	| face nvert( v/t/n  v//n v/t  v)??
+|	"s" =pre 1? ( drop ; ) drop	| 1/off
+|	"o" =pre 1? ( drop ; ) drop	| o [object name]
+|	"g" =pre 1? ( drop ; ) drop	| g [group name]
+|	"mtllib" =pre 1? ( drop ; ) drop	| mtllib [external .mtl file name]
 	"usemtl" =pre 1? ( drop usmt ; ) drop	| usemtl [material name]
 	;
 
@@ -155,62 +136,95 @@
 :parseobj | text --
 	( trim parseline >>cr 1? ) drop ;
 
-
 |--------------------
 | nombre text mem solido
-#colora
+#colornow
 
-:illum
-	;
+#colka * 1024
+#colkd * 1024
+#colks * 1024
+#colke * 1024
+#colNs * 1024
+#colNi * 1024
+#cold * 1024
+#colI * 1024
+#colMapKd * 1024
+#colMapNs * 1024
+#colMapBp * 1024
+
+:n]Ka! colornow 3 << 'colka + ! ; 
+:n]Kd! colornow 3 << 'colkd + ! ;
+:n]Ks! colornow 3 << 'colks + ! ;
+:n]Ke! colornow 3 << 'colke + ! ;
+:n]Ns! colornow 3 << 'colNs + ! ;
+:n]Ni! colornow 3 << 'colNi + ! ;
+:n]d! colornow 3 << 'cold + ! ;
+:n]i! colornow 3 << 'colI + ! ;
+:n]Mkd! colornow 3 << 'colMapKd + ! ;
+:n]MNs! colornow 3 << 'colMapNs + ! ;
+:n]Mbp! colornow 3 << 'colMapBp + ! ;
+
+::]Ka@ 3 << 'colka + @ ;
+::]Kd@ 3 << 'colkd + @ ;
+::]Ks@ 3 << 'colks + @ ;
+::]Ke@ 3 << 'colke + @ ;
+::]Ns@ 3 << 'colNs + @ ;
+::]Ni@ 3 << 'colNi + @ ;
+::]d@ 3 << 'cold + @ ;
+::]i@ 3 << 'colI + @ ;
+::]Mkd@ 3 << 'colMapKd + @ ;
+::]MNs@ 3 << 'colMapNs + @ ;
+::]Mbp@ 3 << 'colMapBp + @ ;
+
+
+:parseV | adr -- adr val
+	>>sp trim
+	getfenro ;
+	
+:parseV3 | adr -- adr val
+	>>sp trim
+	getfenro $fffff and swap
+	getfenro $fffff and 20 << swap
+	getfenro $fffff and 40 << 
+	rot or rot or ;
 
 :newmtl
-	colorl> 'colora !
-	32 'colorl> +!
-	7 + trim
-	dup colora !
-	;
-
-:texmap
-	7 + trim dup colora 8 + !
-|	existe?
-	dup 'path "%s%l" sprint
-	| loadimg  |** no carga imagen
-	|dup .println
-	
-	colora 24 + !
-	;
-
-:colorp
-	3 + trim
-	getfenro $ff 1.0 */ $ff0000 and swap
-	getfenro $ff 1.0 */ 8 >> $ff00 and swap
-	getfenro $ff 1.0 */ 16 >> $ff and
-	rot or rot or
-	colora 24 + !
+	1 'colornow +!
+	dup >>sp trim colornow swap 
+	colorl> !+ !+ 'colorl> !
+|	colornow "c:%d" .println
+	0 n]Ka! 0 n]Kd! 0 n]Ks! 0 n]Ke!
+	0 n]Mkd! 0 n]MNs! 0 n]Mbp!
+	0 n]Ns! 1.0 n]Ni!
+	1.0 n]d! 2.0 n]i! 
 	;
 
 :parselinem
+	|dup "%l" .println
 	"newmtl " =pre 1? ( drop newmtl ; ) drop
-	"Ka" =pre 1? ( drop colorp ; ) drop
-	"Kd" =pre 1? ( drop colorp ; ) drop
-	"Ks" =pre 1? ( drop ; ) drop
-	"Ke" =pre 1? ( drop ; ) drop
-	"Ni" =pre 1? ( drop ; ) drop
-	"d " =pre 1? ( drop ; ) drop
-	"Tr" =pre 1? ( drop ; ) drop | 1-d
-	"illum" =pre 1? ( drop illum ; ) drop
-	"map_Kd" =pre 1? ( drop texmap ; ) drop
-	"map_Ka" =pre 1? ( drop texmap ; ) drop
-	"map_Ks" =pre 1? ( drop ; ) drop
-	"map_Ns" =pre 1? ( drop ; ) drop
-	"map_d" =pre 1? ( drop ; ) drop
-	"map_bump " =pre 1? ( drop ; ) drop
-	"bump" =pre 1? ( drop ; ) drop
-	"disp" =pre 1? ( drop ; ) drop
-	"decal" =pre 1? ( drop ; ) drop
+	"Ka" =pre 1? ( drop parseV3 n]Ka! ; ) drop	| ambient color
+	"Kd" =pre 1? ( drop parseV3 n]Kd! ; ) drop	| diffuse color
+	"Ks" =pre 1? ( drop parseV3 n]Ks! ; ) drop	| specular
+	"Ke" =pre 1? ( drop parseV3 n]Ke! ; ) drop	| emissive
+	"Ni" =pre 1? ( drop parseV n]Ni! ; ) drop	| optical density*
+	"Ns" =pre 1? ( drop parseV n]Ns! ; ) drop	| shininess
+	"d " =pre 1? ( drop parseV n]d! ; ) drop	| opacity
+	"illum" =pre 1? ( drop parseV n]i! ; ) drop | illumination
+	"map_Kd" =pre 1? ( drop >>sp trim dup n]Mkd! ; ) drop | diffuse Map { 255 255 255 255}
+	"map_Ns" =pre 1? ( drop >>sp trim dup n]Mns! ; ) drop | especular Map { 255 255 255 255}
+	"map_bump " =pre 1? ( drop >>sp trim dup n]Mbp! ; ) drop | normal Map { 127 127 255 0 }
 	;
+	
+|	"map_Ka" =pre 1? ( drop ; ) drop
+|	"map_Ks" =pre 1? ( drop ; ) drop
+|	"map_d" =pre 1? ( drop ; ) drop
+|	"bump" =pre 1? ( drop ; ) drop
+|	"disp" =pre 1? ( drop ; ) drop
+|	"decal" =pre 1? ( drop ; ) drop
+|	"Tr" =pre 1? ( drop ; ) drop | 1-d	
 
 :notmtl
+	"error, not MTL!" .println
 |	7 + trim dup colora 4 + !
 |	existe?
 |	dup 'path "%s%l" sprint
@@ -219,22 +233,21 @@
 
 :parsemtl | text --
 	0? ( drop notmtl ; )
+	-1 'colornow !
 	( trim parselinem >>cr 1? ) drop ;
 
 |--------- contar elementos y cargar mtl
 :mtli	| mtllib [external .mtl file name]
-	6 + trim
-	dup 'path
-	"%s%l" sprint
+	>>sp trim
+	dup 'path "%s%l" sprint
 	here dup 'textmtl !
-	swap
-	load 0 swap !+ 'here !
+	swap load 0 swap c!+ 'here !
 	;
 
 ::cnt/
 	0 swap
 	( c@+ 13 >? 
-		$2f =? ( rot 1 + rot rot )
+		$2f =? ( rot 1 + -rot )
 		drop
 		) 2drop ;
 
@@ -248,9 +261,10 @@
 	"vn" =pre 1? ( drop 1 'nnorm +! ; ) drop	| normales (x,y,z)
 	"vp" =pre 1? ( drop 1 'npara +! ; ) drop	| param space ( u [,v] [,w] )
 	"v" =pre 1? ( drop 1 'nver +! ; ) drop	| vertices (x,y,z[,w=1])
-	"f" =pre 1? ( drop facecnt 'nface +! ; ) drop	| face nvert( v/t/n  v//n v/t
-	"s" =pre 1? ( drop ; ) drop	| 1/off
-	"o" =pre 1? ( drop ; ) drop	| o [object name]
+	"f" =pre 1? ( drop |facecnt 
+					1 'nface +! ; ) drop	| face nvert( v/t/n  v//n v/t
+|	"s" =pre 1? ( drop ; ) drop	| 1/off
+|	"o" =pre 1? ( drop ; ) drop	| o [object name]
 	"g" =pre 1? ( drop ; ) drop	| g [group name]
 	"mtllib" =pre 1? ( drop mtli ; ) drop	| mtllib [external .mtl file name]
 	"usemtl" =pre 1? ( drop 1 'ncolor +! ; ) drop	| usemtl [material name]
@@ -258,12 +272,13 @@
 
 :preparse | adr --
 	( trim parsecount >>cr 1? ) drop ;
-
+	
+|--------------------------------------------------	
 ::loadobj | "" -- mem
 	getpath
 	here dup 'textobj !
-	swap load over =? ( 2drop 0 ; ) 0 swap !+
-	'here !
+	swap load over =? ( 2drop 0 ; ) 
+	0 swap c!+ 'here !
 	0 'nver !
 	0 'nface !
 	0 'nnorm !
@@ -276,27 +291,27 @@
 	nver 0? ( nip ; )
 	5 << +
 	dup dup 'texl ! 'texl> !
-	ntex 
-	24 * +
-	dup dup 'facel ! 'facel> ! | falta contar 4 vertices
-	nface 
-	7 3 << * +
+	ntex 24 * +
+	dup dup 'facel ! 'facel> ! | falta contar 4 vertices 
+	nface 5 << + | 4 valores
     dup dup 'norml ! 'norml> !
-	nnorm
-	24 * +
+	nnorm 24 * +
     dup dup 'paral ! 'paral> !
-	npara
-	24 * +
+	npara 24 * +
 	dup dup 'colorl ! 'colorl> !
-	ncolor 1 + 5 << +
+	ncolor 1 + 4 << + | adrname id?
 	'here !
+|	here textobj - 10 >> "%d kb" .println
 	textmtl parsemtl
 	textobj parseobj
+	|here textobj - 10 >> "%d kb" .println
+	unusedcol
 	here
 	;
 
 |------------------------------------------
-#xmin #ymin #zmin #xmax #ymax #zmax
+##xmin ##ymin ##zmin ##xmax ##ymax ##zmax
+
 
 ::objminmax | --
 	verl >b
@@ -336,6 +351,33 @@
 		8 b+
 		) 3drop ;
 
+::objescalax | por div --
+	verl >b
+	nver ( 1? 1 -
+		b@ pick3 pick3 */ b!+
+		8 b+ |b@ pick3 pick3 */ b!+
+		8 b+ |b@ pick3 pick3 */ b!+
+		8 b+
+		) 3drop ;
+
+::objescalay | por div --
+	verl >b
+	nver ( 1? 1 -
+		8 b+ |b@ pick3 pick3 */ b!+
+		b@ pick3 pick3 */ b!+
+		8 b+ |b@ pick3 pick3 */ b!+
+		8 b+
+		) 3drop ;
+
+::objescalaz | por div --
+	verl >b
+	nver ( 1? 1 -
+		8 b+ |b@ pick3 pick3 */ b!+
+		8 b+ |b@ pick3 pick3 */ b!+
+		b@ pick3 pick3 */ b!+
+		8 b+
+		) 3drop ;
+		
 
 ::objcube | lado --
 	xmax ymax zmax max max

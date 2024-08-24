@@ -31,9 +31,9 @@
 #timeline> 0
 
 ::timeline.clear
-	'fxp p.clear
-	'fx p.clear
-	'screen p.clear
+	'fxp p8.clear
+	'fx p8.clear
+	'screen p8.clear
 	timeline
 	dup 'timeline> !
 	'timeline< !
@@ -41,17 +41,17 @@
 	;
 
 :searchless | time adr --time adr
-	( 32 - timeline >=?
+	( 64 - timeline >=?
 		dup @	| time adr time
-		pick2 <=? ( drop 32 + ; )
-		drop ) 32 + ;
+		pick2 <=? ( drop 64 + ; )
+		drop ) 64 + ;
 
 :+tline	| 'fx 'scr event time --
 	1000 *.
 	timeline> searchless | adr
-	dup dup 32 + swap timeline> over - 2 >> move>
+	dup dup 64 + swap timeline> over - 2 >> move>
 	>a a!+ a!+ a!+ a!
-	32 'timeline> +! ;
+	64 'timeline> +! ;
 
 :tictline
 	timeline< timenow
@@ -60,12 +60,12 @@
 		@ >=?
 		swap
 		dup 8 + @ ex
-		32 + swap ) drop
+		64 + swap ) drop
 	'timeline< ! ;
 
 |-------------------- LOOP
 :evt.restart
-	'fx p.clear
+	'fx p8.clear
 	timeline 'timeline< !
 	timeline.start ;
 
@@ -74,7 +74,7 @@
 
 |-------------------- END
 :evt.stop
-	'fx p.clear
+	'fx p8.clear
 	1 'endtimeline !
 	;
 
@@ -82,25 +82,6 @@
 	>r 0 0 'evt.stop r> +tline ;
 	
 |-----------------------------
-::xywh64 | x y w h -- 64b
-	$ffff and swap
-	$ffff and 16 << or swap
-	$ffff and 32 << or swap
-	$ffff and 48 << or ;
-
-::w% sw 16 *>> ;
-::h% sh 16 *>> ;
-
-::xywh%64 | x y w h -- 64b
-	h% $ffff and swap
-	w% $ffff and 16 << or swap
-	h% $ffff and 32 << or swap
-	w% $ffff and 48 << or ;
-
-::xy%64 | x y -- 64b
-	h% $ffff and 32 << or swap
-	w% $ffff and 48 << or 
-	$ffffffff or ;
 
 ::64xy | b -- x y 
 	dup 48 >> swap 16 << 48 >> ;
@@ -114,13 +95,6 @@
 	
 #sdlbin [ 0 0 0 0 ]
 #sdlbox [ 0 0 0 0 ]
-
-::64box | b adr --
-	swap
-	dup 48 >> rot d!+
-	swap dup 16 << 48 >> rot d!+
-	swap dup 32 << 48 >> rot d!+
-	swap 48 << 48 >> swap d! ;
 
 |--- ratio adjust
 :setbox | hn wn --
@@ -161,7 +135,7 @@
 	;
 
 ::+box | box color --
-	'drawbox 'screen p!+ >a
+	'drawbox 'screen p8!+ >a
 	8 << 1 or a!+ a!+ ;
 
 |-------------------- IMAGEN
@@ -179,7 +153,7 @@
 #imgwh 0
 
 ::+img  | img box --
-	'drawimg 'screen p!+ >a
+	'drawimg 'screen p8!+ >a
 	1 a!+ a!+ 
 	dup 0 0 'imgwh dup 4 + SDL_QueryTexture | texture info
 	a!+ | texture
@@ -199,7 +173,7 @@
 	;
 
 ::+imgar  | img box --
-	'drawimgar 'screen p!+ >a
+	'drawimgar 'screen p8!+ >a
 	1 a!+ a!+ 
 	dup 0 0 'imgwh dup 4 + SDL_QueryTexture | texture info
 	a!+ | texture
@@ -218,7 +192,7 @@
 	;
 
 ::+txt  | img boxi boxo --
-	'drawtxt 'screen p!+ >a
+	'drawtxt 'screen p8!+ >a
 	0 a!+ a!+ a!+ a! ;
 	
 |-------------------- TEXT BOX
@@ -232,7 +206,7 @@
 	;
 	
 ::+tbox | font "" box color -- ; HVRRGGBB00
-	'drawtbox 'screen p!+ >a
+	'drawtbox 'screen p8!+ >a
 	swapcolor
 	8 << 1 or a!+ a!+ a!+ a! ;
 
@@ -243,20 +217,38 @@
 	b@+ b@+ swap | box in 2do for animation
 	r> $ffffff and | color
 	b@+ >r | font
-	b@+ 32 << or 
+	b@+ 24 << or 
 	r>
-	textboxs | $vh str box colorfb font --
+	textboxb | $vh str box colorfb font --
 	;
 	
 ::+tboxb | colorb font "" boz color -- ; HVRRGGBB00
-	'drawtboxb 'screen p!+ >a
+	'drawtboxb 'screen p8!+ >a
 	swapcolor
 	8 << 1 or a!+ a!+ a!+ a!+ 
 	swapcolor a! ;
 	
+|-------------------- TEXT BOX FILL BACK
+:drawtboxo
+	>b b@+ 1 and? ( drop ; )
+	8 >> dup >r 24 >>
+	b@+ b@+ swap | box in 2do for animation
+	r> $ffffff and | color
+	b@+ >r | font
+	b@+ 24 << or 
+	r>
+	textboxo | $vh str box colorfb font --
+	;
+	
+::+tboxo | colorb font "" ooboz color -- ; HVRRGGBB00
+	'drawtboxo 'screen p8!+ >a
+	swapcolor
+	8 << 1 or a!+ a!+ a!+ a!+ 
+	swapcolor a! ;	
+	
 |-------------------- SOUND
 :evt.play | adr --
-	-1 over 16 + @ 0 -1 Mix_PlayChannelTimed ;
+	-1 over 16 + @ 0 -1 Mix_PlayChannelTimed drop ;
 
 ::+sound | sonido inicio --
 	0 'evt.play 2swap >r swap r> +tline ;
@@ -275,14 +267,14 @@
 
 |-----------------------------
 ::getscr | -- adrlast
-	'screen p.last ;
+	'screen p8.last ;
 
 :getfx | -- adrlast
-	'fxp p.last ;
+	'fxp p8.last ;
 
 |-----------------------------
 :evt.on | adr -- adr
-	dup 16 + @ 8 + dup @ 1 not and swap ! ;
+	dup 16 + @ 8 + dup @ 1 nand swap ! ;
 
 ::+fx.on | sec --
 	>r 0 getscr 'evt.on r> +tline ;
@@ -319,7 +311,7 @@
 	;
 
 ::evt.box
-	'boxanim 'fx p!+ >a
+	'boxanim 'fx p8!+ >a
 	dup 24 + @ >b | fxp
 	b@+ 1000 *. a!+	| inicio
 	1.0 b@+ 1000 *.u /. a!+ | tiempo
@@ -333,14 +325,14 @@
 	;
 
 ::+fx.box | boxstart boxend func duration sec --
-	dup >r 'fxp p!+ >a a!+ a!+ a!+ a!
+	dup >r 'fxp p8!+ >a a!+ a!+ a!+ a!
 	getfx getscr 'evt.box r> +tline ;
 
 	
 |-------------------- DINAMICOS
 ::+ifx.box | elemento boxstart boxend func duration sec --
 	timenow +
-	dup >r 'fxp p!+ >a a!+ a!+ a!+ a!
+	dup >r 'fxp p8!+ >a a!+ a!+ a!+ a!
 	getfx 
 	swap 
 	'evt.box r> +tline ;
@@ -376,7 +368,7 @@
 	;
 
 ::evt.color
-	'colanim 'fx p!+ >a
+	'colanim 'fx p8!+ >a
 	dup 24 + @ >b | fxp
 	b@+ 1000 *. a!+	| inicio
 	1.0 b@+ 1000 *.u /. a!+ | tiempo
@@ -392,7 +384,7 @@
 	;
 
 ::+fx.color | colorstart colorend func duraction sec --
-	dup >r 'fxp p!+ >a a!+ a!+ a!+ a!
+	dup >r 'fxp p8!+ >a a!+ a!+ a!+ a!
 	getfx getscr 'evt.color r> +tline ;
 
 |*********DEBUG
@@ -405,7 +397,7 @@
 		@+ "%d " .print
 		@+ "%d " .print
 		@+ "%d " .println
-		) drop cr ;
+		) drop .cr ;
 
 ::debugtimeline
 	.cls
@@ -415,8 +407,8 @@
 	[ dup @+ "%h " .print 
 		@+ "%d " .print  
 		@+ 64xywh "%d,%d:%d,%d " .print 
-		@ "%h " .println ; ] 'screen p.mapv cr
-	cr
+		@ "%h " .println ; ] 'screen p8.mapv .cr
+	.cr
 	[ dup @+ "%f " .print
 		@+ "%f " .print
 		@+ "%h " .print
@@ -424,15 +416,15 @@
 		@+ 64xywh "%d,%d:%d,%d " .print
 		@+ "%d " .print
 		@ "%d " .print
-		cr ; ] 'fxp p.mapv cr
-	cr
+		.cr ; ] 'fxp p8.mapv .cr
+	.cr
 	;
 	
 ::debugtlmem
 	"" .println
-	'screen p.cnt "screen:%d " .println
-	'fx p.cnt "fx:%d " .println
-	'fxp p.cnt "fxp:%d " .println
+	'screen p8.cnt "screen:%d " .println
+	'fx p8.cnt "fx:%d " .println
+	'fxp p8.cnt "fxp:%d " .println
 	timeline> timeline  - "tl:%h " .println
 	;
 	
@@ -441,15 +433,15 @@
 ::timeline.draw
 	dtime
 	tictline
-	'fx p.draw
-	'screen p.drawo
+	'fx p8.draw
+	'screen p8.drawo
 	;
 
 ::timeline.inimem
-	512 'screen p.ini
-	512 'fx p.ini
-	512 'fxp p.ini
+	512 'screen p8.ini
+	512 'fx p8.ini
+	512 'fxp p8.ini
 	here 'timeline !
-	$1fff 'here +!
+	$ffff 'here +!
 	;
 
