@@ -6,7 +6,7 @@
 //
 
 //#define DEBUG
-//#define LINUX
+#define LINUX
 //#define RPI   // Tested on a Raspberry PI 4
 
 #include <stdio.h>
@@ -21,9 +21,22 @@
 #include <dirent.h>
 #include <sys/mman.h>
 #include <sys/types.h>
+#include <stdint.h>
+
+typedef int64_t __int64; 
+typedef int32_t __int32; 
+typedef int16_t __int16; 
+typedef uint64_t __uint64; 
+typedef uint32_t __uint32; 
+typedef uint16_t __uint16; 
+
 
 #else	// WINDOWS
 #include <windows.h>
+
+typedef __uint64 unsigned __int64;
+typedef __uint32 unsigned __int32; 
+typedef __uint16 unsigned __int16;  
 
 #endif
 
@@ -641,7 +654,7 @@ switch(n) {
 	case DIV: t=lite(tok2)/lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
 	case SHL: t=lite(tok2)<<lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
 	case SHR: t=lite(tok2)>>lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	case SHR0: t=(unsigned __int64)(lite(tok2))>>lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
+	case SHR0: t=(__uint64)(lite(tok2))>>lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
 	case MOD: t=lite(tok2)%lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
 	//case DIVMOD: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
 	//case MULDIV: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
@@ -1086,10 +1099,10 @@ while (TOS<=T) {
 }
 #endif
 
-void memset32(unsigned __int32 *dest, unsigned __int32 val, unsigned __int32 count)
+void memset32(__uint32 *dest,__uint32 val, __uint32 count)
 { while (count--) *dest++ = val; }
 
-void memset64(unsigned __int64 *dest, unsigned __int64 val, unsigned __int32 count)
+void memset64(__uint64 *dest,__uint64 val,__uint32 count)
 { while (count--) *dest++ = val; }
 
 // run code, from adress "boot"
@@ -1131,7 +1144,7 @@ next:
 	case IFNE:if (TOS==*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFNO
 	case IFAND:if (!(TOS&*NOS)) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFNA
 	case IFNAND:if (TOS&*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFAN
-	case IFBT:if ((unsigned __int64)(*(NOS-1)-*NOS)>(unsigned __int64)(TOS-(*NOS))){ip+=(op>>8);} TOS=*(NOS-1);NOS-=2;goto next;
+	case IFBT:if ((__uint64)(*(NOS-1)-*NOS)>(__uint64)(TOS-(*NOS))){ip+=(op>>8);} TOS=*(NOS-1);NOS-=2;goto next;
 	case DUP:NOS++;*NOS=TOS;goto next;				//DUP
 	case DROP:TOS=*NOS;NOS--;goto next;				//DROP
 	case OVER:NOS++;*NOS=TOS;TOS=*(NOS-1);goto next;	//OVER
@@ -1163,7 +1176,7 @@ next:
 	case DIV:TOS=(*NOS/TOS);NOS--;goto next;			//DIV
 	case SHL:TOS=*NOS<<TOS;NOS--;goto next;				//SAl
 	case SHR:TOS=*NOS>>TOS;NOS--;goto next;				//SAR
-	case SHR0:TOS=((unsigned __int64)*NOS)>>TOS;NOS--;goto next;	//SHR
+	case SHR0:TOS=((__uint64)*NOS)>>TOS;NOS--;goto next;	//SHR
 	case MOD:TOS=*NOS%TOS;NOS--;goto next;					//MOD
 	case DIVMOD:op=*NOS;*NOS=op/TOS;TOS=op%TOS;goto next;	//DIVMOD
 	case MULDIV:TOS=((__int128)(*(NOS-1))*(*NOS)/TOS);NOS-=2;goto next;	//MULDIV
@@ -1244,7 +1257,7 @@ next:
 		NOS-=2;TOS=*NOS;NOS--;goto next;
 	case FILL://QFILL
 //		W=(unsigned __int64)*(NOS-1);op=*NOS;while (TOS--) { *(unsigned __int64*)W=op;W+=8; }
-		memset64((unsigned __int64*)*(NOS-1),*NOS,TOS);		
+		memset64((__uint64*)*(NOS-1),*NOS,TOS);		
 		NOS-=2;TOS=*NOS;NOS--;goto next;
 
 	case CMOVED://CMOVE 
@@ -1275,7 +1288,7 @@ next:
 		NOS-=2;TOS=*NOS;NOS--;goto next;
 	case DFILL://FILL
 //		W=*(NOS-1);op=*NOS;while (TOS--) { *(int*)W=op;W+=4; }
-		memset32((unsigned __int32*)*(NOS-1),*NOS,TOS);
+		memset32((__uint32*)*(NOS-1),*NOS,TOS);
 		NOS-=2;TOS=*NOS;NOS--;goto next;
 	case MEM://"MEM"
 		NOS++;*NOS=TOS;TOS=(__int64)&memdata[memd];goto next;
@@ -1347,7 +1360,7 @@ next:
 	case DIV1:TOS/=op>>8;goto next;
 	case SHL1:TOS<<=op>>8;goto next;
 	case SHR1:TOS>>=op>>8;goto next;
-	case SHR01:TOS=(unsigned __int64)TOS>>(op>>8);goto next;
+	case SHR01:TOS=(__uint64)TOS>>(op>>8);goto next;
 	case MOD1:TOS=TOS%(op>>8);goto next;
 	case DIVMOD1:op>>=8;NOS++;*NOS=TOS/op;TOS=TOS%op;goto next;	//DIVMOD
 	case MULDIV1:op>>=8;TOS=(__int128)(*NOS)*TOS/op;NOS--;goto next;	//MULDIV
