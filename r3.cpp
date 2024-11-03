@@ -6,7 +6,7 @@
 //
 
 //#define DEBUG
-#define LINUX
+//#define LINUX
 //#define RPI   // Tested on a Raspberry PI 4
 
 #include <stdio.h>
@@ -34,9 +34,9 @@ typedef uint16_t __uint16;
 #else	// WINDOWS
 #include <windows.h>
 
-typedef __uint64 unsigned __int64;
-typedef __uint32 unsigned __int32; 
-typedef __uint16 unsigned __int16;  
+typedef unsigned __int64 __uint64;
+typedef unsigned __int32 __uint32; 
+typedef unsigned __int16 __uint16;  
 
 #endif
 
@@ -134,6 +134,7 @@ const char *r3bas[]={
 "B@","B!","B@+","B!+",
 "CB@","CB!","CB@+","CB!+",
 "DB@","DB!","DB@+","DB!+",
+"AB[","]BA",
 "MOVE","MOVE>","FILL",
 "CMOVE","CMOVE>","CFILL",
 "DMOVE","DMOVE>","DFILL",
@@ -204,6 +205,7 @@ TOB,BTO,BA,
 BF,BS,BFA,BSA,
 CBF,CBS,CBFA,CBSA,
 DBF,DBS,DBFA,DBSA,
+SAVEAB,LOADBA,
 MOVED,MOVEA,FILL,
 CMOVED,CMOVEA,CFILL,
 DMOVED,DMOVEA,DFILL,
@@ -1245,6 +1247,9 @@ next:
 	case DBFA:NOS++;*NOS=TOS;TOS=*(__int32*)REGB;REGB+=4;goto next;//dB@+ 
 	case DBSA:*(__int32*)REGB=TOS;TOS=*NOS;NOS--;REGB+=4;goto next;//dB!+
 
+	case SAVEAB:RTOS--;*RTOS=REGA;RTOS--;*RTOS=REGB;goto next;// ab[
+	case LOADBA:REGB=*RTOS;RTOS++;REGA=*RTOS;RTOS++;goto next;// ]ba
+	
 	case MOVED://QMOVE 
 //		W=(unsigned __int64)*(NOS-1);op=(unsigned __int64)*NOS;
 //		while (TOS--) { *(unsigned __int64*)W=*(unsigned __int64*)op;W+=8;op+=8; }
