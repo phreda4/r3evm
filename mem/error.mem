@@ -1,0 +1,4 @@
+FILE:r3 LINE:9 CHAR:5
+
+   9| dup as%%dwer
+          ^- word not found

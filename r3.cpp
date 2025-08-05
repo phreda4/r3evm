@@ -816,18 +816,25 @@ cerror=f;
 void printerror(char *name,char *src)
 {
 int line=1;
-char *lc=src;
+char *lc=src,*lca;
+char *le,linee[1024];
 for (char *p=src;p<cerror;p++)
 	if (*p==10) { if (*(p+1)==13) p++;
 		line++;lc=p+1;
 	} else if (*p==13) { if (*(p+1)==10) p++;
 		line++;lc=p+1; }
 *nextcr(lc)=0; // 0 in end of line
-//lc=name;while((unsigned char)*lc>31) { lc++; } *lc=0; // 0 in end of name
+le=&linee[0];
+lca=lc;
+while (*lc>31||*lc==9) {
+	if (*lc==0x25) *le++=0x25;
+	*le++=*lc++;
+	};
+*le=0;
 *nextcr(name)=0;
-fprintf(stderr,"FILE:%s LINE:%d CHAR:%d\n\n",name,line,cerror-lc);	
-fprintf(stderr,"%4d|%s\n     ",line,lc);
-for(char *p=lc;p<cerror;p++) if (*p==9) fprintf(stderr,"\t"); else fprintf(stderr," ");
+fprintf(stderr,"FILE:%s LINE:%d CHAR:%d\n\n",name,line,cerror-lca);	
+fprintf(stderr,"%4d|%s\n     ",line,linee);
+for(char *p=lca;p<cerror;p++) if (*p==9) fprintf(stderr,"\t"); else fprintf(stderr," ");
 fprintf(stderr,"^- %s\n",werror);	
 }
 
