@@ -638,13 +638,17 @@ if (n==4) modo=2; // ]
 if (n==MUL) modo=3; // * reserva bytes Qword Dword Kbytes
 }
 
-int lite(int tok) { return (tok>>8); }
-int fit(int n) { return ((n<<8>>8)==n);}
+__int64 lite(int tok) { return (tok>>8); }
+__int64 fit(int n) { return ((n<<8>>8)==n);}
+/*
 void back(int n) { memcode[memc-2]=(n<<8)|LIT;memc--; }
 void back1(int n) { memcode[memc-1]=(n<<8)|LIT; }
+*/
+void back(__int64 n) { memc-=2;compilaLIT(n); }
+void back1(__int64 n) { memc--;compilaLIT(n); }
 
 int constfold(int n,int tok1,int tok2) // TOS,NOS
-{ int t;
+{ __int64 t;
 switch(n) {
 	case AND: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
 	case OR: t=lite(tok1)|lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
