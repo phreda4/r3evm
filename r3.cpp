@@ -638,39 +638,35 @@ if (n==4) modo=2; // ]
 if (n==MUL) modo=3; // * reserva bytes Qword Dword Kbytes
 }
 
-__int64 lite(int tok) { return (tok>>8); }
-__int64 fit(int n) { return ((n<<8>>8)==n);}
-/*
-void back(int n) { memcode[memc-2]=(n<<8)|LIT;memc--; }
-void back1(int n) { memcode[memc-1]=(n<<8)|LIT; }
-*/
-void back(__int64 n) { memc-=2;compilaLIT(n); }
-void back1(__int64 n) { memc--;compilaLIT(n); }
+inline __int64 lite(int tok) { return (tok>>8); }
+
+inline void back(__int64 n) { memc-=2;compilaLIT(n); }
+inline void back1(__int64 n) { memc--;compilaLIT(n); }
 
 int constfold(int n,int tok1,int tok2) // TOS,NOS
 { __int64 t;
 switch(n) {
-	case AND: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	case OR: t=lite(tok1)|lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	case XOR: t=lite(tok1)^lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	case NAND: t=(~lite(tok1))&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	case ADD: t=lite(tok1)+lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	case SUB: t=lite(tok2)-lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	case MUL: t=lite(tok1)*lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	case DIV: t=lite(tok2)/lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	case SHL: t=lite(tok2)<<lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	case SHR: t=lite(tok2)>>lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	case SHR0: t=(__uint64)(lite(tok2))>>lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	case MOD: t=lite(tok2)%lite(tok1);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	//case DIVMOD: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	//case MULDIV: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	//case MULSHR: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	//case CDIVSH: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT && fit(t)) { back(t);return 1; } break;
-	case NOT: t=~lite(tok1);if (fit(t)) { back1(t);return 1; } break;
-	case NEG: t=-lite(tok1);if (fit(t)) { back1(t);return 1; } break;
-	case ABS: t=lite(tok1);if (t<0)t=-t;if (fit(t)) { back1(t);return 1; } break;
-	case CSQRT: t=isqrt(lite(tok1));if (fit(t)) { back1(t);return 1; } break;
-	case CLZ: t=iclz(lite(tok1));if (fit(t)) { back1(t);return 1; } break;
+	case AND: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	case OR: t=lite(tok1)|lite(tok2);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	case XOR: t=lite(tok1)^lite(tok2);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	case NAND: t=(~lite(tok1))&lite(tok2);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	case ADD: t=lite(tok1)+lite(tok2);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	case SUB: t=lite(tok2)-lite(tok1);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	case MUL: t=lite(tok1)*lite(tok2);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	case DIV: t=lite(tok2)/lite(tok1);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	case SHL: t=lite(tok2)<<lite(tok1);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	case SHR: t=lite(tok2)>>lite(tok1);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	case SHR0: t=(__uint64)(lite(tok2))>>lite(tok1);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	case MOD: t=lite(tok2)%lite(tok1);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	//case DIVMOD: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	//case MULDIV: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	//case MULSHR: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	//case CDIVSH: t=lite(tok1)&lite(tok2);if ((tok2&0xff)==LIT) { back(t);return 1; } break;
+	case NOT: t=~lite(tok1);back1(t);return 1; 
+	case NEG: t=-lite(tok1);back1(t);return 1;
+	case ABS: t=lite(tok1);if (t<0)t=-t;back1(t);return 1;
+	case CSQRT: t=isqrt(lite(tok1));back1(t);return 1;
+	case CLZ: t=iclz(lite(tok1));back1(t);return 1;
 	}
 	
 return 0;
