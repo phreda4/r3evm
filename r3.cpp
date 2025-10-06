@@ -86,7 +86,7 @@ void iniA(void) { cntstacka=0; }
 void pushA(int n) { stacka[cntstacka++]=n; }
 int popA(void) { return stacka[--cntstacka]; }
 
-#define iclz(x) __builtin_clz(x)
+#define iclz(x) __builtin_clzll(x)
 
 // http://www.devmaster.net/articles/fixed-point-optimizations/
 static inline __int64 isqrt(__int64 value)
