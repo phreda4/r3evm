@@ -30,7 +30,7 @@
 
 #ifdef DEBUGVER
 #include <signal.h>
-#include <setjmp.h>
+//#include <setjmp.h>
 #endif
 
 typedef int64_t __int64; 
@@ -40,13 +40,33 @@ typedef uint64_t __uint64;
 typedef uint32_t __uint32; 
 typedef uint16_t __uint16; 
 
+  #include <unistd.h>
+  #include <fcntl.h>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
+  #include <errno.h>
+  typedef int SOCKET;
+  #define INVALID_SOCKET -1
+  #define SET_NONBLOCK(s) fcntl(s, F_SETFL, O_NONBLOCK)
+  #define CLOSE_SOCK(s) close(s)
+  #define LAST_ERROR errno
+
 
 #else	// WINDOWS
 #include <windows.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+typedef int socklen_t;
+#define SET_NONBLOCK(s) { u_long mode = 1; ioctlsocket(s, FIONBIO, &mode); }
+#define CLOSE_SOCK(s) closesocket(s)
+#define LAST_ERROR WSAGetLastError()
 
 typedef unsigned __int64 __uint64;
 typedef unsigned __int32 __uint32; 
 typedef unsigned __int16 __uint16;  
+
 
 #endif
 
@@ -1100,6 +1120,144 @@ return -1;
 /*--------RUNER--------*/
 //----------------------
 /////////////////////////////////////////////////////////////
+#define BUFF_SIZE 4096
+#define LOCALHOST "127.0.0.1"
+
+typedef struct {
+  SOCKET sock;
+  char rx_buf[BUFF_SIZE];
+  int rx_len;
+} conn_t;
+
+static conn_t conn;
+
+void init_winsock(void) {
+#ifdef _WIN32
+  WSADATA wsa;
+  if (WSAStartup(MAKEWORD(2, 2), &wsa)) {
+    fprintf(stderr, "WSAStartup error\n");
+    exit(1);
+  }
+#endif
+}
+
+void cleanup_winsock(void) {
+#ifdef _WIN32
+  WSACleanup();
+#endif
+}
+
+int server_create(int port) {
+  struct sockaddr_in addr;
+  conn.sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (conn.sock == INVALID_SOCKET) {
+    perror("socket");
+    return -1;
+	}
+  SET_NONBLOCK(conn.sock);
+  int reuse = 1;
+  if (setsockopt(conn.sock, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(reuse)) < 0) {
+    perror("setsockopt");
+    CLOSE_SOCK(conn.sock);
+    return -1;
+	}
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = inet_addr(LOCALHOST);
+  addr.sin_port = htons(port);
+  if (bind(conn.sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+    perror("bind");
+    CLOSE_SOCK(conn.sock);
+    return -1;
+	}
+  if (listen(conn.sock, 1) < 0) {
+    perror("listen");
+    CLOSE_SOCK(conn.sock);
+    return -1;
+	}
+  printf("Servidor escuchando en 127.0.0.1:%d\n", port);
+  conn.rx_len = 0;
+  return 0;
+}
+
+int client_connect(int port) {
+  struct sockaddr_in addr;
+  conn.sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (conn.sock == INVALID_SOCKET) {
+    perror("socket");
+    return -1;
+	}
+  SET_NONBLOCK(conn.sock);
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = inet_addr(LOCALHOST);
+  addr.sin_port = htons(port);
+  if (connect(conn.sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+#ifdef _WIN32
+    if (LAST_ERROR != WSAEWOULDBLOCK) {
+#else
+    if (LAST_ERROR != EINPROGRESS) {
+#endif
+      perror("connect");
+      CLOSE_SOCK(conn.sock);
+      return -1;
+		}
+	}
+  printf("Conectando a 127.0.0.1:%d\n", port);
+  conn.rx_len = 0;
+  return 0;
+}
+
+int server_accept(void) {
+  struct sockaddr_in addr;
+  socklen_t len = sizeof(addr);
+  SOCKET cli_sock = accept(conn.sock, (struct sockaddr*)&addr, &len);
+  if (cli_sock == INVALID_SOCKET) {return -1;}
+  CLOSE_SOCK(conn.sock);
+  conn.sock = cli_sock;
+  conn.rx_len = 0;
+  SET_NONBLOCK(conn.sock);
+  printf("Cliente conectado\n");
+  return 0;
+}
+
+int sock_send(const char *data, int len) {
+  int n = send(conn.sock, data, len, 0);
+  return (n > 0) ? n : 0;
+}
+
+int sock_recv(void) {
+  int n = recv(conn.sock, conn.rx_buf + conn.rx_len, BUFF_SIZE - conn.rx_len - 1, 0);
+  if (n > 0) {
+    conn.rx_len += n;
+    conn.rx_buf[conn.rx_len] = '\0';
+    return n;
+	}
+  if (n == 0) {return -1;}
+  if (n < 0) {
+#ifdef _WIN32
+    if (LAST_ERROR == WSAECONNRESET || LAST_ERROR == WSAECONNABORTED) {return -1;}
+#else
+    if (LAST_ERROR == ECONNRESET || LAST_ERROR == ECONNABORTED) {return -1;}
+#endif
+  }  
+return 0;
+}
+
+void sock_close(void) {
+  CLOSE_SOCK(conn.sock);
+}
+
+void sock_flush(void) {
+  conn.rx_len = 0;
+  conn.rx_buf[0] = '\0';
+}
+
+conn_t* get_conn(void) {
+  return &conn;
+}
+
+/////////////////////////////////////////////////////////////
 
 void memset32(__uint32 *dest,__uint32 val, __uint32 count)
 { while (count--) *dest++ = val; }
@@ -1119,69 +1277,36 @@ int ip;
 
 /////////////////////////////////////////////////////////////
 
-void print_error(void* error_code);
-
-/////////////////////////////////////////////////////////////
-#ifdef WINDOWS
-
-// Manejador de excepciones para Windows (captura TODAS las no manejadas)
-LONG WINAPI error_filter(PEXCEPTION_POINTERS pExInfo) {
-    DWORD code = pExInfo->ExceptionRecord->ExceptionCode;
-    print_error((void*)(uintptr_t)code);  // Casteo para unificar
-    return EXCEPTION_EXECUTE_HANDLER;  // Re-lanza después de imprimir
-}
-
-void install_handler() {
-    SetUnhandledExceptionFilter(error_filter);
-    //printf("Manejador instalado en Windows (captura todas las excepciones no manejadas).\n");
-}
-
-void uninstall_handler() {
-    SetUnhandledExceptionFilter(NULL);
-    //printf("Manejador desinstalado en Windows.\n");
-}
-
-#else  // Linux/Unix
-  
-// Manejador de señales para Linux (común para todos)
-void error_handler(int sig) {
-    print_error((void*)(uintptr_t)sig);  // Casteo para unificar
-    signal(sig, SIG_DFL);  // Restaura por defecto
-    raise(sig);  // Re-lanza
-}
-
-void install_handler() {
-    signal(SIGABRT, error_handler);  // Abort (ej. assert fallido)
-    signal(SIGBUS, error_handler);   // Error de bus (acceso memoria inválido)
-    signal(SIGFPE, error_handler);   // Error punto flotante (div/0, overflow)
-    signal(SIGILL, error_handler);   // Instrucción ilegal
-    signal(SIGSEGV, error_handler);  // Violación segmento (null ptr, etc.)
-    signal(SIGPIPE, error_handler);  // Broken pipe (escritura a socket cerrado)
-//        signal(SIGTERM, error_handler);  // Terminación (kill)
-        // Opcional: signal(SIGINT, error_handler);  // Ctrl+C (descomenta si quieres)
-//        printf("Manejadores instalados en Linux para todos los signals de error comunes.\n");
-}
-
-void uninstall_handler() {
-    signal(SIGABRT, SIG_DFL);
-    signal(SIGBUS, SIG_DFL);
-    signal(SIGFPE, SIG_DFL);
-    signal(SIGILL, SIG_DFL);
-    signal(SIGSEGV, SIG_DFL);
-    signal(SIGPIPE, SIG_DFL);
-//        signal(SIGTERM, SIG_DFL);
-        // Opcional: signal(SIGINT, SIG_DFL);
-//        printf("Manejadores desinstalados en Linux.\n");
-}
-
-#endif
-
 void print_error(void* error_code) {
+int i,sd,sr;
+sd=(NOS-(&datastack[0]));
+sr=(&retstack[512-1])-RTOS;
+
+printf("RUNTIME ERROR\n");
+printf("MC:$%x ",memcode);
+printf("MD:$%x ",memdata);
+printf("B:$%x ",boot);
+printf("I:$%x\n",ip);
+//TOS=0;
+//NOS = &datastack[0];
+//RTOS = &retstack[512 - 1];
+printf("D:%d\n",sd);
+for(int i=2;i<sd+1;i++) {
+	printf("$%x ",datastack[i]);
+	}
+printf("$%x\n",TOS);
+printf("R:%d\n",sr);
+for(int i=510;i>510-sr;i--) {
+	printf("$%x ",retstack[i]);
+	}
+printf("\n");
+printf("A:$%x B:$%x\n",REGA,REGB);
+	
 #ifdef _WIN32
     DWORD code = (DWORD)(uintptr_t)error_code;
     const char* msg;
     switch (code) {
-        case EXCEPTION_ACCESS_VIOLATION:              msg = "Violación de acceso a memoria (ptr inválido)"; break;
+        case EXCEPTION_ACCESS_VIOLATION:              msg = "MEM INV"; break;
         case EXCEPTION_DATATYPE_MISALIGNMENT:         msg = "Desalineación de tipo de dato"; break;
         case EXCEPTION_BREAKPOINT:                    msg = "Punto de interrupción"; break;
         case EXCEPTION_SINGLE_STEP:                   msg = "Paso único (debug)"; break;
@@ -1193,7 +1318,7 @@ void print_error(void* error_code) {
         case EXCEPTION_FLT_OVERFLOW:                  msg = "Desbordamiento flotante"; break;
         case EXCEPTION_FLT_STACK_CHECK:               msg = "Verificación de stack flotante"; break;
         case EXCEPTION_FLT_UNDERFLOW:                 msg = "Subdesbordamiento flotante"; break;
-        case EXCEPTION_INT_DIVIDE_BY_ZERO:            msg = "División entera por cero"; break;
+        case EXCEPTION_INT_DIVIDE_BY_ZERO:            msg = "/0"; break;
         case EXCEPTION_INT_OVERFLOW:                  msg = "Desbordamiento entero"; break;
         case EXCEPTION_PRIV_INSTRUCTION:              msg = "Instrucción privilegiada"; break;
         case EXCEPTION_IN_PAGE_ERROR:                 msg = "Error en página (memoria no residente)"; break;
@@ -1206,7 +1331,7 @@ void print_error(void* error_code) {
         case STATUS_FLOAT_MULTIPLE_TRAPS:             msg = "Múltiples trampas flotantes"; break;
         default:                                      msg = "Excepción desconocida"; break;
     }
-    printf("Error interceptado en Windows: %s (código: 0x%lx)\n", msg, code);
+    printf("Error %s ($%lx)\n", msg, code);
     
 #else
     int sig = (int)(uintptr_t)error_code;
@@ -1222,11 +1347,61 @@ void print_error(void* error_code) {
         // Opcional: case SIGINT: msg = "Interrupción (Ctrl+C)"; break;
         default:      msg = "Señal desconocida"; break;
     }
-    printf("Error interceptado en Linux: %s (señal: %d)\n", msg, sig);
+    printf("Error %s (%d)\n", msg, sig);
 #endif
 //getch();
 
 }
+
+/////////////////////////////////////////////////////////////
+#ifdef WINDOWS
+
+LONG WINAPI error_filter(PEXCEPTION_POINTERS pExInfo) {
+    DWORD code = pExInfo->ExceptionRecord->ExceptionCode;
+    print_error((void*)(uintptr_t)code);  // Casteo para unificar
+    return EXCEPTION_EXECUTE_HANDLER;  // Re-lanza después de imprimir
+}
+
+void install_handler() {
+    SetUnhandledExceptionFilter(error_filter);
+}
+
+void uninstall_handler() {
+    SetUnhandledExceptionFilter(NULL);
+}
+
+#else  // Linux/Unix
+  
+void error_handler(int sig) {
+    print_error((void*)(uintptr_t)sig);  // Casteo para unificar
+    signal(sig, SIG_DFL);  // Restaura por defecto
+    raise(sig);  // Re-lanza
+}
+
+void install_handler() {
+    signal(SIGABRT, error_handler);  // Abort (ej. assert fallido)
+    signal(SIGBUS, error_handler);   // Error de bus (acceso memoria inválido)
+    signal(SIGFPE, error_handler);   // Error punto flotante (div/0, overflow)
+    signal(SIGILL, error_handler);   // Instrucción ilegal
+    signal(SIGSEGV, error_handler);  // Violación segmento (null ptr, etc.)
+    signal(SIGPIPE, error_handler);  // Broken pipe (escritura a socket cerrado)
+//        signal(SIGTERM, error_handler);  // Terminación (kill)
+// Opcional: signal(SIGINT, error_handler);  // Ctrl+C (descomenta si quieres)
+}
+
+void uninstall_handler() {
+    signal(SIGABRT, SIG_DFL);
+    signal(SIGBUS, SIG_DFL);
+    signal(SIGFPE, SIG_DFL);
+    signal(SIGILL, SIG_DFL);
+    signal(SIGSEGV, SIG_DFL);
+    signal(SIGPIPE, SIG_DFL);
+//        signal(SIGTERM, SIG_DFL);
+// Opcional: signal(SIGINT, SIG_DFL);
+}
+
+#endif
+
 /////////////////////////////////////////////////////////////////////
 // run code, from adress "boot"
 void runr3(int boot) 
@@ -1610,6 +1785,7 @@ next:
 
 	
 ////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[])
 {
 char *filename;
@@ -1619,9 +1795,21 @@ else
 	filename=(char*)"main.r3";
 if (!r3compile(filename)) return -1;
     
+init_winsock();
+if (argc > 2) { // argv[2] = puerto del debugger
+	server_create(atoi(argv[2]));
+	//client_connect(atoi(argv[2]));
+} else {
+	server_create(9999);
+	//client_connect(9999);
+	}
+
 install_handler();
 runr3(boot);
 uninstall_handler();
 
+sock_close();
+cleanup_winsock();    
+    
 return 0;
 }

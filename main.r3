@@ -538,7 +538,6 @@
 	
 |---------------------------------
 :main
-3 0 /
 	rebuild
 	loadm
 	( exit 0? drop
@@ -550,8 +549,16 @@
 		drop ) drop
 	savem 
 	;
-
+	
+:test2
+	15 10 ! ;	
+:test
+	3 0 /
+	test2 dup drop ;
+	
 : |<<<<<<<<<<<<<<< BOOT
+1 >a 2 >b
+|test
 conadj evsize
 main 
 .masb ;
