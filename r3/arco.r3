@@ -49,5 +49,6 @@
 	
 :	|====================== INICIO 
 	"r3sdl" 800 600 SDLinit
+|3 0 /
 	'main SDLShow 
 	;

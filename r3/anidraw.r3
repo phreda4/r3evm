@@ -6,7 +6,7 @@
 ^r3/lib/rand.r3	
 
 #ink $ff00
- dup as%dwer
+ 
 #aline * 8192
 #aline>
 
@@ -78,6 +78,7 @@
 	
 	SDLkey
 	>esc< =? ( exit )
+	<f1> =? ( 4drop )
 	drop ;
 
 : 
