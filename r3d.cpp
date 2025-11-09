@@ -6,6 +6,8 @@
 //
 
 #define DEBUGVER
+//#define OPTOFF
+//#define NETSERVER
 //#define DEBUG
 
 #define WINDOWS
@@ -16,8 +18,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-//#include <excpt.h>
-#include <conio.h> 
  
 #if defined(LINUX) || defined(RPI)
 
@@ -30,7 +30,6 @@
 
 #ifdef DEBUGVER
 #include <signal.h>
-//#include <setjmp.h>
 #endif
 
 typedef int64_t __int64; 
@@ -40,6 +39,7 @@ typedef uint64_t __uint64;
 typedef uint32_t __uint32; 
 typedef uint16_t __uint16; 
 
+#ifdef NETSERVER
   #include <unistd.h>
   #include <fcntl.h>
   #include <sys/socket.h>
@@ -51,10 +51,13 @@ typedef uint16_t __uint16;
   #define SET_NONBLOCK(s) fcntl(s, F_SETFL, O_NONBLOCK)
   #define CLOSE_SOCK(s) close(s)
   #define LAST_ERROR errno
-
+#endif
 
 #else	// WINDOWS
+
 #include <windows.h>
+
+#ifdef NETSERVER
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -62,11 +65,11 @@ typedef int socklen_t;
 #define SET_NONBLOCK(s) { u_long mode = 1; ioctlsocket(s, FIONBIO, &mode); }
 #define CLOSE_SOCK(s) closesocket(s)
 #define LAST_ERROR WSAGetLastError()
+#endif
 
 typedef unsigned __int64 __uint64;
 typedef unsigned __int32 __uint32; 
 typedef unsigned __int16 __uint16;  
-
 
 #endif
 
@@ -724,7 +727,7 @@ if (n==2) { blockOut();return; }	//)	salto
 if (n==3) { dicc[cntdicc-1].info|=4;anonIn();return; }		//[	salto:etiqueta
 if (n==4) { dicc[cntdicc-1].info|=4;anonOut();return; }		//]	etiqueta;push
 
-#ifndef DEBUGVER // DISABLE
+#ifndef OPTOFF // DISABLE
 ///////////////////////// OPTIMIZATION
 // CONSTANT FOLDING
 if (n>=AND && n<=CLZ && (tokpre&0xff)==LIT) {
@@ -833,7 +836,7 @@ void compilaWORD(int n)
 if (modo>1) { datanro(n);return; }
 //printf("COMPILA %x (%x)\n",dicc[n].mem,dicc[n].info);
 
-#ifndef DEBUGVER
+#ifndef OPTOFF
 if ((dicc[n].info&6)==2) { 
 	//printword(dicc[n].nombre);printf(" INLINE %x (%x)\n",dicc[n].mem,dicc[n].info);
 	compilainline(dicc[n].mem);return; } // INLINE, no ;;
@@ -1120,6 +1123,8 @@ return -1;
 /*--------RUNER--------*/
 //----------------------
 /////////////////////////////////////////////////////////////
+#ifdef NETSERVER
+
 #define BUFF_SIZE 4096
 #define LOCALHOST "127.0.0.1"
 
@@ -1250,7 +1255,7 @@ void sock_flush(void) {
 conn_t* get_conn(void) {
   return &conn;
 }
-
+#endif
 /////////////////////////////////////////////////////////////
 
 void memset32(__uint32 *dest,__uint32 val, __uint32 count)
@@ -1270,32 +1275,72 @@ __int64 REGB=0;
 int ip;
 
 /////////////////////////////////////////////////////////////
+// write error
+
+void fword(FILE *f,char *s) {
+while (*s>32) fputc(*s++,f);
+}
+
+void errorinc(FILE *f)
+{
+fprintf(f,"includes\n");
+for(int i=0;i<cntincludes;i++) {
+	fprintf(f,"%d. ",i);
+	fword(f,includes[i].nombre);
+	fprintf(f,"\n");
+	}
+for(int i=0;i<cntstacki;i++) {
+	fprintf(f,"%d. %d\n",i,stacki[i]);
+	}
+}
+
+
+void fprintcode(FILE *f,int n) {
+if ((n&0xff)<5 && n!=0) {
+	fprintf(f,r3asm[n&0xff]);fprintf(f," %x",n>>8);
+} else if (((n&0xff)>=IFL && (n&0xff)<=IFNAND) || (n&0xff)==JMPR) {	
+	fprintf(f,r3bas[n&0xff]);fprintf(f," >> %d",n>>8);
+} else if ((n&0xff)>=IFL1 && (n&0xff)<=IFNAND1) {	
+	fprintf(f,r3bas[n&0xff]);fprintf(f," %d",n>>16);fprintf(f," >> %d",n<<16>>24);
+} else if ((n&0xff)>SYSCALL10 ) {
+	fprintf(f,r3bas[(n&0xff)+1]);fprintf(f," %x",n>>8);	
+} else 
+	fprintf(f,r3bas[n&0xff]);
+fprintf(f,"\n");
+}
+
+void errorcode(FILE *f) {
+int dic=0;
+while (dicc[dic].info&0x10) dic++;
+for(int i=1;i<memc;i++) {
+	if (dicc[dic].mem==i) {
+		fprintf(f,"=== %x. ",dic);
+		fword(f,dicc[dic].nombre-1);
+		fprintf(f," %x ",dicc[dic].mem);	
+		fprintf(f,"%x ===\n",dicc[dic].info);			
+		dic++;
+		while (~(dicc[dic].info&0x10) && dicc[dic].mem==dicc[dic-1].mem) dic++;
+		while (dicc[dic].info&0x10) dic++;
+		}
+	fprintf(f,"%x:%x:",i,memcode[i]);
+	fprintcode(f,memcode[i]);
+	if ((memcode[i]&0xff)>=AFECH) fprintf(f,"***\n");
+	}
+fprintf(f,"\n");
+}
+
+void errordicc(FILE *f)
+{
+for(int i=0;i<cntdicc;i++) {
+	fprintf(f,"%x. ",i);
+	fword(f,dicc[i].nombre-1);
+	fprintf(f," %x ",dicc[i].mem);	
+	fprintf(f,"%x \n",dicc[i].info);	
+	}
+}
+
 
 void print_error(void* error_code) {
-int i,sd,sr;
-sd=(NOS-(&datastack[0]));
-sr=(&retstack[512-1])-RTOS;
-
-printf("RUNTIME ERROR\n");
-printf("MC:$%x ",memcode);
-printf("MD:$%x ",memdata);
-printf("B:$%x ",boot);
-printf("I:$%x\n",ip);
-//TOS=0;
-//NOS = &datastack[0];
-//RTOS = &retstack[512 - 1];
-printf("D:%d\n",sd);
-for(int i=2;i<sd+1;i++) {
-	printf("$%x ",datastack[i]);
-	}
-printf("$%x\n",TOS);
-printf("R:%d\n",sr);
-for(int i=510;i>510-sr;i--) {
-	printf("$%x ",retstack[i]);
-	}
-printf("\n");
-printf("A:$%x B:$%x\n",REGA,REGB);
-	
 #ifdef _WIN32
     DWORD code = (DWORD)(uintptr_t)error_code;
     const char* msg;
@@ -1325,8 +1370,7 @@ printf("A:$%x B:$%x\n",REGA,REGB);
         case STATUS_FLOAT_MULTIPLE_TRAPS:             msg = "Múltiples trampas flotantes"; break;
         default:                                      msg = "Excepción desconocida"; break;
     }
-    printf("Error %s ($%lx)\n", msg, code);
-    
+  
 #else
     int sig = (int)(uintptr_t)error_code;
     const char* msg;
@@ -1341,10 +1385,34 @@ printf("A:$%x B:$%x\n",REGA,REGB);
         // Opcional: case SIGINT: msg = "Interrupción (Ctrl+C)"; break;
         default:      msg = "Señal desconocida"; break;
     }
-    printf("Error %s (%d)\n", msg, sig);
 #endif
-//getch();
+FILE *fe;
+int i,sd,sr;
+sd=(NOS-(&datastack[0]));
+sr=(&retstack[512-1])-RTOS;
+fe=fopen("r3.err","w+");
+fprintf(fe,"RUNTIME ERROR: %s ($%lx)\n", msg, code);
+fprintf(fe,"MC:$%x ",memcode);
+fprintf(fe,"MD:$%x ",memdata);
+fprintf(fe,"B:$%x ",boot);
+fprintf(fe,"I:$%x ",ip);
+fprintf(fe,"IN:%s\n",r3bas[memcode[ip-1]]);
 
+//TOS=0;//NOS = &datastack[0];//RTOS = &retstack[512 - 1];
+fprintf(fe,"D:%d\n",sd);
+for(int i=2;i<sd+1;i++) {
+	fprintf(fe,"$%x ",datastack[i]);
+	}
+fprintf(fe,"$%x\n",TOS);
+fprintf(fe,"R:%d\n",sr);
+for(int i=510;i>510-sr;i--) {
+	fprintf(fe,"$%x ",retstack[i]);
+	}
+fprintf(fe,"\n");
+fprintf(fe,"A:$%x B:$%x\n",REGA,REGB);
+//fprintf(fe,"DICC:\n");errordicc(fe);
+fprintf(fe,"CODE:\n");errorcode(fe);
+fclose(fe);
 }
 
 /////////////////////////////////////////////////////////////
@@ -1647,7 +1715,7 @@ next:
 	case LIT3:TOS=(TOS&0xffffffffffff)|((op>>8)<<48);goto next;	// LIT xxxx......aaaaaa	
 	case LITF:NOS++;*NOS=TOS;TOS=*(__int64*)(&memcode[ip]);ip+=2;goto next; // insegure for optimization
 //----------------- OPTIMIZED WORD
-#ifndef DEBUGVER // DISABLE
+#ifndef OPTOFF // DISABLE
 	case AND1:TOS&=op>>8;goto next;
 	case OR1:TOS|=op>>8;goto next;
 	case XOR1:TOS^=op>>8;goto next;
@@ -1789,6 +1857,9 @@ else
 	filename=(char*)"main.r3";
 if (!r3compile(filename)) return -1;
     
+#ifdef DEBUGVER    
+
+#ifdef NETSERVER
 init_winsock();
 if (argc > 2) { // argv[2] = puerto del debugger
 	//server_create(atoi(argv[2]));
@@ -1797,13 +1868,21 @@ if (argc > 2) { // argv[2] = puerto del debugger
 	//server_create(9999);
 	client_connect(9999);
 	}
+#endif
 
 install_handler();
+#endif
+
 runr3(boot);
+
+#ifdef DEBUGVER
 uninstall_handler();
 
+#ifdef NETSERVER
 sock_close();
 cleanup_winsock();    
-    
+#endif
+
+#endif
 return 0;
 }
