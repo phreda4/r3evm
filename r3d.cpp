@@ -1175,7 +1175,7 @@ int server_create(int port) {
     CLOSE_SOCK(conn.sock);
     return -1;
 	}
-  printf("Servidor escuchando en 127.0.0.1:%d\n", port);
+//  printf("Servidor escuchando en 127.0.0.1:%d\n", port);
   conn.rx_len = 0;
   return 0;
 }
@@ -1183,10 +1183,7 @@ int server_create(int port) {
 int client_connect(int port) {
   struct sockaddr_in addr;
   conn.sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (conn.sock == INVALID_SOCKET) {
-    perror("socket");
-    return -1;
-	}
+  if (conn.sock == INVALID_SOCKET) { perror("socket");return -1;	}
   SET_NONBLOCK(conn.sock);
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
@@ -1198,12 +1195,9 @@ int client_connect(int port) {
 #else
     if (LAST_ERROR != EINPROGRESS) {
 #endif
-      perror("connect");
-      CLOSE_SOCK(conn.sock);
-      return -1;
-		}
+      perror("connect"); CLOSE_SOCK(conn.sock);return -1; }
 	}
-  printf("Conectando a 127.0.0.1:%d\n", port);
+//  printf("Conectando a 127.0.0.1:%d\n", port);
   conn.rx_len = 0;
   return 0;
 }
@@ -1217,7 +1211,7 @@ int server_accept(void) {
   conn.sock = cli_sock;
   conn.rx_len = 0;
   SET_NONBLOCK(conn.sock);
-  printf("Cliente conectado\n");
+//  printf("Cliente conectado\n");
   return 0;
 }
 
@@ -1797,11 +1791,11 @@ if (!r3compile(filename)) return -1;
     
 init_winsock();
 if (argc > 2) { // argv[2] = puerto del debugger
-	server_create(atoi(argv[2]));
-	//client_connect(atoi(argv[2]));
+	//server_create(atoi(argv[2]));
+	client_connect(atoi(argv[2]));
 } else {
-	server_create(9999);
-	//client_connect(9999);
+	//server_create(9999);
+	client_connect(9999);
 	}
 
 install_handler();
