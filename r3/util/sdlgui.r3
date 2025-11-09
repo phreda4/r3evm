@@ -3,14 +3,14 @@
 
 ^r3/lib/gui.r3
 
-^r3/win/sdl2gfx.r3
+^r3/lib/sdl2gfx.r3
 ^r3/util/ttfont.r3
-^r3/lib/input.r3
+|^r3/lib/input.r3
 
 #winx 10 #winy 10
 #winw 10 #winh 10
 
-#padx 2 #pady 2
+##padx 2 ##pady 2
 ##curx 10 ##cury 10
 ##boxw 100 ##boxh 20
 
@@ -40,6 +40,7 @@
 	0 'keyevent !
 |	0 'winevent !
 
+	0 'winx ! 0 'winy !
 	0 'cury ! 0 'curx !
 	sw 'boxw !
 	immfontsh 8 + 'boxh !
@@ -51,8 +52,9 @@
 ::immat 'cury ! 'curx ! ;
 ::immat+ 'cury +! 'curx +! ;
 ::immbox 'boxh ! 'boxw ! ;
-::immfont! dup 'immfont ! ttfont "A" ttsize 'immfontsh ! drop ;
+::immfont! dup 'immfont ! ttfont! "A" ttsize 'immfontsh ! drop ;
 ::immpad! 'pady ! 'padx ! ;
+::immwinxy 2dup 'winy ! 'winx ! pady + swap padx + swap immat ;
 
 |----------------------	
 ::imm>>
@@ -69,7 +71,7 @@
 	winx padx + 'curx ! boxh 'cury +! ;	
 	
 |--- place
-:plgui
+::plgui
 	curx padx + cury pady + boxw boxh guiBox ;
 
 ::plxywh
@@ -113,10 +115,15 @@
 	immcolortex ttColor
 	curx padx + 
 	boxh immfontsh - 1 >> cury + pady + 
-	ttat sprint dup tt.
+	ttat sprint dup ttemits
 	ttsize drop nip padx 1 << + 'curx +!
 	;
 	
+::immStrC | "" --
+	immcolortex ttColor
+	ttsize boxw rot - 1 >> curx + padx +
+	boxh rot - 1 >> cury + pady + 
+	ttat ttemits ;
 
 ::immListBox | lines --
 	boxh * curx cury rot boxw swap guiBox ;
@@ -147,23 +154,34 @@
 |--- widget	
 ::immbtn | 'click "" --
 	plgui
-	immcolorbtn [ $808080 xor ; ] guiI SDLColor
+	immcolorbtn [ $808080 xor 2 2 immat+ ; ] guiI SDLColor
 	plxywh SDLFRect
 	immlabelc
+	[ -2 -2 immat+ ; ] guiI
 	onClick ;	
-
+	
 ::immibtn | 'click nro --
 	plgui
-	immcolorbtn [ $808080 xor ; ] guiI SDLColor
+	immcolorbtn [ $808080 xor 2 2 immat+ ; ] guiI SDLColor
 	plxywh SDLFRect
 	immiconb
+	[ -2 -2 immat+ ; ] guiI
 	onClick ;	
 
 ::immtbtn | 'click "" --
 	ttsize drop 'boxw !
 	plgui
-	[ immcolorbtn SDLColor plxywh SDLFRect ; ] guiI
+	[ immcolorbtn SDLColor plxywh SDLFRect 2 2 immat+ ; ] guiI
 	imm.
+	[ -2 -2 immat+ ; ] guiI
+	onClick ;
+
+::immebtn | 'click "" --
+	ttsize drop 'boxw !
+	plgui
+	[ 2 2 immat+ ; ] guiI
+	immlabelc
+	[ -2 -2 immat+ ; ] guiI
 	onClick ;
 
 ::immzone | 'click --
@@ -336,9 +354,9 @@
 	
 |----- ALFANUMERICO
 :iniinput | 'var max IDF -- 'var max IDF
-	pick2 1 - 'cmax !
-	pick3 dup 'padi> !
-	( c@+ 1? drop ) drop 1 -
+	dup 1- 'cmax !
+	over dup 'padi> !
+	( c@+ 1? drop ) drop 1-
 	dup 'pad> ! 'padf> !
 	'lins 'modo !
 	;
@@ -380,12 +398,12 @@
 	'clickfoco onClick
 	$ffffff ttcolor
 	drop
-	ttprint ;
+	ttemits ;
 
 
 |----- ENTERO
 :iniinputi
-	pick2 'cmax ! ;
+	dup 'cmax ! ;
 
 :knro
 	SDLchar 0? ( drop ; ) $30 <? ( drop ; ) $39 >? ( drop ; )
@@ -419,7 +437,8 @@
 	'proinputi 'iniinputi w/foco
 	'clickfoco onClick
 	$ffffff ttcolor
-	@ "%d" ttprint ;
+	@ "%d" ttprint 
+	;
 
 |----- windows
 :winxy!
@@ -489,7 +508,9 @@
 	;
 	
 ::immwin | 'win -- 0/1
-	dup @ $2 and? ( winnow 'winhot ! ) drop | all in top
+	dup @ 
+	$1 nand? ( 2drop 0 ; )
+	$2 and? ( winnow 'winhot ! ) drop | all in top
 	wintit
 	dup 8 + @+ winxy! @+ winwh! wintitle
 	@ 

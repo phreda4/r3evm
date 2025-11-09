@@ -1,8 +1,8 @@
 | MAPEDITOR
 | PHREDA 2023
 
-^r3/win/sdl2gfx.r3
-^r3/win/sdl2image.r3
+^r3/lib/sdl2gfx.r3
+^r3/lib/sdl2image.r3
 
 ^r3/lib/gui.r3
 
@@ -374,7 +374,7 @@
 :msele
 	[ sdlx sdly 2dup 'my ! 'mx ! scr2view 'oy ! 'ox ! ; ] 
 	[ drawselect ; ] 
-	[  fillmap ; ] guiMap ;
+	[  fillmap ; ] onMap ;
 	
 	
 :mfill
@@ -457,7 +457,7 @@
 	"r3sdl" 800 600 SDLinit
 	bfont1 
 	| SDLfull	
-	32 32 "r3\editor\mapeditor32.png" tsload 'sprgui !	
+	32 32 "r3/editor/mapeditor32.png" tsload 'sprgui !	
 	
 	'filemap "mem/mapedit.mem" load drop
 	loadmap

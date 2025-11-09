@@ -2,8 +2,8 @@
 | PHREDA
 |-----------------------
 ^r3/util/bfont.r3
+^r3/lib/sdlkeys.r3
 ^r3/lib/gui.r3
-^r3/lib/sys.r3
 
 |--- Edita linea
 #cmax
@@ -42,6 +42,9 @@
 
 #modo 'lins
 
+:blink 
+	msec 4 >> $1 and ;
+	
 :cursor
 	blink 1? ( drop ; ) drop
 	modo 'lins =? ( drop pad> padi> - bcursori ; ) drop
@@ -50,9 +53,9 @@
 
 |----- ALFANUMERICO
 :iniinput | 'var max IDF -- 'var max IDF
-	pick2 1 - 'cmax !
-	pick3 dup 'padi> !
-	( c@+ 1? drop ) drop 1 -
+	dup 1- 'cmax !
+	over dup 'padi> !
+	( c@+ 1? drop ) drop 1-
 	dup 'pad> ! 'padf> !
 	'lins 'modo !
 	;
@@ -141,7 +144,7 @@
 
 |----- ENTERO
 :iniinputi
-	pick2 'cmax ! ;
+	dup 'cmax ! ;
 
 :knro |
 	$30 <? ( drop ; ) $39 >? ( drop ; )

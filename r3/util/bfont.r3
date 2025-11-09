@@ -2,8 +2,8 @@
 | fuentes de ancho fijo 
 | PHREDA 2021
 |-----------------------------
-^r3/win/sdl2gfx.r3
-^r3/win/sdl2image.r3
+^r3/lib/sdl2gfx.r3
+^r3/lib/sdl2image.r3
 
 #pfont 
 ##wp ##hp
@@ -50,6 +50,11 @@
 ::bfillemit | "" -- ""
 	count wp *
 	hp 32 << or
+	dp 'rec !+ !
+	SDLRenderer 'rec SDL_RenderFillRect ;
+
+::bfcemit | cnt -- 
+	wp * hp 32 << or
 	dp 'rec !+ !
 	SDLRenderer 'rec SDL_RenderFillRect ;
 
@@ -104,18 +109,27 @@
 
 	
 ::bat | x y --
-	32 << or 'dp ! ;	
+	swap $ffffffff and swap 32 << or 'dp ! ;	
 
-::ccx dp $ffffffff and ;
+::ccx dp 32 << 32 >> ;
 ::ccy dp 32 >> ;
 
 ::gotoxy | x y --
 	hp * swap wp * swap bat ;
 ::gotox | x --
 	wp * 'dp d! ;
+	
 ::bcr
 	0 'dp d!
 	hp 'dp 4 + d+! ;
+::bcr2
+	0 'dp d!
+	hp 2* 'dp 4 + d+! ;
+::bcrz | size --
+	0 'dp d!
+	hp 16 *>> 'dp 4 + d+! ;
+
+
 ::bsp
 	wp 'dp d+! ;
 ::bnsp | n --
@@ -135,6 +149,13 @@
 
 ::bcursori | n --
 	wp * bpos swap rot + swap hp dup 2 >> - + wp hp 2 >> SDLFRect ;
+
+::bcursor2 | n --
+	wp 2* * bpos swap rot + swap wp 2* hp 2* SDLFRect ;
+
+::bcursori2 | n --
+	wp 2* * bpos swap rot + swap hp dup 2/ + + wp 2* hp 2/ SDLFRect ;
+	
 
 ::bfont1	
 	8 16 "media/img/VGA8x16.png" bmfont	;	

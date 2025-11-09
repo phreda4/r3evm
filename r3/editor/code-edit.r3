@@ -1,13 +1,11 @@
 | edit-code
 | PHREDA 2007
 |---------------------------------------
-^r3/win/console.r3
-^r3/win/mconsole.r3
+^r3/lib/console.r3
+^r3/lib/mconsole.r3
 ^r3/lib/math.r3
 ^r3/lib/mem.r3
 ^r3/lib/parse.r3
-
-^r3/lib/trace.r3
 
 | ventana de texto
 #xcode 6
@@ -29,7 +27,7 @@
 #inisel		| inicio seleccion
 #finsel		| fin seleccion
 
-#fuente  	| fuente editable
+#fuente		| fuente editable
 #fuente> 	| cursor
 #$fuente	| fin de texto
 
@@ -51,8 +49,8 @@
 #cerror 0
 
 |----- edicion
-:lins  | c --
-	fuente> dup 1 - $fuente over - 1 + cmove>
+:lins | c --
+	fuente> dup 1- $fuente over - 1+ cmove>
 	1 '$fuente +!
 :lover | c --
 	fuente> c!+ dup 'fuente> !
@@ -64,29 +62,28 @@
 
 :back
 	fuente> fuente <=? ( drop ; )
-	dup 1 - c@ undobuffer> c!+ 'undobuffer> !
-	dup 1 - swap $fuente over - 1 + cmove
+	dup 1- c@ undobuffer> c!+ 'undobuffer> !
+	dup 1- swap $fuente over - 1+ cmove
 	-1 '$fuente +!
 	-1 'fuente> +! ;
 
 :del
 	fuente>	$fuente >=? ( drop ; )
-    1 + fuente <=? ( drop ; )
-	9 over 1 - c@ undobuffer> c!+ c!+ 'undobuffer> !
-	dup 1 - swap $fuente over - 1 + cmove
+	1+ fuente <=? ( drop ; )
+	9 over 1- c@ undobuffer> c!+ c!+ 'undobuffer> !
+	dup 1- swap $fuente over - 1+ cmove
 	-1 '$fuente +! ;
 
 :<<13 | a -- a
 	( fuente >=?
 		dup c@ 13 =? ( drop ; )
-		drop 1 - ) ;
+		drop 1- ) ;
 
 :>>13 | a -- a
 	( $fuente <?
 		dup c@
-		13 =? ( drop 1 - ; ) | quitar el 1 -
-		drop 1 + )
-	drop $fuente 2 - ;
+		13 =? ( drop 1- ; ) | quitar el 1 -
+		drop 1+ ) 2 - ;
 
 #1sel #2sel
 
@@ -100,31 +97,54 @@
 
 :khome
 	selecc
-	fuente> 1 - <<13 1 + 'fuente> !
+	fuente> 1- <<13 1+ 'fuente> !
 	selecc ;
 
 :kend
 	selecc
-	fuente> >>13  1 + 'fuente> !
+	fuente> >>13 1+ 'fuente> !
 	selecc ;
 
-:scrollup | 'fuente -- 'fuente
-	pantaini> 1 - <<13 1 - <<13  1 + 'pantaini> !
-	ylinea 1? ( 1 - ) 'ylinea !
+:scrollup
+	pantaini> 2 - <<13 1+
+	fuente <? ( drop ; )
+	'pantaini> !
 	selecc ;
 
 :scrolldw
+	pantafin> >>13 2 + 
+	$fuente >=? ( drop ; ) 
+	'pantafin> !
 	pantaini> >>13 2 + 'pantaini> !
-	pantafin> >>13 2 + 'pantafin> !
-	1 'ylinea +!
 	selecc ;
+
+::setpantafin
+	pantaini>
+	hcode ( 1? swap >>13 1+ swap 1- ) drop
+	$fuente <? ( 1- ) 'pantafin> ! ;
+	
+:setpantaini
+	pantafin>
+	hcode ( 1? swap 2 - <<13 1+ swap 1- ) drop
+	fuente <? ( fuente nip )
+	'pantaini> !
+	;
+	
+
+
+:fixcur
+	fuente>
+	pantaini> <? ( <<13 1+ 'pantaini> ! setpantafin ; )
+	pantafin> >? ( >>13 2 + 'pantafin> ! setpantaini ; )
+	drop
+	;
 
 :karriba
 	fuente> fuente =? ( drop ; )
 	selecc
-	dup 1 - <<13		| cur inili
+	dup 1- <<13		| cur inili
 	swap over - swap	| cnt cur
-	dup 1 - <<13			| cnt cur cura
+	dup 1- <<13			| cnt cur cura
 	swap over - 		| cnt cura cur-cura
 	rot min + fuente max
 	'fuente> !
@@ -133,36 +153,32 @@
 :kabajo
 	fuente> $fuente >=? ( drop ; )
 	selecc
-	dup 1 - <<13 | cur inilinea
+	dup 1- <<13 | cur inilinea
 	over swap - swap | cnt cursor
-	>>13 1 +    | cnt cura
-	dup 1 + >>13 1 + 	| cnt cura curb
+	>>13 1+		| cnt cura
+	dup 1+ >>13 1+ 	| cnt cura curb
 	over - rot min +
 	'fuente> !
 	selecc ;
 
 :kder
 	selecc
-	fuente> $fuente <?
-	( 1 + 'fuente> ! selecc ; ) drop
+	fuente> $fuente <? ( 1+ 'fuente> ! selecc ; ) drop
 	;
 
 :kizq
 	selecc
-	fuente> fuente >?
-	( 1 - 'fuente> ! selecc ; ) drop
+	fuente> fuente >? ( 1- 'fuente> ! selecc ; ) drop
 	;
 
 :kpgup
 	selecc
-	20 ( 1?
-		1 - karriba ) drop
+	hcode ( 1? 1- karriba ) drop
 	selecc ;
 
 :kpgdn
 	selecc
-	20 ( 1?
-		1 - kabajo ) drop
+	hcode ( 1? 1- kabajo ) drop
 	selecc ;
 
 |------------------------------------------------
@@ -174,17 +190,20 @@
 :loadtxt | -- ; cargar texto
 	fuente 'name 
 	load 0 swap c!
-	fuente only13 1 - '$fuente !	|-- queda solo cr al fin de linea
+	fuente only13 1- '$fuente !	|-- queda solo cr al fin de linea
 	fuente dup 'pantaini> ! simplehash 'hashfile !
 	;
 
 :savetxt | -- ; guarda texto
 	fuente simplehash hashfile =? ( drop ; ) drop | no cambio
+	
 	mark	
 	fuente ( c@+ 1?
 		13 =? ( ,c 10 ) ,c ) 2drop
+		
 	'name savemem
-	empty ;
+	empty 
+	;
 
 |----------------------------------
 :loadinfo
@@ -197,10 +216,15 @@
 
 :linetocursor | -- ines
 	0 fuente ( fuente> <? c@+
-		13 =? ( rot 1 + -rot ) drop ) drop ;
+		13 =? ( rot 1+ -rot ) drop ) drop ;
 		
 :r3info
-	rows 1 - 'hcode !
+|WIN|	"r3 r3/editor/r3info.r3"
+|LIN|	"./r3lin r3/editor/r3info.r3"
+|RPI|	"./r3rpi r3/editor/r3info.r3"
+	sys
+
+	rows 1- 'hcode !
 	0 'outpad !
 	0 'cerror !
 	
@@ -216,7 +240,7 @@
 	fuente cerror + 'fuente> !
 	linetocursor 'lerror !
 	here >>cr 0 swap c!
-	fuente> lerror 1 + here
+	fuente> lerror 1+ here
 	" %s in line %d (%w)" sprint 'outpad strcpy
 	
 	rows 2 - 'hcode !
@@ -225,10 +249,6 @@
 
 :runfile
 	savetxt
-|WIN|	"r3 r3/editor/r3info.r3"
-|LIN|	"./r3lin r3/editor/r3info.r3"
-|RPI|	"./r3rpi r3/editor/r3info.r3"
-	sys
 	r3info	
 	cerror 1? ( drop ; ) drop
 	.masb .reset .cls
@@ -251,7 +271,6 @@
 |RPI|	"./r3rpi r3/editor/r3debug.r3"
 	sys
 	"press <ESC> to continue" .write waitesc
-	r3info
 	;
 
 :mkplain
@@ -262,7 +281,6 @@
 |RPI| "./r3rpi r3/editor/r3plain.r3"
 	sys
 	.alsb
-	r3info
 	;
 
 :compile
@@ -273,7 +291,6 @@
 |RPI| "./r3rpi r3/system/r3compiler.r3"
 	sys
 	.alsb
-	r3info
 	;
 
 |-------------------------------------------
@@ -315,23 +332,23 @@
 	nip ;
 
 :editvalid | adr -- adr 1/0
-    "ico" =pre 1? ( ; ) drop
-    "bmr" =pre 1? ( ; ) drop
-    "vsp" =pre 1? ( ; ) drop
-    "spr" =pre
+	"ico" =pre 1? ( ; ) drop
+	"bmr" =pre 1? ( ; ) drop
+	"vsp" =pre 1? ( ; ) drop
+	"spr" =pre
 	;
 
 #ncar
 :controle
 	savetxt
-	fuente> ( dup 1 - c@ $ff and 32 >? drop 1 - ) drop | busca comienzo
+	fuente> ( dup 1- c@ $ff and 32 >? drop 1- ) drop | busca comienzo
 	dup c@
 	$5E <>? ( 2drop ; ) | no es ^
 	drop
 	dup fuente - 'ncar !
 	dup 2 + posfijo? 0? ( 2drop ; )
 	editvalid 0? ( 3drop ; ) drop
-	swap 1 + | ext name
+	swap 1+ | ext name
 	mark
 	dup c@ 46 =? ( swap 2 + 'path ,s ) drop
 	,word
@@ -353,8 +370,8 @@
 |-------------
 :controlv | paste
 	clipboard clipboard> over - 0? ( 3drop ; ) | clip cnt
-	fuente> dup pick2  + swap | clip cnt 'f+ 'f
-	$fuente over - 1 + cmove>	| clip cnt
+	fuente> dup pick2 + swap | clip cnt 'f+ 'f
+	$fuente over - 1+ cmove>	| clip cnt
 	fuente> -rot | f clip cnt
 	dup '$fuente +!
 	cmove
@@ -365,8 +382,8 @@
 :controlz | undo
 	undobuffer>
 	undobuffer =? ( drop ; )
-	1 - dup c@
-	9 =? ( drop 1 - dup c@ [ -1 'fuente> +! ; ] >r )
+	1- dup c@
+	9 =? ( drop 1- dup c@ [ -1 'fuente> +! ; ] >r )
 	lins 'undobuffer> ! ;
 
 |-------------
@@ -385,34 +402,34 @@
 	dup c@ $ff and
 	0? ( 2drop ; )
 	toupp
-	fuente> 1 - | adr 1c act
+	fuente> 1- | adr 1c act
 	( fuente >?
 		dup c@ toupp pick2 =? ( exactw 1? ( setcur ; ) )
-		drop 1 - ) 3drop ;
+		drop 1- ) 3drop ;
 
 :controls | -- ;find next
 	'pad
 	dup c@ $ff and
 	0? ( drop ; )
 	toupp
-	fuente> 1 + | adr 1c act
+	fuente> 1+ | adr 1c act
 	( $fuente <?
 		dup c@ toupp pick2 =? ( exactw 1? ( setcur ; ) )
-		drop 1 + ) 3drop ;
+		drop 1+ ) 3drop ;
 
 |-------------
 :controld | buscar definicion
 	;
 
-:controln  | new
+:controln | new
 	| si no existe esta definicion
 	| ir justo antes de la definicion
-	| agregar palabra :new  ;
+	| agregar palabra :new ;
 	;
 
 |---------- TAGS in code	
 :,ncar | n -- 
-	97 ( swap 1? 1 - swap dup ,c 1 + ) 2drop ;
+	97 ( swap 1? 1- swap dup ,c 1+ ) 2drop ;
 
 :buildinfo | infmov --
 	,bcyan 
@@ -421,9 +438,9 @@
 	over 55 << 59 >> + | deltaD
 	,ncar ,sp 
 	,reset ,sp ,bcyan ,black
-	$1000000000 and? ( ";"  ,s	)	| multiple
+	$1000000000 and? ( ";" ,s )	| multiple
 	$2000000000 and? ( "R" ,s )		| recurse
-	$8000000000 nand? ( "."  ,s	)	| no ;
+	$8000000000 nand? ( "." ,s )	| no ;
 	drop
 	;
 
@@ -451,7 +468,7 @@
 	@+ swap 'linecommnow !
 	,sp
 	dup 12 32 + >> $ff and 
-	0? ( 2drop ,bred ,white "<< NOT USED >>" ,s prntcom ; ) drop
+	0? ( ,bred ,white " X " ,s ) drop
 	,black
 	buildinfo
 	prntcom
@@ -469,7 +486,7 @@
 	$3A =? ( drop 9 'colornow ! ; )	| $3a :  Definicion
 	$23 =? ( drop 13 'colornow ! ; )	| $23 #  Variable
 	$27 =? ( drop 14 'colornow ! ; )	| $27 ' Direccion
-    drop
+	drop
 	over isNro 1? ( drop 11 'colornow ! ; ) 
 	drop 10 'colornow ! ;
 
@@ -487,9 +504,9 @@
 
 :iniline
 	xlinea wcolor
-	( 1? 1 - swap
-		c@+ 0? ( drop nip 1 - ; )
-		13 =? ( drop nip 1 - ; )
+	( 1? 1- swap
+		c@+ 0? ( drop nip 1- ; )
+		13 =? ( drop nip 1- ; )
 		9 =? ( wcolor )
 		32 =? ( wcolor )
 		drop swap ) drop ;
@@ -502,17 +519,17 @@
 	( atselect c@+ 1?
 		$22 =? (
 			over c@ $22 <>? ( drop ; )
-			,c swap 1 + swap )
+			,c swap 1+ swap )
 		13 <>?
-		,ct ) drop 1 - 0 ;
+		,ct ) drop 1- 0 ;
 	
 :endline
 	,c ( atselect c@+ 1? 13 <>? ,ct )	
-	1? ( drop ; ) drop 1 - ;
+	1? ( drop ; ) drop 1- ;
 	
 :parseline 
 	,tcolor
-	( atselect c@+ 1? 13 <>?  | 0 o 13 sale
+	( atselect c@+ 1? 13 <>? | 0 o 13 sale
 		9 =? ( wcolor ,tcolor ,sp ,sp drop 32 )
 		32 =? ( wcolor ,tcolor )
 		$22 =? ( strword ) 		| $22 " string
@@ -521,20 +538,20 @@
 		,c
 		) 
 	1? ( drop ; ) drop
-	1 - ;
+	1- ;
 
 |... no color line	
 :parselinenc
 	( atselect c@+ 1? 13 <>? ,c ) 
 	1? ( drop ; ) drop
-	1 - ;
+	1- ;
 
 |..............................
 :linenow
 	ycursor =? ( $3e ,c ; ) 32 ,c ;
 	
 :linenro | lin -- lin
-	over ylinea + linenow 1 + .d 3 .r. ,s 32 ,c ; 
+	over ylinea + linenow 1+ .d 3 .r. ,s 32 ,c ; 
 
 :drawline | adr line -- line adr'
 	"^[0m^[37m" ,printe			| ,esc "0m" ,s ,esc "37m" ,s  | reset,white,clear
@@ -549,41 +566,47 @@
 :setpantafin
 	pantaini>
 	0 ( hcode <?
-		swap >>cr 1 + swap
-		1 + ) drop
-	$fuente <? ( 1 - ) 'pantafin> ! ;
+		swap >>cr 1+ swap
+		1+ ) drop
+	$fuente <? ( 1- ) 'pantafin> ! ;
 	
 |..............................
 :drawcode
-	fuente>
-	( pantafin> >? scrolldw )
-	( pantaini> <? scrollup )
-	drop 
-
 	,reset
 	inicomm
 	pantaini>
 	0 ( hcode <?
 		1 ycode pick2 + ,at
 		drawline
-		swap 1 + ) drop
-	$fuente <? ( 1 - ) 'pantafin> ! ;
+		swap 1+ ) drop
+	$fuente <? ( 1- ) 'pantafin> ! ;
 
 :emitcur
 	13 =? ( drop 1 'ycursor +! 0 'xcursor ! ; )
 	9 =? ( drop 3 'xcursor +! ; )
 	drop 1 'xcursor +! ;
 
+#cacheyl
+#cachepi
+
+:getcacheini |  -- pantanini>
+	pantaini> cachepi =? ( cacheyl 'ylinea ! ; ) drop
+	0 'ylinea !
+	fuente 
+	( pantaini> <? c@+ 13 =? ( 1 'ylinea +! ) drop ) 
+	dup 'cachepi !
+	ylinea 'cacheyl !
+	;	
+	
 :cursorpos
-	ylinea 'ycursor ! 0 'xcursor !
-	pantaini> ( fuente> <? c@+ emitcur ) drop
-	| hscroll
+	0 'xcursor !
+	getcacheini
+	ylinea 'ycursor !
+	( fuente> <? c@+ emitcur ) drop 
 	xcursor
 	xlinea <? ( dup 'xlinea ! )
-	xlinea wcode + >=? ( dup wcode - 1 + 'xlinea ! )
+	xlinea wcode + >=? ( dup wcode - 1+ 'xlinea ! )
 	drop 
-	xcode xlinea - xcursor +
-	ycode ylinea - ycursor + ,at 
 	;
 	
 |-------------- panel control
@@ -598,7 +621,7 @@
 	0? ( drop ; ) 'fuente> ! ;
 
 :findmodekey
-	1 hcode 1 + .at  .eline
+	1 hcode 1+ .at .eline
 	" > " .write .input 
 	controls
 	;
@@ -626,44 +649,46 @@
 	;
 
 :vchar | char --  ; visible char
-	$1000 and? ( drop ; )
-	16 >> $ff and
-	8 =? ( drop kback ; )
+|WIN|	$1000 and? ( drop ; )
+|WIN|	16 >> $ff and
+|WIN|	8 =? ( drop kback ; )
+|LIN|	$7f =? ( drop kback ; )
 	9 =? ( modo ex ; )
 	13 =? ( clearinfo modo ex ; )
 	32 <? ( drop ; )
 	modo ex ;
 
 :teclado
-	panelcontrol 1? ( drop controlkey ; ) drop
-
-	$ff0000 and? ( vchar ; ) 
+|WIN|	panelcontrol 1? ( drop controlkey ; ) drop
+|WIN|	$ff0000 and? ( vchar fixcur ; ) 
+|LIN|	$80 <? ( vchar fixcur ; )
 	
-	$53 =? ( kdel )
-	$48 =? ( karriba ) 
-	$50 =? ( kabajo )
-	$4d =? ( kder ) 
-	$4b =? ( kizq )
-	$47 =? ( khome ) 
-	$4f =? ( kend )
-	$49 =? ( kpgup ) 
-	$51 =? ( kpgdn )
+	[DEL] =? ( kdel )
+	[UP] =? ( karriba ) 
+	[DN] =? ( kabajo )
+	[RI] =? ( kder ) 
+	[LE] =? ( kizq )
+	[HOME] =? ( khome ) 
+	[END] =? ( kend )
+	[PGUP] =? ( kpgup ) 
+	[PGDN] =? ( kpgdn )
 	
-	$52 =? (  modo | ins
+	[INS] =? ( modo | ins
 			'lins =? ( drop 'lover 'modo ! .ovec ; )
 			drop 'lins 'modo ! .insc )
-	$1d =? ( controlon ) 
+|WIN|	[CTRL] =? ( controlon ) 
 	
-	$2a =? ( 1 'mshift ! ) $102a =? ( 0 'mshift ! ) | shift der
-	$36 =? ( 1 'mshift ! ) $1036 =? ( 0 'mshift ! ) | shift izq 
+|WIN|	[SHIFTR] =? ( 1 'mshift ! ) ]SHIFTR[ =? ( 0 'mshift ! ) | shift der
+|WIN|	[SHIFTL] =? ( 1 'mshift ! ) ]SHIFTR[ =? ( 0 'mshift ! ) | shift izq 
 
-	$3b =? ( runfile )
-	$3c =? ( debugfile )
-|	$3d =? ( profiler )
-	$3e =? ( mkplain )
-	$3f =? ( compile )
+	[F1] =? ( runfile )
+	[F2] =? ( debugfile )
+|	[F3] =? ( profiler )
+	[F4] =? ( mkplain )
+	[F5] =? ( compile )
 	
 	drop
+	fixcur
 	;
 
 
@@ -698,13 +723,16 @@
 :pantalla	
 	mark			| buffer in freemem
 	,hidec ,reset ,cls
+	cursorpos
 	
 	topbar
 	drawcode
 	fotbar
 	
-	cursorpos
+	xcode xlinea - xcursor +
+	ycode ylinea - ycursor + ,at 
 	,showc
+	
 	memsize type	| type buffer
 	empty			| free buffer
 	;
@@ -712,12 +740,13 @@
 #exit 0
 
 :evkey	
-	evtkey
-	$1B1001 =? ( 1 'exit ! )
+|WIN|	evtkey ]ESC[ 
+|LIN|	getch [ESC]
+	=? ( 1 'exit ! )
 	teclado ;
 	
 ::>>cr | adr -- adr'
-	( c@+ 1? 13 =? ( drop ; ) drop ) drop 1 - ;
+	( c@+ 1? 13 =? ( drop ; ) drop ) drop 1- ;
 	
 :xycursor | x y -- cursor
 	pantaini> | x y c
@@ -727,37 +756,49 @@
 		c@+ 
 		9 =? ( rot 2 - clamp0 -rot )
 		13 =? ( 0 nip )
-		0? ( drop nip 1 - ; ) 
+		0? ( drop nip 1- ; ) 
 		drop ) drop ;
-		
+
+			
+:evwmouse 
+|WIN|	evtmw 
+	-? ( drop scrolldw scrolldw ; ) drop
+	scrollup scrollup ;
+
 :evmouse
-	evtmb $0 =? ( drop ; ) drop 
-	evtmxy
+|WIN|	evtm
+	1 =? ( drop ; ) | move 
+	4 =? ( drop evwmouse ; )
+	drop
+|WIN|	evtmb $0 =? ( drop ; ) drop 
+|WIN|	evtmxy
 	1 <? ( 2drop ; )
-	1 - xycursor
+	1- xycursor
 	'fuente> ! 
 	;
 
 
 :evsize	
 	.getconsoleinfo
-	rows 1 - 'hcode !
+	rows 1- 'hcode !
 	cols 7 - 'wcode !
 	;
 	
 :editor
 	setpantafin
-	rows 1 - 'hcode !
+	rows 1- 'hcode !
 	cols 7 - 'wcode !
 	0 'xlinea !
 	.showc .insc
 	( exit 0? drop 
 		pantalla
-		getevt
-		$1 =? ( evkey )
-		$2 =? ( evmouse )
-		$4 =? ( evsize )
-		drop ) drop ;
+|WIN|		getevt
+|WIN|		$1 =? ( evkey )
+|WIN|		$2 =? ( evmouse )
+|WIN|		$4 =? ( evsize )
+|WIN|		drop 
+|LIN|		evkey
+		) drop ;
 
 |---- Mantiene estado del editor
 :ram
@@ -771,11 +812,11 @@
 	$3fff +				| 16KB
 	dup 'undobuffer !
 	dup 'undobuffer> !
-	$ffff +         	| 64kb
+	$ffff +				| 64kb
 	dup 'linecomm !
 	dup	'linecomm> !
 	$3fff +				| 4096 linecomm
-	'here  ! | -- FREE
+	'here ! | -- FREE
 	mark 
 
 	loadtxt
@@ -785,8 +826,14 @@
 |----------- principal
 :main
 	'name "mem/main.mem" load drop
+	
+|WIN|	"r3 r3/editor/r3info.r3"
+|LIN|	"./r3lin r3/editor/r3info.r3"
+|RPI|	"./r3rpi r3/editor/r3info.r3"
+	sys
+	
 	ram
-	evtmouse
+|WIN|	evtmouse
 	.getconsoleinfo
 	.alsb 
 	editor 

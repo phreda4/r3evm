@@ -6,7 +6,7 @@
 | field 1|field 2|..|field 3^
 |
 |
-^r3/win/console.r3
+^r3/lib/console.r3
 
 ##rowdb
 #flds * 512
@@ -113,6 +113,7 @@
 		>>line trim ) nip nip ;
 		
 ::cntdbrow | 'db -- cnt
+	0? ( ; )
 	>a
 	0 ( ca@+ 1?
 	 	$5e =? ( swap 1 + swap ) | ^

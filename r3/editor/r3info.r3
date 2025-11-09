@@ -2,9 +2,7 @@
 | PHREDA 2020
 |------------------
 |MEM 128
-^r3/win/console.r3
-
-^r3/lib/trace.r3
+^r3/lib/console.r3
 
 ^r3/system/r3base.r3
 ^r3/system/r3pass1.r3
@@ -29,7 +27,8 @@
 	r3-stage-1 error 1? ( 2drop ; ) drop	
 	r3-stage-2 1? ( 2drop ; ) drop 		
 	r3-stage-3			
-	r3-stage-4	
+	|r3-stage-4	
+	r3-stage-4-full
 	drop	
 	;
 

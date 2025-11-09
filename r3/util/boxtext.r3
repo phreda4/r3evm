@@ -4,8 +4,8 @@
 
 ^r3/lib/math.r3	
 
-^r3/win/sdl2gfx.r3	
-^r3/win/sdl2ttf.r3
+^r3/lib/sdl2gfx.r3	
+^r3/lib/sdl2ttf.r3
 
 #boxt 0 0 
 
@@ -83,6 +83,7 @@
 	dddest 1 << neg 'bbtext 8 + +!
 	SDL_DestroyTexture
 	SDL_FreeSurface ;
+
 
 #vbbtext 'bbtextb
 	
@@ -210,3 +211,4 @@
 		a> 4 + d@ 'htotal +!
 		8 a+ ) drop
 	htotal ;
+	

@@ -1,12 +1,12 @@
 | draw animate
 | PHREDA 2023
 
-^r3/win/sdl2gfx.r3	
+^r3/lib/sdl2gfx.r3	
 ^r3/lib/gui.r3	
 ^r3/lib/rand.r3	
 
 #ink $ff00
- 
+
 #aline * 8192
 #aline>
 
@@ -70,15 +70,14 @@
 :drawline
 	0 sdlcls
 	gui		
-	SDLx SDLy guiIn
-	'pendn 'penmv 'pencopy guiMap
+	0 0 sw sh guiRect
+	'pendn 'penmv 'pencopy onMap
 	anidraw
 	alinedraw
 	SDLredraw
 	
 	SDLkey
 	>esc< =? ( exit )
-	<f1> =? ( 4drop )
 	drop ;
 
 : 

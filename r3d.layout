@@ -4,5 +4,5 @@ CursorRow=1179
 TopLine=1159
 LeftChar=1
 [Editors]
-Order=0
+Order=-1,0
 Focused=0

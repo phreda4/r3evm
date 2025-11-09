@@ -1,8 +1,8 @@
 | bmap mapa de mosaicos con capas
 | PHREDA
 |------------------
-^r3/win/console.r3
-^r3/win/sdl2gfx.r3
+^r3/lib/console.r3
+^r3/lib/sdl2gfx.r3
 ^r3/util/sdlgui.r3
 ^r3/util/arr16.r3
 ^r3/lib/rand.r3
@@ -190,9 +190,14 @@
 	maptw mapth 32 << or 'boxdst 8 + !	| size dst
 	tilew tileh 32 << or 'boxsrc 8 + ! 	| size src w h 
 	tileset @+ 'tsimg ! 8 + 'tsmap !
-	34 'mapsw ! 22 'mapsh !	
+	34 'mapsw ! 23 'mapsh !	| conf?
 	;
 
+::bmap2xy | x y -- x y
+	swap tilew * fix. swap tileh * fix. ;
+::whbmap | -- w h
+	mapw maph ;
+	
 ::xyinmap@ | x y -- map
 	16 >> mapth / swap 16 >> maptw / swap map> @ ;
 	

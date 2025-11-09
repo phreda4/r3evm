@@ -1,7 +1,7 @@
 | Editor de imagenes
 | PHREDA 2020
 |--------------------------------------------------
-^r3/win/sdl2gfx.r3
+^r3/lib/sdl2gfx.r3
 ^r3/util/bfont.r3
 ^r3/lib/gui.r3
 ^r3/lib/vdraw.r3
@@ -59,13 +59,13 @@
 :modoline
 	[ xypen 'ya ! 'xa ! ; ]
 	[ colord SDLColor xa ya xypen SDLLine ; ]
-	[ xa ya scr2img vop xypen scr2img vline buffercopy ; ] guiMap ;
+	[ xa ya scr2img vop xypen scr2img vline buffercopy ; ] onMap ;
 
 |----------- BOX
 :modobox
 	[ xypen 'ya ! 'xa ! ; ]
 	[ colord SDLColor xa ya xypen pick2 - swap pick3 - swap SDLRect ; ]
-	[ xa ya scr2img xypen scr2img vrect buffercopy ; ] guiMap ;
+	[ xa ya scr2img xypen scr2img vrect buffercopy ; ] onMap ;
 
 |----------- CIRCLE
 :border2cenrad
@@ -77,7 +77,7 @@
 	[ xypen 'ya ! 'xa ! ; ]
 	[ colord SDLColor xa ya xypen border2cenrad SDLEllipse ; ]
 	[ xa ya scr2img xypen scr2img 	| x y x y
-		border2cenrad vellipseb buffercopy ; ] guiMap ;
+		border2cenrad vellipseb buffercopy ; ] onMap ;
 
 |----------- PICKER
 :modopicker
@@ -91,7 +91,7 @@
 :modoselect
 	[ xypen 'ys1 ! 'xs1 ! ; ]
 	[ xs1 ys1 xypen pick2 - swap pick3 - swap  SDLRect ; ]
-	[ xypen scr2img 'ys2 ! 'xs2 ! ; ] guiMap ;
+	[ xypen scr2img 'ys2 ! 'xs2 ! ; ] onMap ;
 
 |------------------------------
 #modo 0

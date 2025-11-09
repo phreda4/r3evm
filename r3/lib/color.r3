@@ -3,8 +3,13 @@
 |-----------------------------------------
 ^r3/lib/math.r3
 
+::swapcolor | color -- swapcolor
+	dup 16 >> $ff and 
+	over 16 << $ff0000 and or
+	swap $ff00ff00 and or ;
+
 ::colavg | a b -- c
-	2dup xor $fefefefe and 1 >> >r or r> - ;
+	2dup or -rot xor $fefefefe and 1 >> - ;
 
 ::col50% | c1 c2 -- c
 	$fefefe and swap $fefefe and + 1 >> ;
@@ -15,16 +20,18 @@
 ::col33%  | c1 c2 -- c
 	$555555 and swap $aaaaaa and or ;
 
-::colmix | c1 c2 m -- c
-	pick2 $ff00ff and
-	pick2 $ff00ff and
-	over - pick2 * 8 >> +
-	$ff00ff and >r
-	rot $ff00ff00 and
-	rot $ff00ff00 and
-	over - rot * 8 >> +
-	$ff00ff00 and r> or ;
-
+::colmix | c1 c2 a -- c 
+	rot dup 24 << or $ff00ff00ff and
+	rot dup 24 << or $ff00ff00ff and
+	over - rot * 8 >> + $ff00ff00ff and
+	dup 24 >> or ;
+	
+::colmix4 | c1 c2 a -- c 
+	rot dup 12 << or $f0f0f and
+	rot dup 12 << or $f0f0f and
+	over - rot 4 >> * 4 >> + $f0f0f and
+	dup 12 >> or ;
+	
 |--- diferencia de color
 ::diffrgb2 | a b -- v
 	over 16 >> over 16 >> - abs | a b a1
@@ -48,24 +55,24 @@
 
 ::yuv32 | yuv -- col
 	pick2 16 - 76283 * pick2 128 - 132252 * + 16 >> bound >r
-	pick2 16 - 76283 * pick2 128 - 25624 *  - pick2 128 - 53281 * - 16 >> bound 8 << $ff00 and >r
+	pick2 16 - 76283 * pick2 128 - 25624 * - pick2 128 - 53281 * - 16 >> bound 8 << $ff00 and >r
 	nip 128 - 104595 * swap 16 - 76283 * + 16 >> bound 16 << $ff0000 and r> or r> or ;
 
 | hsv 1.0 1.0 1.0 --> rgb
 | hsv 1.0 1.0 1.0 --> rgb
 
 :h0 ;				|v, n, m
-:h1 >r swap r> ;	|n, v, m
-:h2 -rot ;		|m, v, n
+:h1 swap -rot ;		|n, v, m
+:h2 -rot ;			|m, v, n
 :h3 swap rot ;		|m, n, v
 :h4 rot ;			|n, m, v
 :h5 swap ;			|v, m, n
 #acch h0 h1 h2 h3 h4 h5
 
 ::hsv2rgb | h s v -- rgb32
-	1? ( 1 - ) $ffff and swap
+	1? ( 1- ) $ffff and swap
 	0? ( drop nip 8 >> dup 8 << dup 8 << or or ; ) | hvs
-	rot 1? ( 1 - ) $ffff and
+	rot 1? ( 1- ) $ffff and
 	dup 1 << + 1 <<	| 6*
 	dup 16 >> 	| vshH
 	1 nand? ( $ffff rot - swap ) | vsfH
@@ -87,15 +94,15 @@
 	vr vg - pick2 /. 4.0 + ;
 
 ::rgb2hsv | argb -- h s v
-	dup 16 >> $ff and 1.0 255 */ 'vr !
-	dup 8 >> $ff and 1.0 255 */ 'vg !
-	$ff and 1.0 255 */ 'vb !
+	dup 8 >> $ff00 and 'vr !
+	dup $ff00 and 'vg !
+	$ff and 8 << 'vb !
 	vr vg min vb min
 	vr vg max vb max | min max
 	over =? ( 2drop 0 0 vr ; )
 	dup rot - swap | x max
 	getzone | x val h
-	6/ -? ( 1.0 + )
+	6 / -? ( 1.0 + )
 	rot pick2 /.	| val h s
 	rot
 	;
@@ -203,3 +210,20 @@
 	dup $ff00 and 
 	over $ff and 16 << or 
 	swap 16 >> $ff and or ;	
+	
+|---- 4bytes color
+::4bcol | col -- color 
+	dup $f and dup 4 << or swap | ff col
+	dup $f0 and 4 << dup 4 << or swap
+	dup $f00 and 8 << dup 4 << or swap
+	$f000 and 12 << dup 4 << or 
+	or or or ;
+	
+::4bicol | col -- color 
+	dup $f and 16 << dup 4 << or swap | ff col
+	dup $f0 and 4 << dup 4 << or swap
+	dup $f00 and 8 >> dup 4 << or swap
+	$f000 and 12 << dup 4 << or 
+	or or or ;
+	
+
