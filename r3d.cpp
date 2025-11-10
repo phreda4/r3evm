@@ -6,6 +6,7 @@
 //
 
 #define DEBUGVER
+#define INLINEOFF
 //#define OPTOFF
 //#define NETSERVER
 //#define DEBUG
@@ -836,10 +837,13 @@ void compilaWORD(int n)
 if (modo>1) { datanro(n);return; }
 //printf("COMPILA %x (%x)\n",dicc[n].mem,dicc[n].info);
 
+
 #ifndef OPTOFF
+#ifndef INLINEOFF
 if ((dicc[n].info&6)==2) { 
 	//printword(dicc[n].nombre);printf(" INLINE %x (%x)\n",dicc[n].mem,dicc[n].info);
 	compilainline(dicc[n].mem);return; } // INLINE, no ;;
+#endif
 #endif
 
 codetok((dicc[n].mem<<8)+CALL+((dicc[n].info>>4)&1));
@@ -1339,6 +1343,49 @@ for(int i=0;i<cntdicc;i++) {
 	}
 }
 
+//
+//
+//
+void saveimagen(char *nombre)
+{
+FILE *file=fopen(nombre,"wb");if (file==NULL) return;
+fwrite(&cntdicc,sizeof(int),1,file);
+fwrite(&boot,sizeof(int),1,file);
+fwrite(&memc,sizeof(int),1,file);
+fwrite(&memd,sizeof(int),1,file);
+for (int i=0;i<cntdicc;i++) {
+	fwrite(&dicc[i].mem,sizeof(int),1,file);
+	fwrite(&dicc[i].info,sizeof(int),1,file);
+	}
+fwrite((void*)memcode,sizeof(int),memc,file);
+fwrite((void*)memdata,sizeof(int),memd,file);
+fclose(file);
+}
+
+void loadimagen(char *nombre)
+{
+FILE *file=fopen(nombre,"rb");if (file==NULL) return;
+fread(&boot,sizeof(int),1,file);
+fread(&memc,sizeof(int),1,file);
+fread(&memd,sizeof(int),1,file);
+
+#if defined(LINUX)
+ memcode=(int*)mmap(NULL,sizeof(int)*memc,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
+ memdata=(char*)mmap(NULL,memd,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
+#elif defined(RPI)
+ memcode=(int*)mmap(NULL,sizeof(int)*memc,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
+ memdata=(char*)mmap(NULL,memd,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
+#else
+ memcode=(int*)malloc(sizeof(int)*memc);
+ memdata=(char*)malloc(memd);
+#endif
+
+fread((void*)memcode,sizeof(int),memc,file);
+fread((void*)memdata,sizeof(int),memd,file);
+//memlibre=data+cntdato;
+fclose(file);
+}
+
 
 void print_error(void* error_code) {
 #ifdef _WIN32
@@ -1390,7 +1437,8 @@ FILE *fe;
 int i,sd,sr;
 sd=(NOS-(&datastack[0]));
 sr=(&retstack[512-1])-RTOS;
-fe=fopen("r3.err","w+");
+
+fe=fopen("mem/r3.err","w");
 fprintf(fe,"RUNTIME ERROR: %s ($%lx)\n", msg, code);
 fprintf(fe,"MC:$%x ",memcode);
 fprintf(fe,"MD:$%x ",memdata);
@@ -1424,7 +1472,7 @@ LONG WINAPI error_filter(PEXCEPTION_POINTERS pExInfo) {
     return EXCEPTION_EXECUTE_HANDLER;  // Re-lanza después de imprimir
 }
 
-void install_handler() {
+void install_handler() { 
     SetUnhandledExceptionFilter(error_filter);
 }
 
@@ -1858,7 +1906,7 @@ else
 if (!r3compile(filename)) return -1;
     
 #ifdef DEBUGVER    
-
+saveimagen("mem/r3code.mem");
 #ifdef NETSERVER
 init_winsock();
 if (argc > 2) { // argv[2] = puerto del debugger
