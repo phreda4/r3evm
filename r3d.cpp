@@ -6,7 +6,9 @@
 //
 
 #define DEBUGVER
-#define INLINEOFF
+
+//#define INLINEOFF
+
 //#define OPTOFF
 //#define NETSERVER
 //#define DEBUG
@@ -1346,25 +1348,30 @@ for(int i=0;i<cntdicc;i++) {
 //
 //
 //
-void saveimagen(char *nombre)
-{
-FILE *file=fopen(nombre,"wb");if (file==NULL) return;
+void saveimagen(char *fn) {
+FILE *file=fopen(fn,"wb");if (file==NULL) return;
 fwrite(&cntdicc,sizeof(int),1,file);
 fwrite(&boot,sizeof(int),1,file);
 fwrite(&memc,sizeof(int),1,file);
 fwrite(&memd,sizeof(int),1,file);
-for (int i=0;i<cntdicc;i++) {
-	fwrite(&dicc[i].mem,sizeof(int),1,file);
-	fwrite(&dicc[i].info,sizeof(int),1,file);
-	}
 fwrite((void*)memcode,sizeof(int),memc,file);
-fwrite((void*)memdata,sizeof(int),memd,file);
+fwrite((void*)memdata,1,memd,file);
 fclose(file);
 }
 
-void loadimagen(char *nombre)
+void savedicc(char *fn) {
+FILE *file=fopen(fn,"w");if (file==NULL) return;
+for (int i=0;i<cntdicc;i++) {
+	fword(file,dicc[i].nombre-1);	
+	fprintf(file," %x",dicc[i].mem);	
+	fprintf(file," %x\n",dicc[i].info);			
+	}
+fclose(file);
+}
+
+void loadimagen(char *fn)
 {
-FILE *file=fopen(nombre,"rb");if (file==NULL) return;
+FILE *file=fopen(fn,"rb");if (file==NULL) return;
 fread(&boot,sizeof(int),1,file);
 fread(&memc,sizeof(int),1,file);
 fread(&memd,sizeof(int),1,file);
@@ -1381,7 +1388,7 @@ fread(&memd,sizeof(int),1,file);
 #endif
 
 fread((void*)memcode,sizeof(int),memc,file);
-fread((void*)memdata,sizeof(int),memd,file);
+fread((void*)memdata,1,memd,file);
 //memlibre=data+cntdato;
 fclose(file);
 }
@@ -1907,6 +1914,7 @@ if (!r3compile(filename)) return -1;
     
 #ifdef DEBUGVER    
 saveimagen("mem/r3code.mem");
+savedicc("mem/r3dicc.mem");
 #ifdef NETSERVER
 init_winsock();
 if (argc > 2) { // argv[2] = puerto del debugger

@@ -1,11 +1,7 @@
-^r3/win/console.r3
+|^r3/win/console.r3
 
+#var1 33
 
 :
-9 36 <<
-"%h" .println
-60 ( +? 
-	1 over << clz "%d" .println
-	3 - ) drop
-waitesc
+2 1 over + * 0 c!
 ;

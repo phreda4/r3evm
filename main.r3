@@ -245,6 +245,16 @@
 |LIN|	.alsb
 	;
 
+:runfile2
+|	actual -? ( drop ; )
+|	getinfo $7 and 2 <? ( drop ; ) drop
+	
+	actual getname 'path "cmd /c r3d ""%s/%s""" sprint sysnew
+|	checkerror
+	conadj 
+	
+	;
+
 :r3info
 |WIN| 	"r3 r3/editor/r3info.r3"
 |LIN| 	"./r3lin r3/editor/r3info.r3"
@@ -499,7 +509,7 @@
 |WIN| 	[PGDN] =? ( fpgdn )
 |WIN| 	[HOME] =? ( fhome )
 |WIN| 	[END] =? ( fend )
-|WIN| 	[F1] =? ( fenter )
+|WIN| 	[f1] =? ( runfile2 screen ) |[F1] =? ( fenter )
 |WIN| 	[F2] =? ( f2edit )
 |WIN| 	[F3] =? ( newfile )
 |WIN| 	|[F4] =? ( newfolder ) | f4 - new folder
@@ -542,9 +552,10 @@
 	[HOME] =? ( fhome screen )
 	[END] =? ( fend screen )
 	
-	[f1] =? ( fenter screen )
+	[f1] =? ( runfile2 screen )
 	[f2] =? ( f2edit screen ) |editfile screen )
 	[f3] =? ( newfile screen )
+
 	|[f4] =? ( newfolder screen ) | f4 - new folder
 	drop 
 	;
