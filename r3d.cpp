@@ -7,10 +7,10 @@
 
 #define DEBUGVER
 
-//#define INLINEOFF
+#define INLINEOFF
 
 //#define OPTOFF
-//#define NETSERVER
+#define NETSERVER
 //#define DEBUG
 
 #define WINDOWS
@@ -1134,19 +1134,15 @@ return -1;
 #define BUFF_SIZE 4096
 #define LOCALHOST "127.0.0.1"
 
-typedef struct {
-  SOCKET sock;
-  char rx_buf[BUFF_SIZE];
-  int rx_len;
-} conn_t;
-
-static conn_t conn;
+SOCKET sock;
+char rx_buf[BUFF_SIZE];
+int rx_len;
 
 void init_winsock(void) {
 #ifdef _WIN32
   WSADATA wsa;
   if (WSAStartup(MAKEWORD(2, 2), &wsa)) {
-    fprintf(stderr, "WSAStartup error\n");
+//    fprintf(stderr, "WSAStartup error\n");
     exit(1);
   }
 #endif
@@ -1160,82 +1156,78 @@ void cleanup_winsock(void) {
 
 int server_create(int port) {
   struct sockaddr_in addr;
-  conn.sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (conn.sock == INVALID_SOCKET) {
-    perror("socket");
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock == INVALID_SOCKET) {
     return -1;
 	}
-  SET_NONBLOCK(conn.sock);
+  SET_NONBLOCK(sock);
   int reuse = 1;
-  if (setsockopt(conn.sock, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(reuse)) < 0) {
-    perror("setsockopt");
-    CLOSE_SOCK(conn.sock);
+  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(reuse)) < 0) {
+    CLOSE_SOCK(sock);
     return -1;
 	}
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = inet_addr(LOCALHOST);
   addr.sin_port = htons(port);
-  if (bind(conn.sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-    perror("bind");
-    CLOSE_SOCK(conn.sock);
+  if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+    CLOSE_SOCK(sock);
     return -1;
 	}
-  if (listen(conn.sock, 1) < 0) {
-    perror("listen");
-    CLOSE_SOCK(conn.sock);
+  if (listen(sock, 1) < 0) {
+    CLOSE_SOCK(sock);
     return -1;
 	}
 //  printf("Servidor escuchando en 127.0.0.1:%d\n", port);
-  conn.rx_len = 0;
+  rx_len = 0;
   return 0;
 }
 
 int client_connect(int port) {
   struct sockaddr_in addr;
-  conn.sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (conn.sock == INVALID_SOCKET) { perror("socket");return -1;	}
-  SET_NONBLOCK(conn.sock);
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock == INVALID_SOCKET) { return -1;	}
+  SET_NONBLOCK(sock);
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = inet_addr(LOCALHOST);
   addr.sin_port = htons(port);
-  if (connect(conn.sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+  if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
 #ifdef _WIN32
     if (LAST_ERROR != WSAEWOULDBLOCK) {
 #else
     if (LAST_ERROR != EINPROGRESS) {
 #endif
-      perror("connect"); CLOSE_SOCK(conn.sock);return -1; }
+      CLOSE_SOCK(sock);return -1; }
 	}
 //  printf("Conectando a 127.0.0.1:%d\n", port);
-  conn.rx_len = 0;
+  rx_len = 0;
   return 0;
 }
 
 int server_accept(void) {
   struct sockaddr_in addr;
   socklen_t len = sizeof(addr);
-  SOCKET cli_sock = accept(conn.sock, (struct sockaddr*)&addr, &len);
+  SOCKET cli_sock = accept(sock, (struct sockaddr*)&addr, &len);
   if (cli_sock == INVALID_SOCKET) {return -1;}
-  CLOSE_SOCK(conn.sock);
-  conn.sock = cli_sock;
-  conn.rx_len = 0;
-  SET_NONBLOCK(conn.sock);
+  CLOSE_SOCK(sock);
+  sock = cli_sock;
+  rx_len = 0;
+  SET_NONBLOCK(sock);
 //  printf("Cliente conectado\n");
   return 0;
 }
 
 int sock_send(const char *data, int len) {
-  int n = send(conn.sock, data, len, 0);
+  int n = send(sock, data, len, 0);
   return (n > 0) ? n : 0;
 }
 
 int sock_recv(void) {
-  int n = recv(conn.sock, conn.rx_buf + conn.rx_len, BUFF_SIZE - conn.rx_len - 1, 0);
+  int n = recv(sock, rx_buf + rx_len, BUFF_SIZE - rx_len - 1, 0);
   if (n > 0) {
-    conn.rx_len += n;
-    conn.rx_buf[conn.rx_len] = '\0';
+    rx_len += n;
+    rx_buf[rx_len] = '\0';
     return n;
 	}
   if (n == 0) {return -1;}
@@ -1250,17 +1242,13 @@ return 0;
 }
 
 void sock_close(void) {
-  CLOSE_SOCK(conn.sock);
+  CLOSE_SOCK(sock);
 }
 
 void sock_flush(void) {
-  conn.rx_len = 0;
-  conn.rx_buf[0] = '\0';
+  rx_len=0;rx_buf[0]='\0';
 }
 
-conn_t* get_conn(void) {
-  return &conn;
-}
 #endif
 /////////////////////////////////////////////////////////////
 
@@ -1521,385 +1509,391 @@ void uninstall_handler() {
 
 /////////////////////////////////////////////////////////////////////
 // run code, from adress "boot"
-void runr3(int boot) 
-{
-//    datastack[DATA_STACK_ENTRIES - 1] = 0;
-retstack[512 - 1] = 0;    
-		
-register __int64 op=0;
+void startr3(int boot) {
+retstack[512-1]=0;    
 ip=boot;
 TOS=0;
-NOS = &datastack[0];
-RTOS = &retstack[512 - 1];
-REGA=0;
-REGB=0;
+NOS=&datastack[0];
+RTOS=&retstack[512 - 1];
+REGA=0;REGB=0;
+}
 
-next:
-	op=memcode[ip++]; 
-	
-#ifdef DEBUG	
-//printstackd(NOS);printf("%d |%x: %x |",TOS,ip,op);printcode(op);
-#endif
-	
-	switch(op&0xff){
-	case FIN:ip=*RTOS;RTOS++;if (ip==0) return;
-		goto next; 													// ;
-	case LIT:NOS++;*NOS=TOS;TOS=op>>8;goto next;					// LIT1
-	case ADR:NOS++;*NOS=TOS;TOS=(__int64)&memdata[op>>8];goto next;	// LIT adr
-	case CALL:RTOS--;*RTOS=ip;ip=(unsigned int)op>>8;goto next;		// CALL
-	case VAR:NOS++;*NOS=TOS;TOS=*(__int64*)&memdata[op>>8];goto next;// VAR
-	case EX:RTOS--;*RTOS=ip;ip=TOS;TOS=*NOS;NOS--;goto next;		//EX
-	case ZIF:if (TOS!=0) {ip+=(op>>8);}; goto next;//ZIF
-	case UIF:if (TOS==0) {ip+=(op>>8);}; goto next;//UIF
-	case PIF:if (TOS<0) {ip+=(op>>8);}; goto next;//PIF
-	case NIF:if (TOS>=0) {ip+=(op>>8);}; goto next;//NIF
-	case IFL:if (TOS<=*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFL
-	case IFG:if (TOS>=*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFG
-	case IFE:if (TOS!=*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFN	
-	case IFGE:if (TOS>*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFGE
-	case IFLE:if (TOS<*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFLE
-	case IFNE:if (TOS==*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFNO
-	case IFAND:if (!(TOS&*NOS)) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFNA
-	case IFNAND:if (TOS&*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;goto next;//IFAN
-	case IFBT:if ((__uint64)(*(NOS-1)-*NOS)>(__uint64)(TOS-(*NOS))){ip+=(op>>8);} TOS=*(NOS-1);NOS-=2;goto next;
-	case DUP:NOS++;*NOS=TOS;goto next;				//DUP
-	case DROP:TOS=*NOS;NOS--;goto next;				//DROP
-	case OVER:NOS++;*NOS=TOS;TOS=*(NOS-1);goto next;	//OVER
-	case PICK2:NOS++;*NOS=TOS;TOS=*(NOS-2);goto next;//PICK2
-	case PICK3:NOS++;*NOS=TOS;TOS=*(NOS-3);goto next;//PICK3
-	case PICK4:NOS++;*NOS=TOS;TOS=*(NOS-4);goto next;//PICK4
-	case SWAP:op=*NOS;*NOS=TOS;TOS=op;goto next;		//SWAP
-	case NIP:NOS--;goto next; 						//NIP
-	case ROT:op=TOS;TOS=*(NOS-1);*(NOS-1)=*NOS;*NOS=op;goto next;	//ROT
-	case MROT:op=TOS;TOS=*(NOS);*NOS=*(NOS-1);*(NOS-1)=op;goto next;	//-ROT
-	case DUP2:op=*NOS;NOS++;*NOS=TOS;NOS++;*NOS=op;goto next;//DUP2
-	case DROP2:NOS--;TOS=*NOS;NOS--;goto next;				//DROP2
-	case DROP3:NOS-=2;TOS=*NOS;NOS--;goto next;				//DROP3
-	case DROP4:NOS-=3;TOS=*NOS;NOS--;goto next;				//DROP4
+void stepr3() {
+register __int64 op=memcode[ip++]; 
+switch(op&0xff){
+	case FIN:ip=*RTOS;RTOS++;return; 								// ;
+	case LIT:NOS++;*NOS=TOS;TOS=op>>8;return;				// LIT1
+	case ADR:NOS++;*NOS=TOS;TOS=(__int64)&memdata[op>>8];return;// LIT adr
+	case CALL:RTOS--;*RTOS=ip;ip=(unsigned int)op>>8;return;	// CALL
+	case VAR:NOS++;*NOS=TOS;TOS=*(__int64*)&memdata[op>>8];return;// VAR
+	case EX:RTOS--;*RTOS=ip;ip=TOS;TOS=*NOS;NOS--;return;	//EX
+	case ZIF:if (TOS!=0) {ip+=(op>>8);}; return;//ZIF
+	case UIF:if (TOS==0) {ip+=(op>>8);}; return;//UIF
+	case PIF:if (TOS<0) {ip+=(op>>8);}; return;//PIF
+	case NIF:if (TOS>=0) {ip+=(op>>8);}; return;//NIF
+	case IFL:if (TOS<=*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;return;//IFL
+	case IFG:if (TOS>=*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;return;//IFG
+	case IFE:if (TOS!=*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;return;//IFN	
+	case IFGE:if (TOS>*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;return;//IFGE
+	case IFLE:if (TOS<*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;return;//IFLE
+	case IFNE:if (TOS==*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;return;//IFNO
+	case IFAND:if (!(TOS&*NOS)) {ip+=(op>>8);} TOS=*NOS;NOS--;return;//IFNA
+	case IFNAND:if (TOS&*NOS) {ip+=(op>>8);} TOS=*NOS;NOS--;return;//IFAN
+	case IFBT:if ((__uint64)(*(NOS-1)-*NOS)>(__uint64)(TOS-(*NOS))){ip+=(op>>8);} TOS=*(NOS-1);NOS-=2;return;
+	case DUP:NOS++;*NOS=TOS;return;			//DUP
+	case DROP:TOS=*NOS;NOS--;return;			//DROP
+	case OVER:NOS++;*NOS=TOS;TOS=*(NOS-1);return;//OVER
+	case PICK2:NOS++;*NOS=TOS;TOS=*(NOS-2);return;//PICK2
+	case PICK3:NOS++;*NOS=TOS;TOS=*(NOS-3);return;//PICK3
+	case PICK4:NOS++;*NOS=TOS;TOS=*(NOS-4);return;//PICK4
+	case SWAP:op=*NOS;*NOS=TOS;TOS=op;return;	//SWAP
+	case NIP:NOS--;return; 						//NIP
+	case ROT:op=TOS;TOS=*(NOS-1);*(NOS-1)=*NOS;*NOS=op;return;//ROT
+	case MROT:op=TOS;TOS=*(NOS);*NOS=*(NOS-1);*(NOS-1)=op;return;//-ROT
+	case DUP2:op=*NOS;NOS++;*NOS=TOS;NOS++;*NOS=op;return;//DUP2
+	case DROP2:NOS--;TOS=*NOS;NOS--;return;			//DROP2
+	case DROP3:NOS-=2;TOS=*NOS;NOS--;return;			//DROP3
+	case DROP4:NOS-=3;TOS=*NOS;NOS--;return;			//DROP4
 	case OVER2:NOS++;*NOS=TOS;TOS=*(NOS-3);
-		NOS++;*NOS=TOS;TOS=*(NOS-3);goto next;	//OVER2
+		NOS++;*NOS=TOS;TOS=*(NOS-3);return;//OVER2
 	case SWAP2:op=*NOS;*NOS=*(NOS-2);*(NOS-2)=op;
-		op=TOS;TOS=*(NOS-1);*(NOS-1)=op;goto next;	//SWAP2
-	case TOR:RTOS--;*RTOS=TOS;TOS=*NOS;NOS--;goto next;	//>r
-	case RFROM:NOS++;*NOS=TOS;TOS=*RTOS;RTOS++;goto next;	//r>
-	case ERRE:NOS++;*NOS=TOS;TOS=*RTOS;goto next;			//r@
-	case AND:TOS&=*NOS;NOS--;goto next;					//AND
-	case OR:TOS|=*NOS;NOS--;goto next;					//OR
-	case XOR:TOS^=*NOS;NOS--;goto next;					//XOR
-	case NAND:TOS=(~TOS)&(*NOS);NOS--;goto next;		//NAND
-	case ADD:TOS=*NOS+TOS;NOS--;goto next;				//SUMA
-	case SUB:TOS=*NOS-TOS;NOS--;goto next;				//RESTA
-	case MUL:TOS=*NOS*TOS;NOS--;goto next;				//MUL
-	case DIV:TOS=(*NOS/TOS);NOS--;goto next;			//DIV
-	case SHL:TOS=*NOS<<TOS;NOS--;goto next;				//SAl
-	case SHR:TOS=*NOS>>TOS;NOS--;goto next;				//SAR
-	case SHR0:TOS=((__uint64)*NOS)>>TOS;NOS--;goto next;	//SHR
-	case MOD:TOS=*NOS%TOS;NOS--;goto next;					//MOD
-	case DIVMOD:op=*NOS;*NOS=op/TOS;TOS=op%TOS;goto next;	//DIVMOD
-	case MULDIV:TOS=((__int128)(*(NOS-1))*(*NOS)/TOS);NOS-=2;goto next;	//MULDIV
-	case MULSHR:TOS=((__int128)(*(NOS-1)*(*NOS))>>TOS);NOS-=2;goto next;	//MULSHR
-	case CDIVSH:TOS=(__int128)((*(NOS-1)<<TOS)/(*NOS));NOS-=2;goto next;//CDIVSH
-	case NOT:TOS=~TOS;goto next;							//NOT
-	case NEG:TOS=-TOS;goto next;					//NEG
-	case ABS:if(TOS<0)TOS=-TOS;goto next;			//ABS
-	case CSQRT:TOS=isqrt(TOS);goto next;			//CSQRT
-	case CLZ:TOS=iclz(TOS);goto next;				//CLZ
+		op=TOS;TOS=*(NOS-1);*(NOS-1)=op;return;//SWAP2
+	case TOR:RTOS--;*RTOS=TOS;TOS=*NOS;NOS--;return;//>r
+	case RFROM:NOS++;*NOS=TOS;TOS=*RTOS;RTOS++;return;//r>
+	case ERRE:NOS++;*NOS=TOS;TOS=*RTOS;return;		//r@
+	case AND:TOS&=*NOS;NOS--;return;				//AND
+	case OR:TOS|=*NOS;NOS--;return;				//OR
+	case XOR:TOS^=*NOS;NOS--;return;				//XOR
+	case NAND:TOS=(~TOS)&(*NOS);NOS--;return;	//NAND
+	case ADD:TOS=*NOS+TOS;NOS--;return;			//SUMA
+	case SUB:TOS=*NOS-TOS;NOS--;return;			//RESTA
+	case MUL:TOS=*NOS*TOS;NOS--;return;			//MUL
+	case DIV:TOS=(*NOS/TOS);NOS--;return;		//DIV
+	case SHL:TOS=*NOS<<TOS;NOS--;return;			//SAl
+	case SHR:TOS=*NOS>>TOS;NOS--;return;			//SAR
+	case SHR0:TOS=((__uint64)*NOS)>>TOS;NOS--;return;//SHR
+	case MOD:TOS=*NOS%TOS;NOS--;return;				//MOD
+	case DIVMOD:op=*NOS;*NOS=op/TOS;TOS=op%TOS;return;//DIVMOD
+	case MULDIV:TOS=((__int128)(*(NOS-1))*(*NOS)/TOS);NOS-=2;return;//MULDIV
+	case MULSHR:TOS=((__int128)(*(NOS-1)*(*NOS))>>TOS);NOS-=2;return;//MULSHR
+	case CDIVSH:TOS=(__int128)((*(NOS-1)<<TOS)/(*NOS));NOS-=2;return;//CDIVSH
+	case NOT:TOS=~TOS;return;						//NOT
+	case NEG:TOS=-TOS;return;				//NEG
+	case ABS:if(TOS<0)TOS=-TOS;return;		//ABS
+	case CSQRT:TOS=isqrt(TOS);return;		//CSQRT
+	case CLZ:TOS=iclz(TOS);return;			//CLZ
 	
-	case FECH:TOS=*(__int64*)TOS;goto next;		//@
-	case CFECH:TOS=*(char*)TOS;goto next;		//C@
-	case WFECH:TOS=*(__int16*)TOS;goto next;	//W@
-	case DFECH:TOS=*(__int32*)TOS;goto next;	//D@
-	case FECHPLUS:NOS++;*NOS=TOS+8;TOS=*(__int64*)TOS;goto next;//@+
-	case CFECHPLUS:NOS++;*NOS=TOS+1;TOS=*(char*)TOS;goto next;// C@+
-	case WFECHPLUS:NOS++;*NOS=TOS+2;TOS=*(__int16*)TOS;goto next;//W@+			
-	case DFECHPLUS:NOS++;*NOS=TOS+4;TOS=*(__int32*)TOS;goto next;//D@+		
-	case STOR:*(__int64*)TOS=(__int64)*NOS;NOS--;TOS=*NOS;NOS--;goto next;// !
-	case CSTOR:*(char*)TOS=(char)*NOS;NOS--;TOS=*NOS;NOS--;goto next;//C!
-	case WSTOR:*(__int16*)TOS=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//W!		
-	case DSTOR:*(__int32*)TOS=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//D!
-	case STOREPLUS:*(__int64*)TOS=*NOS;NOS--;TOS+=8;goto next;// !+
-	case CSTOREPLUS:*(char*)TOS=*NOS;NOS--;TOS++;goto next;//C!+
-	case WSTOREPLUS:*(__int16*)TOS=*NOS;NOS--;TOS+=2;goto next;//W!+	
-	case DSTOREPLUS:*(__int32*)TOS=*NOS;NOS--;TOS+=4;goto next;//D!+
-	case INCSTOR:*(__int64*)TOS+=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//+!
-	case CINCSTOR:*(char*)TOS+=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//C+!
-	case WINCSTOR:*(__int16*)TOS+=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//W+!	
-	case DINCSTOR:*(__int32*)TOS+=*NOS;NOS--;TOS=*NOS;NOS--;goto next;//D+!
+	case FECH:TOS=*(__int64*)TOS;return;	//@
+	case CFECH:TOS=*(char*)TOS;return;	//C@
+	case WFECH:TOS=*(__int16*)TOS;return;//W@
+	case DFECH:TOS=*(__int32*)TOS;return;//D@
+	case FECHPLUS:NOS++;*NOS=TOS+8;TOS=*(__int64*)TOS;return;//@+
+	case CFECHPLUS:NOS++;*NOS=TOS+1;TOS=*(char*)TOS;return;// C@+
+	case WFECHPLUS:NOS++;*NOS=TOS+2;TOS=*(__int16*)TOS;return;//W@+			
+	case DFECHPLUS:NOS++;*NOS=TOS+4;TOS=*(__int32*)TOS;return;//D@+		
+	case STOR:*(__int64*)TOS=(__int64)*NOS;NOS--;TOS=*NOS;NOS--;return;// !
+	case CSTOR:*(char*)TOS=(char)*NOS;NOS--;TOS=*NOS;NOS--;return;//C!
+	case WSTOR:*(__int16*)TOS=*NOS;NOS--;TOS=*NOS;NOS--;return;//W!		
+	case DSTOR:*(__int32*)TOS=*NOS;NOS--;TOS=*NOS;NOS--;return;//D!
+	case STOREPLUS:*(__int64*)TOS=*NOS;NOS--;TOS+=8;return;// !+
+	case CSTOREPLUS:*(char*)TOS=*NOS;NOS--;TOS++;return;//C!+
+	case WSTOREPLUS:*(__int16*)TOS=*NOS;NOS--;TOS+=2;return;//W!+	
+	case DSTOREPLUS:*(__int32*)TOS=*NOS;NOS--;TOS+=4;return;//D!+
+	case INCSTOR:*(__int64*)TOS+=*NOS;NOS--;TOS=*NOS;NOS--;return;//+!
+	case CINCSTOR:*(char*)TOS+=*NOS;NOS--;TOS=*NOS;NOS--;return;//C+!
+	case WINCSTOR:*(__int16*)TOS+=*NOS;NOS--;TOS=*NOS;NOS--;return;//W+!	
+	case DINCSTOR:*(__int32*)TOS+=*NOS;NOS--;TOS=*NOS;NOS--;return;//D+!
 	
-	case TOA:REGA=TOS;TOS=*NOS;NOS--;goto next; //>A
-	case ATO:NOS++;*NOS=TOS;TOS=REGA;goto next; //A> 
-	case AA:REGA+=TOS;TOS=*NOS;NOS--;goto next;//A+ 	
+	case TOA:REGA=TOS;TOS=*NOS;NOS--;return; //>A
+	case ATO:NOS++;*NOS=TOS;TOS=REGA;return; //A> 
+	case AA:REGA+=TOS;TOS=*NOS;NOS--;return;//A+ 	
 	
-	case AF:NOS++;*NOS=TOS;TOS=*(__int64*)REGA;goto next;//A@
-	case AS:*(__int64*)REGA=TOS;TOS=*NOS;NOS--;goto next;//A! 
-	case AFA:NOS++;*NOS=TOS;TOS=*(__int64*)REGA;REGA+=8;goto next;//A@+ 
-	case ASA:*(__int64*)REGA=TOS;TOS=*NOS;NOS--;REGA+=8;goto next;//A!+
-	case CAF:NOS++;*NOS=TOS;TOS=*(char*)REGA;goto next;//cA@
-	case CAS:*(char*)REGA=TOS;TOS=*NOS;NOS--;goto next;//cA! 
-	case CAFA:NOS++;*NOS=TOS;TOS=*(char*)REGA;REGA++;goto next;//cA@+ 
-	case CASA:*(char*)REGA=TOS;TOS=*NOS;NOS--;REGA++;goto next;//cA!+
-	case DAF:NOS++;*NOS=TOS;TOS=*(__int32*)REGA;goto next;//dA@
-	case DAS:*(__int32*)REGA=TOS;TOS=*NOS;NOS--;goto next;//dA! 
-	case DAFA:NOS++;*NOS=TOS;TOS=*(__int32*)REGA;REGA+=4;goto next;//dA@+ 
-	case DASA:*(__int32*)REGA=TOS;TOS=*NOS;NOS--;REGA+=4;goto next;//dA!+
+	case AF:NOS++;*NOS=TOS;TOS=*(__int64*)REGA;return;//A@
+	case AS:*(__int64*)REGA=TOS;TOS=*NOS;NOS--;return;//A! 
+	case AFA:NOS++;*NOS=TOS;TOS=*(__int64*)REGA;REGA+=8;return;//A@+ 
+	case ASA:*(__int64*)REGA=TOS;TOS=*NOS;NOS--;REGA+=8;return;//A!+
+	case CAF:NOS++;*NOS=TOS;TOS=*(char*)REGA;return;//cA@
+	case CAS:*(char*)REGA=TOS;TOS=*NOS;NOS--;return;//cA! 
+	case CAFA:NOS++;*NOS=TOS;TOS=*(char*)REGA;REGA++;return;//cA@+ 
+	case CASA:*(char*)REGA=TOS;TOS=*NOS;NOS--;REGA++;return;//cA!+
+	case DAF:NOS++;*NOS=TOS;TOS=*(__int32*)REGA;return;//dA@
+	case DAS:*(__int32*)REGA=TOS;TOS=*NOS;NOS--;return;//dA! 
+	case DAFA:NOS++;*NOS=TOS;TOS=*(__int32*)REGA;REGA+=4;return;//dA@+ 
+	case DASA:*(__int32*)REGA=TOS;TOS=*NOS;NOS--;REGA+=4;return;//dA!+
 	
-	case TOB:REGB=TOS;TOS=*NOS;NOS--;goto next; //>B
-	case BTO:NOS++;*NOS=TOS;TOS=REGB;goto next; //B> 
-	case BA:REGB+=TOS;TOS=*NOS;NOS--;goto next;//B+ 
+	case TOB:REGB=TOS;TOS=*NOS;NOS--;return; //>B
+	case BTO:NOS++;*NOS=TOS;TOS=REGB;return; //B> 
+	case BA:REGB+=TOS;TOS=*NOS;NOS--;return;//B+ 
 
-	case BF:NOS++;*NOS=TOS;TOS=*(__int64*)REGB;goto next;//B@
-	case BS:*(__int64*)REGB=TOS;TOS=*NOS;NOS--;goto next;//B! 
-	case BFA:NOS++;*NOS=TOS;TOS=*(__int64*)REGB;REGB+=8;goto next;//B@+ 
-	case BSA:*(__int64*)REGB=TOS;TOS=*NOS;NOS--;REGB+=8;goto next;//B!+
+	case BF:NOS++;*NOS=TOS;TOS=*(__int64*)REGB;return;//B@
+	case BS:*(__int64*)REGB=TOS;TOS=*NOS;NOS--;return;//B! 
+	case BFA:NOS++;*NOS=TOS;TOS=*(__int64*)REGB;REGB+=8;return;//B@+ 
+	case BSA:*(__int64*)REGB=TOS;TOS=*NOS;NOS--;REGB+=8;return;//B!+
 
-	case CBF:NOS++;*NOS=TOS;TOS=*(char*)REGB;goto next;//cB@
-	case CBS:*(char*)REGB=TOS;TOS=*NOS;NOS--;goto next;//cB! 
-	case CBFA:NOS++;*NOS=TOS;TOS=*(char*)REGB;REGB++;goto next;//cB@+ 
-	case CBSA:*(char*)REGB=TOS;TOS=*NOS;NOS--;REGB++;goto next;//cB!+
+	case CBF:NOS++;*NOS=TOS;TOS=*(char*)REGB;return;//cB@
+	case CBS:*(char*)REGB=TOS;TOS=*NOS;NOS--;return;//cB! 
+	case CBFA:NOS++;*NOS=TOS;TOS=*(char*)REGB;REGB++;return;//cB@+ 
+	case CBSA:*(char*)REGB=TOS;TOS=*NOS;NOS--;REGB++;return;//cB!+
 
-	case DBF:NOS++;*NOS=TOS;TOS=*(__int32*)REGB;goto next;//dB@
-	case DBS:*(__int32*)REGB=TOS;TOS=*NOS;NOS--;goto next;//dB! 
-	case DBFA:NOS++;*NOS=TOS;TOS=*(__int32*)REGB;REGB+=4;goto next;//dB@+ 
-	case DBSA:*(__int32*)REGB=TOS;TOS=*NOS;NOS--;REGB+=4;goto next;//dB!+
+	case DBF:NOS++;*NOS=TOS;TOS=*(__int32*)REGB;return;//dB@
+	case DBS:*(__int32*)REGB=TOS;TOS=*NOS;NOS--;return;//dB! 
+	case DBFA:NOS++;*NOS=TOS;TOS=*(__int32*)REGB;REGB+=4;return;//dB@+ 
+	case DBSA:*(__int32*)REGB=TOS;TOS=*NOS;NOS--;REGB+=4;return;//dB!+
 
-	case SAVEAB:RTOS--;*RTOS=REGA;RTOS--;*RTOS=REGB;goto next;// ab[
-	case LOADBA:REGB=*RTOS;RTOS++;REGA=*RTOS;RTOS++;goto next;// ]ba
+	case SAVEAB:RTOS--;*RTOS=REGA;RTOS--;*RTOS=REGB;return;// ab[
+	case LOADBA:REGB=*RTOS;RTOS++;REGA=*RTOS;RTOS++;return;// ]ba
 	
 	case MOVED://QMOVE 
 //		W=(unsigned __int64)*(NOS-1);op=(unsigned __int64)*NOS;
 //		while (TOS--) { *(unsigned __int64*)W=*(unsigned __int64*)op;W+=8;op+=8; }
 		memcpy((void*)*(NOS-1),(void*)*NOS,TOS<<3);	
-		NOS-=2;TOS=*NOS;NOS--;goto next;
+		NOS-=2;TOS=*NOS;NOS--;return;
 	case MOVEA://MOVE> 
 //		W=(unsigned __int64)*(NOS-1)+(TOS<<3);op=(unsigned __int64)*NOS+(TOS<<3);
 //		while (TOS--) { W-=8;op-=8;*(unsigned __int64*)W=*(unsigned __int64*)op; }
 		memmove((void*)*(NOS-1),(void*)*NOS,TOS<<3);		
-		NOS-=2;TOS=*NOS;NOS--;goto next;
+		NOS-=2;TOS=*NOS;NOS--;return;
 	case FILL://QFILL
 //		W=(unsigned __int64)*(NOS-1);op=*NOS;while (TOS--) { *(unsigned __int64*)W=op;W+=8; }
 		memset64((__uint64*)*(NOS-1),*NOS,TOS);		
-		NOS-=2;TOS=*NOS;NOS--;goto next;
+		NOS-=2;TOS=*NOS;NOS--;return;
 
 	case CMOVED://CMOVE 
 //		W=(__int64)*(NOS-1);op=(__int64)*NOS;
 //		while (TOS--) { *(char*)W=*(char*)op;W++;op++; }
 		memcpy((void*)*(NOS-1),(void*)*NOS,TOS);
-		NOS-=2;TOS=*NOS;NOS--;goto next;
+		NOS-=2;TOS=*NOS;NOS--;return;
 	case CMOVEA://CMOVE> 
 //		W=(__int64)*(NOS-1)+TOS;op=(__int64)*NOS+TOS;
 //		while (TOS--) { W--;op--;*(char*)W=*(char*)op; }
 		memmove((void*)*(NOS-1),(void*)*NOS,TOS);
-		NOS-=2;TOS=*NOS;NOS--;goto next;
+		NOS-=2;TOS=*NOS;NOS--;return;
 	case CFILL://CFILL
 //		W=(__int64)*(NOS-1);op=*NOS;while (TOS--) { *(char*)W=op;W++; }
 		memset((void*)*(NOS-1),*NOS,TOS);
-		NOS-=2;TOS=*NOS;NOS--;goto next;
+		NOS-=2;TOS=*NOS;NOS--;return;
 
 	
 	case DMOVED://MOVE 
 //		W=(__int64)*(NOS-1);op=(__int64)*NOS;
 //		while (TOS--) { *(int*)W=*(int*)op;W+=4;op+=4; }
 		memcpy((void*)*(NOS-1),(void*)*NOS,TOS<<2);
-		NOS-=2;TOS=*NOS;NOS--;goto next;
+		NOS-=2;TOS=*NOS;NOS--;return;
 	case DMOVEA://MOVE> 
 //		W=(__int64)*(NOS-1)+(TOS<<2);op=(__int64)(*NOS)+(TOS<<2);
 //		while (TOS--) { W-=4;op-=4;*(int*)W=*(int*)op; }
 		memmove((void*)*(NOS-1),(void*)*NOS,TOS<<2);
-		NOS-=2;TOS=*NOS;NOS--;goto next;
+		NOS-=2;TOS=*NOS;NOS--;return;
 	case DFILL://FILL
 //		W=*(NOS-1);op=*NOS;while (TOS--) { *(int*)W=op;W+=4; }
 		memset32((__uint32*)*(NOS-1),*NOS,TOS);
-		NOS-=2;TOS=*NOS;NOS--;goto next;
+		NOS-=2;TOS=*NOS;NOS--;return;
 	case MEM://"MEM"
-		NOS++;*NOS=TOS;TOS=(__int64)&memdata[memd];goto next;
+		NOS++;*NOS=TOS;TOS=(__int64)&memdata[memd];return;
 
 #if defined(LINUX) || defined(RPI)
 	case LOADLIB: // "" -- hmo
-		TOS=(__int64)dlopen((char*)TOS,RTLD_NOW);goto next; //RTLD_LAZY 1 RTLD_NOW 2
+		TOS=(__int64)dlopen((char*)TOS,RTLD_NOW);return; //RTLD_LAZY 1 RTLD_NOW 2
 	case GETPROCA: // hmo "" -- ad		
-		TOS=(__int64)dlsym((void*)*NOS,(char*)TOS);NOS--;goto next;
+		TOS=(__int64)dlsym((void*)*NOS,(char*)TOS);NOS--;return;
 #else	// WINDOWS
 	case LOADLIB: // "" -- hmo
-		TOS=(__int64)LoadLibraryA((char*)TOS);goto next;
+		TOS=(__int64)LoadLibraryA((char*)TOS);return;
 	case GETPROCA: // hmo "" -- ad
-		TOS=(__int64)GetProcAddress((HMODULE)*NOS,(char*)TOS);NOS--;goto next;
+		TOS=(__int64)GetProcAddress((HMODULE)*NOS,(char*)TOS);NOS--;return;
 #endif
 		 
 	case SYSCALL0: // adr -- rs
 		op=*(__int64*)&memdata[op>>8];
-		NOS++;*NOS=TOS;TOS=(__int64)(* (__int64(*)())op)();goto next;
+		NOS++;*NOS=TOS;TOS=(__int64)(* (__int64(*)())op)();return;
 	case SYSCALL1: // a0 adr -- rs 
 		op=*(__int64*)&memdata[op>>8];
-		TOS=(__int64)(* (__int64(*)(__int64))op)(TOS);goto next;
+		TOS=(__int64)(* (__int64(*)(__int64))op)(TOS);return;
 	case SYSCALL2: // a0 adr -- rs 
 		op=*(__int64*)&memdata[op>>8];
-		TOS=(__int64)(* (__int64(*)(__int64,__int64))op)(*NOS,TOS);NOS--;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64))op)(*NOS,TOS);NOS--;return;
 	case SYSCALL3: // a1 a0 adr -- rs 
 		op=*(__int64*)&memdata[op>>8];
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64))op)(*(NOS-1),*NOS,TOS);NOS-=2;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64))op)(*(NOS-1),*NOS,TOS);NOS-=2;return;
 	case SYSCALL4: // a1 a0 adr -- rs 
 		op=*(__int64*)&memdata[op>>8];
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64))op)(*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=3;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64))op)(*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=3;return;
 	case SYSCALL5: // a1 a0 adr -- rs 
 		op=*(__int64*)&memdata[op>>8];
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64))op)(*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=4;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64))op)(*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=4;return;
 	case SYSCALL6: // a1 a0 adr -- rs 
 		op=*(__int64*)&memdata[op>>8];
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=5;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=5;return;
 	case SYSCALL7: // a1 a0 adr -- rs 
 		op=*(__int64*)&memdata[op>>8];
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=6;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=6;return;
 	case SYSCALL8: // a1 a0 adr -- rs 
 		op=*(__int64*)&memdata[op>>8];
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=7;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=7;return;
 	case SYSCALL9: // a1 a0 adr -- rs 
 		op=*(__int64*)&memdata[op>>8];
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=8;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=8;return;
 	case SYSCALL10: // a1 a0 adr -- rs 
 		op=*(__int64*)&memdata[op>>8];
-		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=9;goto next;
+		TOS=(__int64)(* (__int64(*)(__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64,__int64))op)(*(NOS-8),*(NOS-7),*(NOS-6),*(NOS-5),*(NOS-4),*(NOS-3),*(NOS-2),*(NOS-1),*NOS,TOS);NOS-=9;return;
 /* -- DEBUG
-	case DOT:printf("%llx ",TOS);TOS=*NOS;NOS--;goto next;
-	case DOTS:printf((char*)TOS);TOS=*NOS;NOS--;goto next;
+	case DOT:printf("%llx ",TOS);TOS=*NOS;NOS--;return;
+	case DOTS:printf((char*)TOS);TOS=*NOS;NOS--;return;
 */	
-//	case ENDWORD: goto next;
+//	case ENDWORD: return;
 //----------------- ONLY INTERNAL
-	case JMP:ip=(op>>8);goto next;//JMP							// JMP
-	case JMPR:ip+=(op>>8);goto next;//JMP						// JMPR	
-	case LIT2:TOS=(TOS&0xffffff)|((op>>8)<<24);goto next;		// LIT ....xxxxxxaaaaaa
-	case LIT3:TOS=(TOS&0xffffffffffff)|((op>>8)<<48);goto next;	// LIT xxxx......aaaaaa	
-	case LITF:NOS++;*NOS=TOS;TOS=*(__int64*)(&memcode[ip]);ip+=2;goto next; // insegure for optimization
+	case JMP:ip=(op>>8);return;//JMP							// JMP
+	case JMPR:ip+=(op>>8);return;//JMP						// JMPR	
+	case LIT2:TOS=(TOS&0xffffff)|((op>>8)<<24);return;	// LIT ....xxxxxxaaaaaa
+	case LIT3:TOS=(TOS&0xffffffffffff)|((op>>8)<<48);return;// LIT xxxx......aaaaaa	
+	case LITF:NOS++;*NOS=TOS;TOS=*(__int64*)(&memcode[ip]);ip+=2;return; // insegure for optimization
 //----------------- OPTIMIZED WORD
 #ifndef OPTOFF // DISABLE
-	case AND1:TOS&=op>>8;goto next;
-	case OR1:TOS|=op>>8;goto next;
-	case XOR1:TOS^=op>>8;goto next;
-	case NAND1:TOS&=~(op>>8);goto next;
-	case ADD1:TOS+=op>>8;goto next;
-	case SUB1:TOS-=op>>8;goto next;
-	case MUL1:TOS*=op>>8;goto next;
-	case DIV1:TOS/=op>>8;goto next;
-	case SHL1:TOS<<=op>>8;goto next;
-	case SHR1:TOS>>=op>>8;goto next;
-	case SHR01:TOS=(__uint64)TOS>>(op>>8);goto next;
-	case MOD1:TOS=TOS%(op>>8);goto next;
-	case DIVMOD1:op>>=8;NOS++;*NOS=TOS/op;TOS=TOS%op;goto next;	//DIVMOD
-	case MULDIV1:op>>=8;TOS=(__int128)(*NOS)*TOS/op;NOS--;goto next;	//MULDIV
-	case MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;goto next;	//MULSHR
-	case CDIVSH1:op>>=8;TOS=(__int128)((*NOS)<<op)/TOS;NOS--;goto next;	//CDIVSH
+	case AND1:TOS&=op>>8;return;
+	case OR1:TOS|=op>>8;return;
+	case XOR1:TOS^=op>>8;return;
+	case NAND1:TOS&=~(op>>8);return;
+	case ADD1:TOS+=op>>8;return;
+	case SUB1:TOS-=op>>8;return;
+	case MUL1:TOS*=op>>8;return;
+	case DIV1:TOS/=op>>8;return;
+	case SHL1:TOS<<=op>>8;return;
+	case SHR1:TOS>>=op>>8;return;
+	case SHR01:TOS=(__uint64)TOS>>(op>>8);return;
+	case MOD1:TOS=TOS%(op>>8);return;
+	case DIVMOD1:op>>=8;NOS++;*NOS=TOS/op;TOS=TOS%op;return;//DIVMOD
+	case MULDIV1:op>>=8;TOS=(__int128)(*NOS)*TOS/op;NOS--;return;//MULDIV
+	case MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;return;//MULSHR
+	case CDIVSH1:op>>=8;TOS=(__int128)((*NOS)<<op)/TOS;NOS--;return;//CDIVSH
 
-	case MULSHR2:op>>=8;TOS=((__int128)TOS*op)>>16;goto next;	//MULSHR .. 234 16 *>>
-	case CDIVSH2:op>>=8;TOS=(__int128)(TOS<<16)/op;goto next;	//CDIVSH ... 23 16 <</
+	case MULSHR2:op>>=8;TOS=((__int128)TOS*op)>>16;return;//MULSHR .. 234 16 *>>
+	case CDIVSH2:op>>=8;TOS=(__int128)(TOS<<16)/op;return;//CDIVSH ... 23 16 <</
 	
-	case MULSHR3:TOS=((__int128)(*NOS)*TOS)>>16;NOS--;goto next;	//MULSHR .. XX 16 *>>
-	case CDIVSH3:TOS=(__int128)((*NOS)<<16)/TOS;NOS--;goto next;	//CDIVSH .. XX 16 <</	
+	case MULSHR3:TOS=((__int128)(*NOS)*TOS)>>16;NOS--;return;//MULSHR .. XX 16 *>>
+	case CDIVSH3:TOS=(__int128)((*NOS)<<16)/TOS;NOS--;return;//CDIVSH .. XX 16 <</	
 
-	case IFL1:if ((op>>16)<=TOS) ip+=(op<<48>>56);goto next;	//IFL <<32>>49
-	case IFG1:if ((op>>16)>=TOS) ip+=(op<<48>>56);goto next;	//IFG
-	case IFE1:if ((op>>16)!=TOS) ip+=(op<<48>>56);goto next;	//IFN
-	case IFGE1:if ((op>>16)>TOS) ip+=(op<<48>>56);goto next;	//IFGE
-	case IFLE1:if ((op>>16)<TOS) ip+=(op<<48>>56);goto next;	//IFLE
-	case IFNE1:if ((op>>16)==TOS) ip+=(op<<48>>56);goto next;//IFNO
-	case IFAND1:if (!((op>>16)&TOS)) ip+=(op<<48>>56);goto next;//IFNA
-	case IFNAND1:if ((op>>16)&TOS) ip+=(op<<48>>56);goto next;//IFAN
+	case IFL1:if ((op>>16)<=TOS) ip+=(op<<48>>56);return;//IFL <<32>>49
+	case IFG1:if ((op>>16)>=TOS) ip+=(op<<48>>56);return;//IFG
+	case IFE1:if ((op>>16)!=TOS) ip+=(op<<48>>56);return;//IFN
+	case IFGE1:if ((op>>16)>TOS) ip+=(op<<48>>56);return;//IFGE
+	case IFLE1:if ((op>>16)<TOS) ip+=(op<<48>>56);return;//IFLE
+	case IFNE1:if ((op>>16)==TOS) ip+=(op<<48>>56);return;//IFNO
+	case IFAND1:if (!((op>>16)&TOS)) ip+=(op<<48>>56);return;//IFNA
+	case IFNAND1:if ((op>>16)&TOS) ip+=(op<<48>>56);return;//IFAN
 	// signed and unsigned transformation
-	case SHLR:TOS=(TOS<<((op>>8)&0xff))>>(op>>16);goto next; // SHLR  ( << >>) extend sign
-	case SHLAR:TOS=(TOS>>((op>>8)&0x3f))&((unsigned)op>>14);goto next; // SHRAND  (>> and) unsigned
+	case SHLR:TOS=(TOS<<((op>>8)&0xff))>>(op>>16);return; // SHLR  ( << >>) extend sign
+	case SHLAR:TOS=(TOS>>((op>>8)&0x3f))&((unsigned)op>>14);return; // SHRAND  (>> and) unsigned
 	// cte + @ c@ w@ d@ 
-	case FECHa:TOS=*(__int64*)(TOS+(op>>8));goto next;//+ @
-	case CFECHa:TOS=*(char*)(TOS+(op>>8));goto next;//+C@
-	case WFECHa:TOS=*(__int16*)(TOS+(op>>8));goto next;//+W@
-	case DFECHa:TOS=*(__int32*)(TOS+(op>>8));goto next;//+D@
+	case FECHa:TOS=*(__int64*)(TOS+(op>>8));return;//+ @
+	case CFECHa:TOS=*(char*)(TOS+(op>>8));return;//+C@
+	case WFECHa:TOS=*(__int16*)(TOS+(op>>8));return;//+W@
+	case DFECHa:TOS=*(__int32*)(TOS+(op>>8));return;//+D@
 	// cte + ! c! w! d!
-	case STORa:*(__int64*)(TOS+(op>>8))=*NOS;TOS=*(NOS-1);NOS-=2;goto next;// + !
-	case CSTORa:*(char*)(TOS+(op>>8))=*NOS;TOS=*(NOS-1);NOS-=2;goto next;//+ C!
-	case WSTORa:*(__int16*)(TOS+(op>>8))=*NOS;TOS=*(NOS-1);NOS-=2;goto next;//+ W!
-	case DSTORa:*(__int32*)(TOS+(op>>8))=*NOS;TOS=*(NOS-1);NOS-=2;goto next;//+ D!
+	case STORa:*(__int64*)(TOS+(op>>8))=*NOS;TOS=*(NOS-1);NOS-=2;return;// + !
+	case CSTORa:*(char*)(TOS+(op>>8))=*NOS;TOS=*(NOS-1);NOS-=2;return;//+ C!
+	case WSTORa:*(__int16*)(TOS+(op>>8))=*NOS;TOS=*(NOS-1);NOS-=2;return;//+ W!
+	case DSTORa:*(__int32*)(TOS+(op>>8))=*NOS;TOS=*(NOS-1);NOS-=2;return;//+ D!
 	// 1|2|3 << + @ c@ w@ d@ 
-	case FECH1:TOS=*(__int64*)((TOS<<1)+(*NOS));NOS--;goto next;//1<<+@
-	case FECH2:TOS=*(__int64*)((TOS<<2)+(*NOS));NOS--;goto next;//2<<+@
-	case FECH3:TOS=*(__int64*)((TOS<<3)+(*NOS));NOS--;goto next;//3<<+@
-	case CFECH1:TOS=*(char*)((TOS<<1)+(*NOS));NOS--;goto next;//1<<+C@
-	case CFECH2:TOS=*(char*)((TOS<<2)+(*NOS));NOS--;goto next;//2<<+C@
-	case CFECH3:TOS=*(char*)((TOS<<3)+(*NOS));NOS--;goto next;//3<<+C@
-	case WFECH1:TOS=*(__int16*)((TOS<<1)+(*NOS));NOS--;goto next;//1<<+W@
-	case WFECH2:TOS=*(__int16*)((TOS<<2)+(*NOS));NOS--;goto next;//2<<+W@
-	case WFECH3:TOS=*(__int16*)((TOS<<3)+(*NOS));NOS--;goto next;//3<<+W@
-	case DFECH1:TOS=*(__int32*)((TOS<<1)+(*NOS));NOS--;goto next;//1<<+D@
-	case DFECH2:TOS=*(__int32*)((TOS<<2)+(*NOS));NOS--;goto next;//2<<+D@
-	case DFECH3:TOS=*(__int32*)((TOS<<3)+(*NOS));NOS--;goto next;//3<<+D@
+	case FECH1:TOS=*(__int64*)((TOS<<1)+(*NOS));NOS--;return;//1<<+@
+	case FECH2:TOS=*(__int64*)((TOS<<2)+(*NOS));NOS--;return;//2<<+@
+	case FECH3:TOS=*(__int64*)((TOS<<3)+(*NOS));NOS--;return;//3<<+@
+	case CFECH1:TOS=*(char*)((TOS<<1)+(*NOS));NOS--;return;//1<<+C@
+	case CFECH2:TOS=*(char*)((TOS<<2)+(*NOS));NOS--;return;//2<<+C@
+	case CFECH3:TOS=*(char*)((TOS<<3)+(*NOS));NOS--;return;//3<<+C@
+	case WFECH1:TOS=*(__int16*)((TOS<<1)+(*NOS));NOS--;return;//1<<+W@
+	case WFECH2:TOS=*(__int16*)((TOS<<2)+(*NOS));NOS--;return;//2<<+W@
+	case WFECH3:TOS=*(__int16*)((TOS<<3)+(*NOS));NOS--;return;//3<<+W@
+	case DFECH1:TOS=*(__int32*)((TOS<<1)+(*NOS));NOS--;return;//1<<+D@
+	case DFECH2:TOS=*(__int32*)((TOS<<2)+(*NOS));NOS--;return;//2<<+D@
+	case DFECH3:TOS=*(__int32*)((TOS<<3)+(*NOS));NOS--;return;//3<<+D@
 	// 1|2|3 << + ! c! w! d!
-	case STOR1:*(__int64*)((TOS<<1)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;// 1<<+!
-	case STOR2:*(__int64*)((TOS<<2)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;// 2<<+!
-	case STOR3:*(__int64*)((TOS<<3)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;// 3<<+!
-	case CSTOR1:*(char*)((TOS<<1)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;//1<<+C!
-	case CSTOR2:*(char*)((TOS<<2)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;//2<<+C!
-	case CSTOR3:*(char*)((TOS<<3)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;//3<<+C!
-	case WSTOR1:*(__int16*)((TOS<<1)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;//1<<+W!
-	case WSTOR2:*(__int16*)((TOS<<2)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;//2<<+W!
-	case WSTOR3:*(__int16*)((TOS<<3)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;//3<<+W!
-	case DSTOR1:*(__int32*)((TOS<<1)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;//1<<+D!
-	case DSTOR2:*(__int32*)((TOS<<2)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;//2<<+D!
-	case DSTOR3:*(__int32*)((TOS<<3)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;goto next;//3<<+D!
-	case AA1:REGA+=(op>>8);goto next;//LIT A+ 	
-	case BA1:REGB+=(op>>8);goto next;//LIT B+ 	
+	case STOR1:*(__int64*)((TOS<<1)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;return;// 1<<+!
+	case STOR2:*(__int64*)((TOS<<2)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;return;// 2<<+!
+	case STOR3:*(__int64*)((TOS<<3)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;return;// 3<<+!
+	case CSTOR1:*(char*)((TOS<<1)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;return;//1<<+C!
+	case CSTOR2:*(char*)((TOS<<2)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;return;//2<<+C!
+	case CSTOR3:*(char*)((TOS<<3)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;return;//3<<+C!
+	case WSTOR1:*(__int16*)((TOS<<1)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;return;//1<<+W!
+	case WSTOR2:*(__int16*)((TOS<<2)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;return;//2<<+W!
+	case WSTOR3:*(__int16*)((TOS<<3)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;return;//3<<+W!
+	case DSTOR1:*(__int32*)((TOS<<1)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;return;//1<<+D!
+	case DSTOR2:*(__int32*)((TOS<<2)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;return;//2<<+D!
+	case DSTOR3:*(__int32*)((TOS<<3)+(*NOS))=*(NOS-1);TOS=*(NOS-2);NOS-=3;return;//3<<+D!
+	case AA1:REGA+=(op>>8);return;//LIT A+ 	
+	case BA1:REGB+=(op>>8);return;//LIT B+ 	
 	
 	//(__int64)&memdata[op>>8]
 	// 'var MEM	
-	case AFECH: NOS++;*NOS=TOS;TOS=*(__int64*)&memdata[op>>8];goto next;	//@
-	case ACFECH:NOS++;*NOS=TOS;TOS=*(char*)&memdata[op>>8];goto next;		//C@
-	case AWFECH:NOS++;*NOS=TOS;TOS=*(__int16*)&memdata[op>>8];goto next;	//W@
-	case ADFECH:NOS++;*NOS=TOS;TOS=*(__int32*)&memdata[op>>8];goto next;	//D@
+	case AFECH: NOS++;*NOS=TOS;TOS=*(__int64*)&memdata[op>>8];return;//@
+	case ACFECH:NOS++;*NOS=TOS;TOS=*(char*)&memdata[op>>8];return;	//C@
+	case AWFECH:NOS++;*NOS=TOS;TOS=*(__int16*)&memdata[op>>8];return;//W@
+	case ADFECH:NOS++;*NOS=TOS;TOS=*(__int32*)&memdata[op>>8];return;//D@
 	
-	case AFECHPLUS: op=(__int64)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+8;TOS=*(__int64*)op;goto next;//@+
-	case ACFECHPLUS:op=(__int64)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+1;TOS=*(char*)op;goto next;// C@+
-	case AWFECHPLUS:op=(__int64)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+2;TOS=*(__int16*)op;goto next;//W@+			
-	case ADFECHPLUS:op=(__int64)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+4;TOS=*(__int32*)op;goto next;//D@+		
+	case AFECHPLUS: op=(__int64)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+8;TOS=*(__int64*)op;return;//@+
+	case ACFECHPLUS:op=(__int64)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+1;TOS=*(char*)op;return;// C@+
+	case AWFECHPLUS:op=(__int64)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+2;TOS=*(__int16*)op;return;//W@+			
+	case ADFECHPLUS:op=(__int64)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+4;TOS=*(__int32*)op;return;//D@+		
 	
-	case ASTOR: *(__int64*)&memdata[op>>8]=TOS;TOS=*NOS;NOS--;goto next;// !
-	case ACSTOR:*(char*)&memdata[op>>8]=TOS;TOS=*NOS;NOS--;goto next;//C!
-	case AWSTOR:*(__int16*)&memdata[op>>8]=TOS;TOS=*NOS;NOS--;goto next;//W!		
-	case ADSTOR:*(__int32*)&memdata[op>>8]=TOS;TOS=*NOS;NOS--;goto next;//D!
+	case ASTOR: *(__int64*)&memdata[op>>8]=TOS;TOS=*NOS;NOS--;return;// !
+	case ACSTOR:*(char*)&memdata[op>>8]=TOS;TOS=*NOS;NOS--;return;//C!
+	case AWSTOR:*(__int16*)&memdata[op>>8]=TOS;TOS=*NOS;NOS--;return;//W!		
+	case ADSTOR:*(__int32*)&memdata[op>>8]=TOS;TOS=*NOS;NOS--;return;//D!
 	
-	case ASTOREPLUS: op=(__int64)&memdata[op>>8];*(__int64*)op=TOS;TOS=op+8;goto next;// !+
-	case ACSTOREPLUS:op=(__int64)&memdata[op>>8];*(char*)op=TOS;TOS=op+1;goto next;//C!+
-	case AWSTOREPLUS:op=(__int64)&memdata[op>>8];*(__int16*)op=TOS;TOS=op+2;goto next;//W!+	
-	case ADSTOREPLUS:op=(__int64)&memdata[op>>8];*(__int32*)op=TOS;TOS=op+4;goto next;//D!+
+	case ASTOREPLUS: op=(__int64)&memdata[op>>8];*(__int64*)op=TOS;TOS=op+8;return;// !+
+	case ACSTOREPLUS:op=(__int64)&memdata[op>>8];*(char*)op=TOS;TOS=op+1;return;//C!+
+	case AWSTOREPLUS:op=(__int64)&memdata[op>>8];*(__int16*)op=TOS;TOS=op+2;return;//W!+	
+	case ADSTOREPLUS:op=(__int64)&memdata[op>>8];*(__int32*)op=TOS;TOS=op+4;return;//D!+
 	
-	case AINCSTOR: *(__int64*)&memdata[op>>8]+=TOS;TOS=*NOS;NOS--;goto next;//+!
-	case ACINCSTOR:*(char*)&memdata[op>>8]+=TOS;TOS=*NOS;NOS--;goto next;//C+!
-	case AWINCSTOR:*(__int16*)&memdata[op>>8]+=TOS;TOS=*NOS;NOS--;goto next;//W+!	
-	case ADINCSTOR:*(__int32*)&memdata[op>>8]+=TOS;TOS=*NOS;NOS--;goto next;//D+!
+	case AINCSTOR: *(__int64*)&memdata[op>>8]+=TOS;TOS=*NOS;NOS--;return;//+!
+	case ACINCSTOR:*(char*)&memdata[op>>8]+=TOS;TOS=*NOS;NOS--;return;//C+!
+	case AWINCSTOR:*(__int16*)&memdata[op>>8]+=TOS;TOS=*NOS;NOS--;return;//W+!	
+	case ADINCSTOR:*(__int32*)&memdata[op>>8]+=TOS;TOS=*NOS;NOS--;return;//D+!
 	// var MEM
 	//*(__int64*)&memdata[op>>8]
-	case VFECH: op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;TOS=*(__int64*)op;goto next;	//@
-	case VCFECH:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;TOS=*(char*)op;goto next;		//C@
-	case VWFECH:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;TOS=*(__int16*)op;goto next;	//W@
-	case VDFECH:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;TOS=*(__int32*)op;goto next;	//D@
+	case VFECH: op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;TOS=*(__int64*)op;return;//@
+	case VCFECH:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;TOS=*(char*)op;return;	//C@
+	case VWFECH:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;TOS=*(__int16*)op;return;//W@
+	case VDFECH:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;TOS=*(__int32*)op;return;//D@
 	
-	case VFECHPLUS: op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+8;TOS=*(__int64*)op;goto next;//@+
-	case VCFECHPLUS:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+1;TOS=*(char*)op;goto next;// C@+
-	case VWFECHPLUS:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+2;TOS=*(__int16*)op;goto next;//W@+			
-	case VDFECHPLUS:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+4;TOS=*(__int32*)op;goto next;//D@+		
+	case VFECHPLUS: op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+8;TOS=*(__int64*)op;return;//@+
+	case VCFECHPLUS:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+1;TOS=*(char*)op;return;// C@+
+	case VWFECHPLUS:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+2;TOS=*(__int16*)op;return;//W@+			
+	case VDFECHPLUS:op=*(__int64*)&memdata[op>>8];NOS++;*NOS=TOS;NOS++;*NOS=op+4;TOS=*(__int32*)op;return;//D@+		
 	
-	case VSTOR: op=*(__int64*)&memdata[op>>8];*(__int64*)op=TOS;TOS=*NOS;NOS--;goto next;// !
-	case VCSTOR:op=*(__int64*)&memdata[op>>8];*(char*)op=TOS;TOS=*NOS;NOS--;goto next;//C!
-	case VWSTOR:op=*(__int64*)&memdata[op>>8];*(__int16*)op=TOS;TOS=*NOS;NOS--;goto next;//W!		
-	case VDSTOR:op=*(__int64*)&memdata[op>>8];*(__int32*)op=TOS;TOS=*NOS;NOS--;goto next;//D!
+	case VSTOR: op=*(__int64*)&memdata[op>>8];*(__int64*)op=TOS;TOS=*NOS;NOS--;return;// !
+	case VCSTOR:op=*(__int64*)&memdata[op>>8];*(char*)op=TOS;TOS=*NOS;NOS--;return;//C!
+	case VWSTOR:op=*(__int64*)&memdata[op>>8];*(__int16*)op=TOS;TOS=*NOS;NOS--;return;//W!		
+	case VDSTOR:op=*(__int64*)&memdata[op>>8];*(__int32*)op=TOS;TOS=*NOS;NOS--;return;//D!
 	
-	case VSTOREPLUS: op=*(__int64*)&memdata[op>>8];*(__int64*)op=TOS;TOS=op+8;goto next;// !+
-	case VCSTOREPLUS:op=*(__int64*)&memdata[op>>8];*(char*)op=TOS;TOS=op+1;goto next;//C!+
-	case VWSTOREPLUS:op=*(__int64*)&memdata[op>>8];*(__int16*)op=TOS;TOS=op+2;goto next;//W!+	
-	case VDSTOREPLUS:op=*(__int64*)&memdata[op>>8];*(__int32*)op=TOS;TOS=op+4;goto next;//D!+
+	case VSTOREPLUS: op=*(__int64*)&memdata[op>>8];*(__int64*)op=TOS;TOS=op+8;return;// !+
+	case VCSTOREPLUS:op=*(__int64*)&memdata[op>>8];*(char*)op=TOS;TOS=op+1;return;//C!+
+	case VWSTOREPLUS:op=*(__int64*)&memdata[op>>8];*(__int16*)op=TOS;TOS=op+2;return;//W!+	
+	case VDSTOREPLUS:op=*(__int64*)&memdata[op>>8];*(__int32*)op=TOS;TOS=op+4;return;//D!+
 	
-	case VINCSTOR: op=*(__int64*)&memdata[op>>8];*(__int64*)op+=TOS;TOS=*NOS;NOS--;goto next;//+!
-	case VCINCSTOR:op=*(__int64*)&memdata[op>>8];*(char*)op+=TOS;TOS=*NOS;NOS--;goto next;//C+!
-	case VWINCSTOR:op=*(__int64*)&memdata[op>>8];*(__int16*)op+=TOS;TOS=*NOS;NOS--;goto next;//W+!	
-	case VDINCSTOR:op=*(__int64*)&memdata[op>>8];*(__int32*)op+=TOS;TOS=*NOS;NOS--;goto next;//D+!
+	case VINCSTOR: op=*(__int64*)&memdata[op>>8];*(__int64*)op+=TOS;TOS=*NOS;NOS--;return;//+!
+	case VCINCSTOR:op=*(__int64*)&memdata[op>>8];*(char*)op+=TOS;TOS=*NOS;NOS--;return;//C+!
+	case VWINCSTOR:op=*(__int64*)&memdata[op>>8];*(__int16*)op+=TOS;TOS=*NOS;NOS--;return;//W+!	
+	case VDINCSTOR:op=*(__int64*)&memdata[op>>8];*(__int32*)op+=TOS;TOS=*NOS;NOS--;return;//D+!
 #endif
 	}
 }
 
+void runr3(int boot) { 
+startr3(boot);
+
+#ifdef NETSERVER
+sock_send("r3ok",4);
+//int sock_recv(void) {
+#endif
+
+while (ip!=0) {
+	stepr3();
+	}
+#ifdef NETSERVER
+sock_send("r3en", 4);
+//int sock_recv(void) {
+#endif
+}
 	
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
@@ -1929,6 +1923,7 @@ if (argc > 2) { // argv[2] = puerto del debugger
 install_handler();
 #endif
 
+//runr3(boot);
 runr3(boot);
 
 #ifdef DEBUGVER
