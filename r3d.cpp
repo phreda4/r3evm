@@ -1829,9 +1829,41 @@ int client_connect(int port) {
 #endif
       CLOSE_SOCK(sock);return -1; }
 	}
-//  printf("Conectando a 127.0.0.1:%d\n", port);
+  //printf("Conectando a 127.0.0.1:%d\n", port);
   rx_len = 0;
   return 0;
+}
+
+int check_connection_status() {
+  fd_set writefds;
+  struct timeval tv;
+  int error = 0;
+  socklen_t len = sizeof(error);
+  
+  FD_ZERO(&writefds);
+  FD_SET(sock, &writefds);
+  
+  tv.tv_sec = 0;
+  tv.tv_usec = 100000;  // 100ms timeout
+  
+  int ret = select(sock + 1, NULL, &writefds, NULL, &tv);
+  
+  if (ret > 0 && FD_ISSET(sock, &writefds)) {
+    // El socket está listo, verifica si hay error
+#ifdef _WIN32
+    getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len);
+#else
+    getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len);
+#endif
+    
+    if (error == 0) {
+      return 1;  // ? Conectado exitosamente
+    } else {
+      return -1; // ? Conexión rechazada (servidor no disponible)
+    }
+  }
+  
+  return 0;  // ? Aún conectando
 }
 
 int server_accept(void) {
@@ -1852,7 +1884,7 @@ int sock_send(const char *data, int len) {
   return (n > 0) ? n : 0;
 }
 
-int sock_recv(void) {
+int sock_recv(void) { // falta encapsular multiframe
   int n = recv(sock, rx_buf + rx_len, BUFF_SIZE - rx_len - 1, 0);
   if (n > 0) {
     rx_len += n;
@@ -1881,28 +1913,90 @@ void sock_flush(void) {
 #endif
 
 ////////////////////////////////// DEBUG ///////////////////////////////////
-// 0 - step ( default)
-// 1 - 1
+// 0 - corriendo ( default)
+// 1 - fin
 int state; 
 
 void debugr3() {
-	/*
+int nexti;
+__int64 *markstack;
+
 switch(rx_buf[0]) {
-case 0x00: return "STEP";
-case 0x01: return "STEP_OVER";
-case 0x02: return "STEP_INTO";
-case 0x03: return "STEP_OUT";
-case 0x04: return "CONTINUE";
-case 0x05: return "PAUSE";
-case 0x06: return "HALT";
-case 0x07: return "RESTART";
-}	
-*/
+case 0x00: // "1 STEP";
+	stepr3();
+	break;
+case 0x01: // "STEP_OVER"; // ejecutar palabra completa
+	nexti=ip+1;
+	// ** lit2,litf
+	while (ip!=0) { 
+		stepr3(); 
+		if (ip==nexti) break;
+		}
+	break;
+case 0x02: // "STEP_OUT"; // salir de palabra (
+	markstack=RTOS;
+	while (ip!=0) { 
+		stepr3(); 
+		if (markstack<RTOS) break; // crece para abajo
+		// breakpoint?
+		}
+	break;
+case 0x03: // "CONTINUE";
+	while (ip!=0) {
+		stepr3();
+		// checkbreakpoint
+		}
+	break;
+case 0x04: // "PAUSE"; // pausa
+
+	break;
+case 0x06: // "HALT"; // terminar
+	state=-1;
+	break;
+case 0x07: // "RESTART"; // no implementado por ahora
+	break;
+//////////////////////////////////////////
+	}
 }
 
+typedef struct {
+	short type;
+	unsigned short ip;
+	short dstack,rstack;
+	__int64 REGA;
+	__int64 REGB;
+	__int64 DATA[4];
+	__int64 RETU[4];
+} netres ;
+
+static netres netr;
+
+void infor3() { // retorna basic info
+netr.type=0;
+netr.ip=ip;
+netr.dstack=(NOS-(&datastack[0]));
+netr.rstack=(&retstack[512-1])-RTOS;
+netr.REGA=REGA;
+netr.REGB=REGB;
+netr.DATA[0]=*(NOS-2);
+netr.DATA[1]=*(NOS-1);
+netr.DATA[2]=*NOS;
+netr.DATA[3]=TOS;
+netr.RETU[0]=*(RTOS-3);
+netr.RETU[1]=*(RTOS-2);
+netr.RETU[2]=*(RTOS-1);
+netr.RETU[0]=*RTOS;
+sock_send((const char*)&netr,sizeof(netr));
+}
 /////////////////////////////////// RUN ////////////////////////////////////
+int conn=0;
+
 void runr3(int boot) { 
 startr3(boot);
+if (conn==0) { // sin conexion
+	while (ip!=0) { stepr3(); }
+	return;
+	}
 
 #ifdef NETSERVER
 sock_send("r3ok",4);
@@ -1912,6 +2006,7 @@ sock_send("r3ok",4);
 while(state!=-1) {
 	if (sock_recv()>0) {
 		debugr3();
+		infor3();
 		}
 #ifdef _WIN32
     Sleep(100);
@@ -1919,15 +2014,7 @@ while(state!=-1) {
     usleep(100000);
 #endif	
 	}
-/*while (ip!=0) {
-	debugr3();
-	stepr3();
-	}
-*/	
-#ifdef NETSERVER
-sock_send("r3en", 4);
-//int sock_recv(void) {
-#endif
+
 }
 	
 ////////////////////////////////////////////////////////////////////////////
@@ -1940,10 +2027,10 @@ if (argc>1)
 else 
 	filename=(char*)"main.r3";
 if (!r3compile(filename)) return -1;
-    
 #ifdef DEBUGVER    
 saveimagen("mem/r3code.mem");
 savedicc("mem/r3dicc.mem");
+
 #ifdef NETSERVER
 init_winsock();
 if (argc > 2) { // argv[2] = puerto del debugger
@@ -1953,22 +2040,25 @@ if (argc > 2) { // argv[2] = puerto del debugger
 	//server_create(9999);
 	client_connect(9999);
 	}
+conn=check_connection_status();	
+
 #endif
 
 install_handler();
 #endif
 
-//runr3(boot);
 runr3(boot);
 
 #ifdef DEBUGVER
 uninstall_handler();
 
 #ifdef NETSERVER
+sock_send("r3en", 4);
 sock_close();
 cleanup_winsock();    
 #endif
 
 #endif
+
 return 0;
 }
