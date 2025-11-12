@@ -1060,8 +1060,8 @@ return;
 // Compile code in file
 int r3compile(char *name) 
 {
-//printf("\nr3vm - PHREDA\n");
-//printf("compile:%s...",name);
+printf("\nr3debug - PHREDA\n");
+printf("compile:%s...",name);
 
 char *sourcecode;
 
@@ -1128,128 +1128,6 @@ return -1;
 //----------------------
 /*--------RUNER--------*/
 //----------------------
-/////////////////////////////////////////////////////////////
-#ifdef NETSERVER
-
-#define BUFF_SIZE 4096
-#define LOCALHOST "127.0.0.1"
-
-SOCKET sock;
-char rx_buf[BUFF_SIZE];
-int rx_len;
-
-void init_winsock(void) {
-#ifdef _WIN32
-  WSADATA wsa;
-  if (WSAStartup(MAKEWORD(2, 2), &wsa)) {
-//    fprintf(stderr, "WSAStartup error\n");
-    exit(1);
-  }
-#endif
-}
-
-void cleanup_winsock(void) {
-#ifdef _WIN32
-  WSACleanup();
-#endif
-}
-
-int server_create(int port) {
-  struct sockaddr_in addr;
-  sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock == INVALID_SOCKET) {
-    return -1;
-	}
-  SET_NONBLOCK(sock);
-  int reuse = 1;
-  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(reuse)) < 0) {
-    CLOSE_SOCK(sock);
-    return -1;
-	}
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = inet_addr(LOCALHOST);
-  addr.sin_port = htons(port);
-  if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-    CLOSE_SOCK(sock);
-    return -1;
-	}
-  if (listen(sock, 1) < 0) {
-    CLOSE_SOCK(sock);
-    return -1;
-	}
-//  printf("Servidor escuchando en 127.0.0.1:%d\n", port);
-  rx_len = 0;
-  return 0;
-}
-
-int client_connect(int port) {
-  struct sockaddr_in addr;
-  sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock == INVALID_SOCKET) { return -1;	}
-  SET_NONBLOCK(sock);
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = inet_addr(LOCALHOST);
-  addr.sin_port = htons(port);
-  if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-#ifdef _WIN32
-    if (LAST_ERROR != WSAEWOULDBLOCK) {
-#else
-    if (LAST_ERROR != EINPROGRESS) {
-#endif
-      CLOSE_SOCK(sock);return -1; }
-	}
-//  printf("Conectando a 127.0.0.1:%d\n", port);
-  rx_len = 0;
-  return 0;
-}
-
-int server_accept(void) {
-  struct sockaddr_in addr;
-  socklen_t len = sizeof(addr);
-  SOCKET cli_sock = accept(sock, (struct sockaddr*)&addr, &len);
-  if (cli_sock == INVALID_SOCKET) {return -1;}
-  CLOSE_SOCK(sock);
-  sock = cli_sock;
-  rx_len = 0;
-  SET_NONBLOCK(sock);
-//  printf("Cliente conectado\n");
-  return 0;
-}
-
-int sock_send(const char *data, int len) {
-  int n = send(sock, data, len, 0);
-  return (n > 0) ? n : 0;
-}
-
-int sock_recv(void) {
-  int n = recv(sock, rx_buf + rx_len, BUFF_SIZE - rx_len - 1, 0);
-  if (n > 0) {
-    rx_len += n;
-    rx_buf[rx_len] = '\0';
-    return n;
-	}
-  if (n == 0) {return -1;}
-  if (n < 0) {
-#ifdef _WIN32
-    if (LAST_ERROR == WSAECONNRESET || LAST_ERROR == WSAECONNABORTED) {return -1;}
-#else
-    if (LAST_ERROR == ECONNRESET || LAST_ERROR == ECONNABORTED) {return -1;}
-#endif
-  }  
-return 0;
-}
-
-void sock_close(void) {
-  CLOSE_SOCK(sock);
-}
-
-void sock_flush(void) {
-  rx_len=0;rx_buf[0]='\0';
-}
-
-#endif
 /////////////////////////////////////////////////////////////
 
 void memset32(__uint32 *dest,__uint32 val, __uint32 count)
@@ -1877,7 +1755,152 @@ switch(op&0xff){
 #endif
 	}
 }
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////
+#ifdef NETSERVER
 
+#define BUFF_SIZE 4096
+#define LOCALHOST "127.0.0.1"
+
+SOCKET sock;
+char rx_buf[BUFF_SIZE];
+int rx_len;
+
+void init_winsock(void) {
+#ifdef _WIN32
+  WSADATA wsa;
+  if (WSAStartup(MAKEWORD(2, 2), &wsa)) {
+//    fprintf(stderr, "WSAStartup error\n");
+    exit(1);
+  }
+#endif
+}
+
+void cleanup_winsock(void) {
+#ifdef _WIN32
+  WSACleanup();
+#endif
+}
+
+int server_create(int port) {
+  struct sockaddr_in addr;
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock == INVALID_SOCKET) {
+    return -1;
+	}
+  SET_NONBLOCK(sock);
+  int reuse = 1;
+  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(reuse)) < 0) {
+    CLOSE_SOCK(sock);
+    return -1;
+	}
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = inet_addr(LOCALHOST);
+  addr.sin_port = htons(port);
+  if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+    CLOSE_SOCK(sock);
+    return -1;
+	}
+  if (listen(sock, 1) < 0) {
+    CLOSE_SOCK(sock);
+    return -1;
+	}
+//  printf("Servidor escuchando en 127.0.0.1:%d\n", port);
+  rx_len = 0;
+  return 0;
+}
+
+int client_connect(int port) {
+  struct sockaddr_in addr;
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock == INVALID_SOCKET) { return -1;	}
+  SET_NONBLOCK(sock);
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = inet_addr(LOCALHOST);
+  addr.sin_port = htons(port);
+  if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+#ifdef _WIN32
+    if (LAST_ERROR != WSAEWOULDBLOCK) {
+#else
+    if (LAST_ERROR != EINPROGRESS) {
+#endif
+      CLOSE_SOCK(sock);return -1; }
+	}
+//  printf("Conectando a 127.0.0.1:%d\n", port);
+  rx_len = 0;
+  return 0;
+}
+
+int server_accept(void) {
+  struct sockaddr_in addr;
+  socklen_t len = sizeof(addr);
+  SOCKET cli_sock = accept(sock, (struct sockaddr*)&addr, &len);
+  if (cli_sock == INVALID_SOCKET) {return -1;}
+  CLOSE_SOCK(sock);
+  sock = cli_sock;
+  rx_len = 0;
+  SET_NONBLOCK(sock);
+//  printf("Cliente conectado\n");
+  return 0;
+}
+
+int sock_send(const char *data, int len) {
+  int n = send(sock, data, len, 0);
+  return (n > 0) ? n : 0;
+}
+
+int sock_recv(void) {
+  int n = recv(sock, rx_buf + rx_len, BUFF_SIZE - rx_len - 1, 0);
+  if (n > 0) {
+    rx_len += n;
+    rx_buf[rx_len] = '\0';
+    return n;
+	}
+  if (n == 0) {return -1;}
+  if (n < 0) {
+#ifdef _WIN32
+    if (LAST_ERROR == WSAECONNRESET || LAST_ERROR == WSAECONNABORTED) {return -1;}
+#else
+    if (LAST_ERROR == ECONNRESET || LAST_ERROR == ECONNABORTED) {return -1;}
+#endif
+  }  
+return 0;
+}
+
+void sock_close(void) {
+  CLOSE_SOCK(sock);
+}
+
+void sock_flush(void) {
+  rx_len=0;rx_buf[0]='\0';
+}
+
+#endif
+
+////////////////////////////////// DEBUG ///////////////////////////////////
+// 0 - step ( default)
+// 1 - 1
+int state; 
+
+void debugr3() {
+	/*
+switch(rx_buf[0]) {
+case 0x00: return "STEP";
+case 0x01: return "STEP_OVER";
+case 0x02: return "STEP_INTO";
+case 0x03: return "STEP_OUT";
+case 0x04: return "CONTINUE";
+case 0x05: return "PAUSE";
+case 0x06: return "HALT";
+case 0x07: return "RESTART";
+}	
+*/
+}
+
+/////////////////////////////////// RUN ////////////////////////////////////
 void runr3(int boot) { 
 startr3(boot);
 
@@ -1886,9 +1909,21 @@ sock_send("r3ok",4);
 //int sock_recv(void) {
 #endif
 
-while (ip!=0) {
+while(state!=-1) {
+	if (sock_recv()>0) {
+		debugr3();
+		}
+#ifdef _WIN32
+    Sleep(100);
+#else
+    usleep(100000);
+#endif	
+	}
+/*while (ip!=0) {
+	debugr3();
 	stepr3();
 	}
+*/	
 #ifdef NETSERVER
 sock_send("r3en", 4);
 //int sock_recv(void) {
