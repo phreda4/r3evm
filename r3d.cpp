@@ -1916,6 +1916,15 @@ void sock_flush(void) {
 // 0 - corriendo ( default)
 // 1 - fin
 int state; 
+int bps[100];
+int cntbps=0;
+
+void addbp(int b) { bps[cntbps++]=b;}
+void delbp(int b) { for (int i=0;i<cntbps;i++) { if (bps[i]==b) { bps[i]=bps[--cntbps];return;}	} }
+int checkbp() {
+for (int i=0;i<cntbps;i++) { if (bps[i]==ip) return 1; }
+return 0; 
+}
 
 void debugr3() {
 int nexti;
@@ -1938,26 +1947,53 @@ case 0x02: // "STEP_OUT"; // salir de palabra (
 	while (ip!=0) { 
 		stepr3(); 
 		if (markstack<RTOS) break; // crece para abajo
-		// breakpoint?
+		if (checkbp()!=0) break;
 		}
 	break;
-case 0x03: // "CONTINUE";
+case 0x03: // "SEP STACK"; // hasta que la pila este en el nivel original
+	markstack=NOS;
 	while (ip!=0) {
 		stepr3();
-		// checkbreakpoint
+		if (markstack>=NOS) break;
+		if (checkbp()!=0) break;
 		}
 	break;
-case 0x04: // "PAUSE"; // pausa
+case 0x04: // "CONTINUE";
+	while (ip!=0) {
+		stepr3();
+		if (checkbp()!=0) break;
+		}
+	break;
+case 0x05: // "PAUSE"; // pausa
 
 	break;
 case 0x06: // "HALT"; // terminar
-	state=-1;
+	state=-1;ip=0;
 	break;
 case 0x07: // "RESTART"; // no implementado por ahora
 	break;
 //////////////////////////////////////////
+case 0x08: // ADD BP
+	addbp(*(int*)rx_buf[1]);
+	break;
+case 0x09: // DEL BP
+	delbp(*(int*)rx_buf[1]);
+	break;
+case 0x0A: // RESETBP
+	cntbps=0;break;
+
+case 0x10: // get var
+	break;
+case 0x11: // get mem
+	break ;
+case 0x12: // get arr
+	break;
+	
+
+
 	}
 }
+
 
 typedef struct {
 	short type;
@@ -1988,22 +2024,24 @@ netr.RETU[2]=*(RTOS-1);
 netr.RETU[0]=*RTOS;
 sock_send((const char*)&netr,sizeof(netr));
 }
+
+void startdb() { netr.type=1;sock_send((const char*)&netr,2);}
+void enddb() { netr.type=-1;sock_send((const char*)&netr,2);}
+
 /////////////////////////////////// RUN ////////////////////////////////////
 int conn=0;
 
 void runr3(int boot) { 
 startr3(boot);
 if (conn==0) { // sin conexion
-	while (ip!=0) { stepr3(); }
+	while (ip!=0) { 
+		stepr3(); 
+		}
 	return;
 	}
 
-#ifdef NETSERVER
-sock_send("r3ok",4);
-//int sock_recv(void) {
-#endif
-
-while(state!=-1) {
+startdb();
+while(ip!=0) { //}state!=-1) {
 	if (sock_recv()>0) {
 		debugr3();
 		infor3();
@@ -2014,7 +2052,7 @@ while(state!=-1) {
     usleep(100000);
 #endif	
 	}
-
+enddb();
 }
 	
 ////////////////////////////////////////////////////////////////////////////
@@ -2053,7 +2091,6 @@ runr3(boot);
 uninstall_handler();
 
 #ifdef NETSERVER
-sock_send("r3en", 4);
 sock_close();
 cleanup_winsock();    
 #endif
