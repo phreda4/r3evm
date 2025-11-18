@@ -1212,7 +1212,7 @@ for(int i=0;i<cntdicc;i++) {
 }
 
 //
-//
+// same info image
 //
 void saveimagen(char *fn) {
 FILE *file=fopen(fn,"wb");if (file==NULL) return;
@@ -1226,11 +1226,22 @@ fclose(file);
 }
 
 void savedicc(char *fn) {
-FILE *file=fopen(fn,"w");if (file==NULL) return;
+FILE *file=fopen(fn,"wb");if (file==NULL) return;
+__int64 v;
+int pos=0;
+char *p;
 for (int i=0;i<cntdicc;i++) {
-	fword(file,dicc[i].nombre-1);	
-	fprintf(file," %x",dicc[i].mem);	
-	fprintf(file," %x\n",dicc[i].info);			
+	v=(pos<<40)|(dicc[i].mem<<8)|dicc[i].info;
+	fwrite((void*)&v,8,1,file);
+	p=dicc[i].nombre;
+	while (*p>32) {	p++;pos++;} 
+	pos++;
+	}
+
+for (int i=0;i<cntdicc;i++) {
+	p=dicc[i].nombre;
+	while (*s>32) fputc(*s++,file);
+	fputc(0,file);
 	}
 fclose(file);
 }
