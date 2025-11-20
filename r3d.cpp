@@ -1240,7 +1240,7 @@ for (int i=0;i<cntdicc;i++) {
 
 for (int i=0;i<cntdicc;i++) {
 	p=dicc[i].nombre;
-	while (*s>32) fputc(*s++,file);
+	while (*p>32) fputc(*p++,file);
 	fputc(0,file);
 	}
 fclose(file);
@@ -1303,9 +1303,9 @@ void print_error(void* error_code) {
     }
   
 #else
-    int sig = (int)(uintptr_t)error_code;
+    int code= (int)(uintptr_t)error_code;
     const char* msg;
-    switch (sig) {
+    switch (code) {
         case SIGABRT: msg = "Señal de abort (ej. assert o abort())"; break;
         case SIGBUS:  msg = "Error de bus (acceso memoria no alineado o inválido)"; break;
         case SIGFPE:  msg = "Error de punto flotante (div/0, overflow, etc.)"; break;
