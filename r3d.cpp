@@ -1231,7 +1231,7 @@ __int64 v;
 int pos=0;
 char *p;
 for (int i=0;i<cntdicc;i++) {
-	v=(pos<<40)|(dicc[i].mem<<8)|dicc[i].info;
+	v=((__int64)pos<<40)|(dicc[i].mem<<8)|dicc[i].info;
 	fwrite((void*)&v,8,1,file);
 	p=dicc[i].nombre;
 	while (*p>32) {	p++;pos++;} 
