@@ -77,6 +77,6 @@ Folder=
 Compile=1
 Link=1
 Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
+OverrideBuildCmd=1
+BuildCmd=$(CPP) -c r3d.cpp -o r3d.o $(CXXFLAGS) -fpermissive -march=native -mtune=native -fomit-frame-pointer -fno-exceptions -fno-rtti
 

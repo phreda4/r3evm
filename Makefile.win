@@ -1,15 +1,15 @@
-# Project: r3d
+# Project: r3
 # Makefile created by Dev-C++ 5.11
 
 CPP      = g++.exe
 CC       = gcc.exe
 WINDRES  = windres.exe
-OBJ      = r3d.o
-LINKOBJ  = r3d.o
-LIBS     = -L"C:/Program Files (x86)/Dev-Cpp/MinGW64/lib" -L"C:/Program Files (x86)/Dev-Cpp/MinGW64/x86_64-w64-mingw32/lib" -static-libgcc -L"C:/Program Files (x86)/Dev-Cpp/MinGW64/x86_64-w64-mingw32/lib" -L"C:/Users/phr3/Desktop/dev/rtv/installlib/x86_64-w64-mingw32/lib" -lmingw32  -lws2_32 -s
+OBJ      = r3.o
+LINKOBJ  = r3.o
+LIBS     = -L"C:/Program Files (x86)/Dev-Cpp/MinGW64/lib" -L"C:/Program Files (x86)/Dev-Cpp/MinGW64/x86_64-w64-mingw32/lib" -static-libgcc -L"C:/Program Files (x86)/Dev-Cpp/MinGW64/x86_64-w64-mingw32/lib" -L"C:/Users/phr3/Desktop/dev/rtv/installlib/x86_64-w64-mingw32/lib" -lmingw32 -s
 INCS     = -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/include" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/x86_64-w64-mingw32/include" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/lib/gcc/x86_64-w64-mingw32/4.9.2/include" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/x86_64-w64-mingw32/include"
 CXXINCS  = -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/include" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/x86_64-w64-mingw32/include" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/lib/gcc/x86_64-w64-mingw32/4.9.2/include" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/lib/gcc/x86_64-w64-mingw32/4.9.2/include/c++" -I"C:/Program Files (x86)/Dev-Cpp/MinGW64/x86_64-w64-mingw32/include"
-BIN      = r3d.exe
+BIN      = r3.exe
 CXXFLAGS = $(CXXINCS) -O2
 CFLAGS   = $(INCS) -O2
 RM       = rm.exe -f
@@ -24,5 +24,5 @@ clean: clean-custom
 $(BIN): $(OBJ)
 	$(CPP) $(LINKOBJ) -o $(BIN) $(LIBS)
 
-r3d.o: r3d.cpp
-	$(CPP) -c r3d.cpp -o r3d.o $(CXXFLAGS)
+r3.o: r3.cpp
+	$(CPP) -c r3.cpp -o r3.o $(CXXFLAGS) -fomit-frame-pointer -fno-exceptions -fno-rtti

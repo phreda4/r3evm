@@ -7,8 +7,8 @@ LIBS     = -ldl -s
 INCS     = 
 CXXINCS  = 
 BIN      = r3lin
-CXXFLAGS = $(CXXINCS) -Os -fpermissive
-CFLAGS   = $(INCS) -Os 
+CXXFLAGS = $(CXXINCS) -O2 -fpermissive -fomit-frame-pointer -fno-exceptions -fno-rtti 
+CFLAGS   = $(INCS) -O2 
 RM       = rm -f
 
 .PHONY: all all-before all-after clean clean-custom
