@@ -8,6 +8,7 @@
 //#define DEBUG
 //#define LINUX
 //#define RPI   // Tested on a Raspberry PI 4
+//#ifdef NOx86 // no x86 arquitecture
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -823,13 +824,12 @@ for (char *p=src;p<cerror;p++)
 	} else if (*p==13) { if (*(p+1)==10) p++;
 		line++;lc=p+1; }
 *nextcr(lc)=0; // 0 in end of line
+
 le=&linee[0];
 lca=lc;
-while (*lc>31||*lc==9) {
-	if (*lc==0x25) *le++=0x25;
-	*le++=*lc++;
-	};
+while (*lc>31||*lc==9) { *le++=*lc++; };
 *le=0;
+
 *nextcr(name)=0;
 fprintf(stderr,"FILE:%s LINE:%d CHAR:%d\n\n",name,line,cerror-lca);	
 fprintf(stderr,"%4d|%s\n     ",line,linee);
@@ -1113,6 +1113,69 @@ void memset32(__uint32 *dest,__uint32 val, __uint32 count)
 void memset64(__uint64 *dest,__uint64 val,__uint32 count)
 { while (count--) *dest++ = val; }
 
+#ifndef NOx86
+static inline __int64 muldiv(__int64 a, __int64 b, __int64 c)
+{
+__int64 r;
+__asm__ volatile (
+    //"movq %1, %%rax\n\t"
+    "imulq %2\n\t"
+    "idivq %3\n\t"
+    : "=a"(r)  : "a"(a), "r"(b), "r"(c)  : "rdx"
+    );
+return r;
+}
+
+static inline __int64 mulshr(__int64 a, __int64 b, __int64 sh)
+{
+__int64 r;
+__asm__ volatile (
+    //"movq %1, %%rax\n\t"
+    "imulq %2\n\t"
+    "shrdq %%cl, %%rdx, %%rax\n\t"
+    : "=a"(r) : "a"(a), "r"(b), "c"(sh) : "rdx"
+    );
+return r;
+}
+
+static inline __int64 cdivsh(__int64 a, __int64 b, __int64 sh)
+{
+__int64 r;
+__asm__ volatile (
+    //"movq %1, %%rax\n\t"
+    "movq %3, %%rcx\n\t"
+    "shldq %%cl, %%rax, %%rdx\n\t"
+    "shlq %%cl, %%rax\n\t"
+    "idivq %2\n\t"
+    : "=a"(r) : "a"(a), "r"(b), "r"(sh) : "rcx", "rdx"
+    );
+return r;
+}
+
+static inline __int64 mulshr16(__int64 a, __int64 b)
+{
+__int64 r;
+__asm__ volatile (
+    "imulq %2\n\t"
+    "shrdq $16, %%rdx, %%rax\n\t"
+    : "=a"(r) : "a"(a), "r"(b) : "rdx"
+    );
+return r;
+}
+
+static inline __int64 cdivsh16(__int64 a, __int64 b)
+{
+__int64 r;
+__asm__ volatile (
+    "xorq %%rdx, %%rdx\n\t"      // rdx = 0
+    "shldq $16, %%rax, %%rdx\n\t" // rdx = a >> 48, rax sigue igual
+    "shlq $16, %%rax\n\t"         // rax = a << 16
+    "idivq %2\n\t"
+    : "=a"(r) : "a"(a), "r"(b) : "rdx"
+    );
+return r;
+}
+#endif
 
 // run code, from adress "boot"
 void runr3(int boot) 
@@ -1251,9 +1314,17 @@ L_SHR:TOS=*NOS>>TOS;NOS--;NEXT;				//SAR
 L_SHR0:TOS=((__uint64)*NOS)>>TOS;NOS--;NEXT;	//SHR
 L_MOD:TOS=*NOS%TOS;NOS--;NEXT;					//MOD
 L_DIVMOD:op=*NOS;*NOS=op/TOS;TOS=op%TOS;NEXT;	//DIVMOD
+
+#ifdef NOx86
 L_MULDIV:TOS=((__int128)(*(NOS-1))*(*NOS)/TOS);NOS-=2;NEXT;	//MULDIV
 L_MULSHR:TOS=((__int128)(*(NOS-1)*(*NOS))>>TOS);NOS-=2;NEXT;	//MULSHR
 L_CDIVSH:TOS=(__int128)((*(NOS-1)<<TOS)/(*NOS));NOS-=2;NEXT;//CDIVSH
+#else
+L_MULDIV: TOS = muldiv(*(NOS-1), *NOS, TOS);NOS-=2;NEXT;	//MULDIV
+L_MULSHR: TOS = mulshr(*(NOS-1), *NOS, TOS);NOS-=2;NEXT;	//MULSHR
+L_CDIVSH: TOS = cdivsh(*(NOS-1), *NOS, TOS);NOS-=2;NEXT;//CDIVSH
+#endif
+
 L_NOT:TOS=~TOS;NEXT;							//NOT
 L_NEG:TOS=-TOS;NEXT;					//NEG
 L_ABS:if(TOS<0)TOS=-TOS;NEXT;			//ABS
@@ -1425,14 +1496,28 @@ L_SHR1:TOS>>=op>>8;NEXT;
 L_SHR01:TOS=(__uint64)TOS>>(op>>8);NEXT;
 L_MOD1:TOS=TOS%(op>>8);NEXT;
 L_DIVMOD1:op>>=8;NOS++;*NOS=TOS/op;TOS=TOS%op;NEXT;	//DIVMOD
+
+#ifdef NOx86
 L_MULDIV1:op>>=8;TOS=(__int128)(*NOS)*TOS/op;NOS--;NEXT;	//MULDIV
 L_MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;NEXT;	//MULSHR
 L_CDIVSH1:op>>=8;TOS=(__int128)((*NOS)<<op)/TOS;NOS--;NEXT;	//CDIVSH
+
 L_MULSHR2:op>>=8;TOS=((__int128)TOS*op)>>16;NEXT;	//MULSHR .. 234 16 *>>
 L_CDIVSH2:op>>=8;TOS=(__int128)(TOS<<16)/op;NEXT;	//CDIVSH ... 23 16 <</
-
 L_MULSHR3:TOS=((__int128)(*NOS)*TOS)>>16;NOS--;NEXT;	//MULSHR .. XX 16 *>>
 L_CDIVSH3:TOS=(__int128)((*NOS)<<16)/TOS;NOS--;NEXT;	//CDIVSH .. XX 16 <</	
+#else
+L_MULDIV1:op>>=8;TOS=muldiv(*NOS,TOS,op);NOS--;NEXT;	//MULDIV
+//L_MULSHR1:op>>=8;TOS=mulshr(*NOS,TOS,op);NOS--;NEXT;	//MULSHR <<<<<<<<<<<<<
+L_MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;NEXT;	//MULSHR
+L_CDIVSH1:op>>=8;TOS=cdivsh(*NOS,TOS,op);NOS--;NEXT;	//CDIVSH
+
+L_MULSHR2:op>>=8;TOS=mulshr16(TOS,op);NEXT;	//MULSHR .. 234 16 *>>
+L_CDIVSH2:op>>=8;TOS=cdivsh16(TOS,op);NEXT;	//CDIVSH ... 23 16 <</
+L_MULSHR3:TOS=mulshr16(*NOS,TOS);NOS--;NEXT;	//MULSHR .. XX 16 *>>
+L_CDIVSH3:TOS=cdivsh16(*NOS,TOS);NOS--;NEXT;	//CDIVSH .. XX 16 <</	
+#endif
+
 L_IFL1:if ((op>>16)<=TOS) ip+=(op<<48>>56);NEXT;	//IFL <<32>>49
 L_IFG1:if ((op>>16)>=TOS) ip+=(op<<48>>56);NEXT;	//IFG
 L_IFE1:if ((op>>16)!=TOS) ip+=(op<<48>>56);NEXT;	//IFN

@@ -1,6 +1,7 @@
 | net socket
 | PHREDA 2025
 
+^r3/lib/mem.r3
 |LIN|^r3/lib/posix/posix.r3
 |WIN|^r3/lib/win/ws2.r3
 
@@ -148,7 +149,7 @@
 	$0 						'server_addr 4 + d! |INADDR_ANY
 | 'server_addr dumpadr
 
-	AF_INET SOCK_STREAM 0 socket-create
+	AF_INET SOCK_STREAM IPPROTO_TCP socket-create
 	dup 'server_addr 16 socket-bind drop
 	dup 1 socket-listen drop | MAXCON
 	dup socket-set-nonblock drop
@@ -157,11 +158,9 @@
 	
 
 ::client-socket |( -- sock )
-	AF_INET SOCK_STREAM 0 socket-create
+	AF_INET SOCK_STREAM IPPROTO_TCP socket-create
 	dup socket-set-nonblock drop
 	;
 
 ::socket-final |( sock -- )
-	socket-close drop
-|	socket-cleanup
-	;
+	socket-close drop ;

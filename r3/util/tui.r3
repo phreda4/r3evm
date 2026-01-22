@@ -1,7 +1,7 @@
 | Text User Inteface
 | PHREDA 2025
 |--------
-^r3/lib/term.r3
+^r3/lib/console.r3
 |^r3/lib/trace.r3
 ^r3/util/utfg.r3
 
@@ -10,6 +10,11 @@
 
 ::flin? | x y -- 0/-1
 	fy - $ffff and fh >? ( 2drop 0 ; ) drop | limit 0--$ffff
+	fx - $ffff and fw >? ( drop 0 ; ) drop
+	-1 ;
+
+::flin?1 | x y -- 0/-1
+	fy - $ffff and 0 >? ( 2drop 0 ; ) drop | limit 0--$ffff
 	fx - $ffff and fw >? ( drop 0 ; ) drop
 	-1 ;
 
@@ -77,7 +82,7 @@
 	dup 'fx +! 2* neg 'fw +! ;
 	
 ::flcr
-	.cr fx .col ;
+	.cr 1 'fy +! fx .col ;
 	
 |---- Events
 #vecdraw
@@ -112,7 +117,7 @@
 |******************
 ::.tdebug
 	wida idf ida id "id:%d ida:%d idf:%d wida:%d " .print
-	rflag "%d " .print
+	rflag "%d " .println
 	;
 |******************	
 
@@ -133,6 +138,22 @@
 		2 ; )	| in->2
 	id =? ( drop | =active
 		evtmxy flin? 0? ( drop
+			evtmb 0? ( drop -1 'ida ! 5 ; ) drop	| out->5
+			4 ;	) drop						| active outside->4
+		evtmb 0? ( drop -1 'ida ! 6 ; ) drop		| click->6
+		3 ; ) 	 							| active->3
+	drop 0 ;
+
+::tuiw1 | -- flag ; 1 line only zone
+	1 'id +! tucl
+	ida 
+	-1 =? ( drop | !active
+		evtmxy flin?1 0? ( ; ) drop	| out->0
+		evtmb 0? ( drop 1 ; ) drop		| over->1
+		id dup 'ida ! 'idfh !
+		2 ; )	| in->2
+	id =? ( drop | =active
+		evtmxy flin?1 0? ( drop
 			evtmb 0? ( drop -1 'ida ! 5 ; ) drop	| out->5
 			4 ;	) drop						| active outside->4
 		evtmb 0? ( drop -1 'ida ! 6 ; ) drop		| click->6
@@ -247,20 +268,29 @@
 	drop ;
 	
 ::tuTBtn | 'ev "" --
-	tuiw 
-	dup .bc
+	tuiw dup .bc
+	6 =? ( tuX! )
 	drop
 	kbBtn
 	>r fw fh fx fy r> xText
 	tuX? 0? ( 2drop ; ) drop ex ;
 	
 ::tuBtn	
-	tuiw dup .bc
+	tuiw1 dup .bc
+	6 =? ( tuX! )
 	drop
 	kbBtn
 	fx fy .at
-	fw swap calign here .write .reset 1 'fy +!
+	fw swap calign here .write 
+	.reset 1 'fy +!
 	tuX? 0? ( 2drop ; ) drop ex ;
+	
+::tuLabel | "" --
+	fw swap lwrite .reset flcr ;
+::tuLabelC | "" --
+	fw swap cwrite .reset flcr ;
+::tuLabelR | "" --
+	fw swap rwrite .reset flcr ;
 	
 |--------------------------------	
 |---- write line
@@ -351,10 +381,10 @@
 
 :ilist | 'var max n  -- 'var max n
 	pick2 8 + @ over +
-	cntlist >=? ( drop ; ) 
+	fx .col | color?
+	cntlist >=? ( drop fw .nsp .cr ; ) 
 	pick3 @ =? ( .rever )
 	uiNindx 
-	fx .col | color?
 	fw swap (xwrite) ex .cr
 	.reset 
 	;
@@ -432,8 +462,8 @@
 :itree | 'var max n  -- 'var max n
 	pick2 8 + @ over +
 	pick3 @ =? ( .rever )
-	uiNindx c@+ 0? ( 2drop ; )
-	fx .col | color
+	fx .col
+	uiNindx c@+ 0? ( 2drop fw .nsp .cr ; )
 	mark dup $1f and 2* ,nsp ,iicon ,s ,eol empty
 	fw here (xwrite) ex .cr 
 	.reset ;
@@ -520,17 +550,70 @@
 	;
 	
 ::tuInputLine | 'buff max --
-	tuiw drop
+	tuiw1 drop
 	tuInputfoco
 	drop
-	fx fy .at	
+	fx fy .at
 	fw 2 <? ( 2drop ; ) 
 	swap lwrite
 	;
 	
 |--- check
-|--- radio
-|--- combo
-|--- slide
-|--- progress
+:checkr
+	1? ( drop "[X] " ; ) drop "[ ] " ;
 	
+::tuCheck | 'var "label" --
+	tuiw1
+	6 =? ( pick2 dup @ 1 xor swap ! tuX! tuR! )
+	dup .bc
+	drop
+	fx fy .at
+	over @ checkr .write .write 
+	.reset 1 'fy +!
+	tuif 0? ( 2drop ; ) drop
+	uikey 
+	[enter] =? ( over dup @ 1 xor swap ! tuX! tuR! )
+	[tab] =? ( focus>> ) [shift+tab] =? ( focus<< )
+	2drop ;
+  
+|--- radio
+:checkr
+	=? ( drop "(•) " ; ) drop "( ) " ; 
+	
+::tuRadio | n 'var "label" --
+	tuiw1
+	6 =? ( pick3 pick3 ! tuX! tuR! )
+	dup .bc
+	drop
+	fx fy .at
+	pick2 pick2 @ checkr .write .write 
+	.reset 1 'fy +!
+	tuif 0? ( 3drop ; ) drop
+	uikey 
+	[enter] =? ( pick2 pick2 ! tuX! tuR! )
+	[tab] =? ( focus>> ) [shift+tab] =? ( focus<< )
+	3drop ;
+
+|--- slide
+
+::tuSlider | 'var min max --
+	tuiw1
+	3 =? ( 3 + )
+	6 =? ( | Dragging
+		evtmx fx - pick2 pick4 - fw 1- */ pick3 +
+		pick4 !
+		tuR! tuX! )
+	drop
+	fx fy .at fw "─" .rep
+	rot @ | min max var
+	pick2 - fw 2swap swap - */
+	fx + fy .at "●" .write
+	.reset 1 'fy +! ;
+
+|--- progress
+::tuProgress | percent --
+	fx fy .at
+	100 clamp0max fw 100 */ "█" .rep
+	.reset 1 'fy +! ;
+
+|--- combo

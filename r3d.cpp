@@ -1969,7 +1969,7 @@ case 0x03: // "SEP STACK"; // hasta que la pila este en el nivel original
 		if (checkbp()!=0) break;
 		}
 	break;
-case 0x04: // "CONTINUE";
+case 0x04: // "PLAY";
 	while (ip!=0) {
 		stepr3();
 		if (checkbp()!=0) break;

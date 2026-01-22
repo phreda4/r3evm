@@ -101,16 +101,20 @@
 #mdragh	
 #idfl		| idf last
 
-#flag
-##keymd		| key modify <<<
 #uistate
+##keymd		| key modify <<<
 
-:flagClear 
-	0 'flag ! ;
-:flagEx!
-	flag 1 or 'flag ! ;
-::uiEx?
-	flag 1 and ;
+:flagEx!	uistate $100 or 'uistate ! ;
+::uiEx?		uistate $100 and ;
+
+::uiOvr		uiState $f and 1 <>? ( 2drop ; ) drop ex ;  | 'v --
+::uiDwn		uiState $f and 2 <>? ( 2drop ; ) drop ex ; | 'v --
+::uiSel		uiState $f and 3 <>? ( 2drop ; ) drop ex ;  | 'v -- ; 3 <?
+::uiClk		uiState $f and 6 <>? ( 2drop ; ) drop ex ; | 'v --
+::uiUp		uiState $f and 5 <? ( 2drop ; ) drop ex ;  | 'v --
+
+::uiFocusIn uiState $10 nand? ( 2drop ; ) drop ex ;
+::uiFocus 	uiState $20 nand? ( 2drop ; ) drop ex ;
 
 ::uiStart
 	uiFull
@@ -187,9 +191,9 @@
 	sdlx cx - $ffff and cw >? ( drop 0 ; ) drop
 	sdly cy - $ffff and chx >? ( drop 0 ; ) drop 
 	-1 ;
-|#idfx 
+
 :stMouse | -- state
-	flagClear 
+|	0 'uistate !	
 	1 'id +! 
 	ida -1 =? ( drop 			| no active
 		uIn? 0? ( ; ) drop		| out->0
@@ -243,15 +247,6 @@
 	ch 'chx !
 	uIn? 0? ( 2drop ; ) drop 'mdragh ! ;
 
-|-- interact	
-::uiOvr		uiState $f and 1 <>? ( 2drop ; ) drop ex ;  | 'v --
-::uiDwn		uiState $f and 2 <>? ( 2drop ; ) drop ex ; | 'v --
-::uiSel		uiState $f and 3 <? ( 2drop ; ) drop ex ;  | 'v --
-::uiClk		uiState $f and 6 <>? ( 2drop ; ) drop ex ; | 'v --
-::uiUp		uiState $f and 5 <? ( 2drop ; ) drop ex ;  | 'v --
-
-::uiFocusIn uiState $10 nand? ( 2drop ; ) drop ex ;
-::uiFocus 	uiState $20 nand? ( 2drop ; ) drop ex ;
 
 ::uiRefocus	-1 'idfa ! ;
 ::uiFocus>> 1 'idfh +! ; | cambia id y luego wid
@@ -282,6 +277,8 @@
 ::uiCRect	cw ch min 2/ cx cy cw ch SDLRound ;
 ::uiCFill	cw ch min 2/ cx cy cw ch SDLFRound ;
 ::uiTex		c2recbox 'recbox swap SDLImageb ; | texture --
+
+::uiWinBox fx fy fw fh ; | -- x y w h 
 
 |--- grid lines
 ::uiLineGridV
@@ -334,17 +331,10 @@
 ::uilRRect	cx 1- cy 1- cw 2 + chx 2 + SDLRound ; | round --
 ::uilCRect	cw 2 + chx 2 + min 2/ cx 1- cy 1- cw 2 + chx 2 + SDLRound ;
 
-:colBack
-	colBac sdlcolor ;
-	
-:colFill
-	colFil sdlcolor ;
-	
-:colFocus
-	colFoc sdlcolor ;
-	
-:colText
-	colTxt txrgb ;
+:colBack	colBac sdlcolor ;
+:colFill	colFil sdlcolor ;
+:colFocus	colFoc sdlcolor ;
+:colText	colTxt txrgb ;
 
 |---- text cursor
 ::uil..
@@ -356,7 +346,6 @@
 	colFill
 	cx cy 1+ cw 2 SDLRect
 	flpady 7 + 'cy +! ;
-	
 
 |---- helptext
 ::ttwrite | "text" --
@@ -460,16 +449,16 @@
 	sdlkey 
 	<tab> =? ( tabfocus ) 
 	<le> =? ( <dn> nip ) 
-	<dn> =? ( over dup @ 1- clamp0 swap ! )
+	<dn> =? ( over dup @ 1- clamp0 swap ! flagEx! )
 	<ri> =? ( <up> nip ) 
-	<up> =? ( over dup @ 1+ pick4 clampmax swap ! )	
+	<up> =? ( over dup @ 1+ pick4 clampmax swap ! flagEx! )	
 	drop ;
 
 :slideh | 0.0 1.0 'value --
 	sdlx cx - cw clamp0max 
 	2over swap - | Fw
 	cw */ pick3 +
-	over ! ;
+	over ! flagEx! ;
 	
 :slideshow | 0.0 1.0 'value --
 	colBack uiLFill
@@ -524,7 +513,7 @@
 	sdly cy - ch clamp0max 
 	2over swap - | Fw
 	ch */ pick3 +
-	over ! ;
+	over ! flagEx! ;
 	
 :slideshowv | 0.0 1.0 'value --
 	ColBack uiFill
@@ -560,6 +549,11 @@
 	a> dup here - 3 >> 'cntlist !
 	'here ! ;
 	
+:calcindx | 'adr -- 'adr
+	0 over ( dup c@ 1? drop
+		>>0 swap 1+ swap ) 2drop
+	'cntlist ! ;
+	
 ::uiNindx | n -- str
 	cntlist >=? ( drop "" ; )
 	3 << indlist + @ ;
@@ -591,7 +585,7 @@
 	colFocus uiLRect 
 	sdlkey
 	<tab> =? ( tabfocus  )
-	<ret> =? ( 1 pick2 << pick3 @ xor pick3 ! ) | 'var n key -- 'var n key
+	<ret> =? ( 1 pick2 << pick3 @ xor pick3 ! flagEx! ) | 'var n key -- 'var n key
 	drop ;
 
 :ic	over @ 1 pick2 << |and? ( drop "[x]" ; ) drop "[ ]" ;
@@ -600,7 +594,7 @@
 :icheck | 'var n -- 'var n
 	uiZone 
 	'focoCheck uiFocus 
-	[ 1 over << pick2 @ xor pick2 ! ; ] uiClk
+	[ 1 over << pick2 @ xor pick2 ! flagEx! ; ] uiClk
 	cx cy txat 
 	ic txicon 32 txemit a@+ txwrite
 	ui.. ;
@@ -616,7 +610,7 @@
 	colFocus uiLRect 
 	sdlkey
 	<tab> =? ( tabfocus  )
-	<ret> =? ( over pick3 ! ) | 'var n key -- 'var n key
+	<ret> =? ( over pick3 ! flagEx! ) | 'var n key -- 'var n key
 	drop ;
 
 :ir over @ |=? ( "(o)" ; ) "( )" ;
@@ -625,7 +619,7 @@
 :iradio | 'var n --
 	uiZone
 	'focoRadio uiFocus
-	[ 2dup swap ! ; ] uiClk
+	[ 2dup swap ! flagEx! ; ] uiClk
 	cx cy txat 
 	ir txicon 32 txemit a@+ txwrite
 	ui.. ;
@@ -671,8 +665,8 @@
 	sdlkey 
 	<ret> =? ( flagEx! )
 	<tab> =? ( tabfocus ) 
-	<up> =? ( pick2 dup @ 1- clamp0 swap ! )
-	<dn> =? ( pick2 dup @ 1+ cntlist 1- clampmax swap ! )	
+	<up> =? ( pick2 dup @ 1- clamp0 swap ! flagEx! )
+	<dn> =? ( pick2 dup @ 1+ cntlist 1- clampmax swap ! flagEx! )	
 	drop 
 	cscroll ;
 
@@ -738,7 +732,8 @@
 :comboclk | 'var cnt -- 'var cnt
 	cntlist <? ( sdlx cx - cw 12 - >? ( drop slidev ; ) drop )
 	sdly cy - txh / pick2 8 + @ + cntlist 1- clampmax pick2 !
-	uiExitWidget ;
+	uiExitWidget 
+	;
 
 :combolist | --
 	uidata1 uidata2 
@@ -763,17 +758,20 @@
 :kblistc	
 	colFocus uiLRect
 	'iniCombo uiClk 
-	kblist ;
+	calcindx | for cntlist
+	kblist 
+	idfs idfh =? ( -1 'idfs ! flagex! ) drop | ex when exit last widget
+	;
 	
 ::uiCombo | 'var 'list --
 	uiZone 
+	colBack uiLFill
 	'kblistc uiFocus
 	mark makeindx	
 	cx cy txat
 	@ uiNindx txwrite
 	cx cw + txh - cy txat 130 txicon
 	empty ui.. ;
-	
 
 |--- Edita linea
 #cmax

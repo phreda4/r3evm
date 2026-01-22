@@ -544,7 +544,6 @@
 :inedit | write editor
 	$7f sdlcolor 
 	|xcode ycode wcode hcode sdlRect 
-	uiZoneW
 	|'dns 'mos 'ups onMap
 	'dns uiDwn
 	'mos uiSel
@@ -555,7 +554,6 @@
 	edselshow ;
 
 ::edfocus
-	|xcode ycode wcode hcode guiBox
 	uiZoneW
 	'inedit uiFocus
 	;
@@ -653,6 +651,12 @@
 #hashfile
 :simplehash | adr -- hash
 	0 swap ( c@+ 1? rot dup 5 << + + swap ) 2drop ;
+	
+::edloadmem | "" --
+	fuente strcpy
+	fuente only13 1- '$fuente ! |-- queda solo cr al fin de linea
+	fuente dup 'scrini> ! simplehash 'hashfile !
+	;
 	
 ::edload | "" --
 	'edfilename strcpy
