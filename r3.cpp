@@ -8,7 +8,7 @@
 //#define DEBUG
 //#define LINUX
 //#define RPI   // Tested on a Raspberry PI 4
-//#ifdef NOx86 // no x86 arquitecture
+#define NOx86 // no x86 arquitecture (or not ASM optimice)
 
 #include <stdio.h>
 #include <stdlib.h>
