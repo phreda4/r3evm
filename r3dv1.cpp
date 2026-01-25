@@ -10,7 +10,7 @@
 #define INLINEOFF
 
 //#define OPTOFF
-#define DEBUGVER
+#define NETSERVER
 //#define DEBUG
 
 #define WINDOWS
@@ -31,6 +31,10 @@
 #include <sys/types.h>
 #include <stdint.h>
 
+#ifdef DEBUGVER
+#include <signal.h>
+#endif
+
 typedef int64_t __int64; 
 typedef int32_t __int32; 
 typedef int16_t __int16; 
@@ -38,10 +42,33 @@ typedef uint64_t __uint64;
 typedef uint32_t __uint32; 
 typedef uint16_t __uint16; 
 
+#ifdef NETSERVER
+  #include <unistd.h>
+  #include <fcntl.h>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
+  #include <errno.h>
+  typedef int SOCKET;
+  #define INVALID_SOCKET -1
+  #define SET_NONBLOCK(s) fcntl(s, F_SETFL, O_NONBLOCK)
+  #define CLOSE_SOCK(s) close(s)
+  #define LAST_ERROR errno
+#endif
 
 #else	// WINDOWS
 
 #include <windows.h>
+
+#ifdef NETSERVER
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+typedef int socklen_t;
+#define SET_NONBLOCK(s) { u_long mode = 1; ioctlsocket(s, FIONBIO, &mode); }
+#define CLOSE_SOCK(s) closesocket(s)
+#define LAST_ERROR WSAGetLastError()
+#endif
 
 typedef unsigned __int64 __uint64;
 typedef unsigned __int32 __uint32; 
@@ -1742,14 +1769,163 @@ switch(op&0xff){
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////
+#ifdef NETSERVER
+
+#define BUFF_SIZE 4096
+#define LOCALHOST "127.0.0.1"
+
+SOCKET sock;
+char rx_buf[BUFF_SIZE];
+int rx_len;
+
+void init_winsock(void) {
+#ifdef _WIN32
+  WSADATA wsa;
+  if (WSAStartup(MAKEWORD(2, 2), &wsa)) {
+//    fprintf(stderr, "WSAStartup error\n");
+    exit(1);
+  }
+#endif
+}
+
+void cleanup_winsock(void) {
+#ifdef _WIN32
+  WSACleanup();
+#endif
+}
+
+int server_create(int port) {
+  struct sockaddr_in addr;
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock == INVALID_SOCKET) {
+    return -1;
+	}
+  SET_NONBLOCK(sock);
+  int reuse = 1;
+  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(reuse)) < 0) {
+    CLOSE_SOCK(sock);
+    return -1;
+	}
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = inet_addr(LOCALHOST);
+  addr.sin_port = htons(port);
+  if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+    CLOSE_SOCK(sock);
+    return -1;
+	}
+  if (listen(sock, 1) < 0) {
+    CLOSE_SOCK(sock);
+    return -1;
+	}
+//  printf("Servidor escuchando en 127.0.0.1:%d\n", port);
+  rx_len = 0;
+  return 0;
+}
+
+int client_connect(int port) {
+  struct sockaddr_in addr;
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock == INVALID_SOCKET) { return -1;	}
+  SET_NONBLOCK(sock);
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = inet_addr(LOCALHOST);
+  addr.sin_port = htons(port);
+  if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+#ifdef _WIN32
+    if (LAST_ERROR != WSAEWOULDBLOCK) {
+#else
+    if (LAST_ERROR != EINPROGRESS) {
+#endif
+      CLOSE_SOCK(sock);return -1; }
+	}
+  //printf("Conectando a 127.0.0.1:%d\n", port);
+  rx_len = 0;
+  return 0;
+}
+
+int check_connection_status() {
+  fd_set writefds;
+  struct timeval tv;
+  int error = 0;
+  socklen_t len = sizeof(error);
+  
+  FD_ZERO(&writefds);
+  FD_SET(sock, &writefds);
+  
+  tv.tv_sec = 0;
+  tv.tv_usec = 100000;  // 100ms timeout
+  
+  int ret = select(sock + 1, NULL, &writefds, NULL, &tv);
+  
+  if (ret > 0 && FD_ISSET(sock, &writefds)) {
+    // El socket está listo, verifica si hay error
+#ifdef _WIN32
+    getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&error, &len);
+#else
+    getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len);
+#endif
+    
+    if (error == 0) {
+      return 1;  // ? Conectado exitosamente
+    } else {
+      return -1; // ? Conexión rechazada (servidor no disponible)
+    }
+  }
+  
+  return 0;  // ? Aún conectando
+}
+
+int server_accept(void) {
+  struct sockaddr_in addr;
+  socklen_t len = sizeof(addr);
+  SOCKET cli_sock = accept(sock, (struct sockaddr*)&addr, &len);
+  if (cli_sock == INVALID_SOCKET) {return -1;}
+  CLOSE_SOCK(sock);
+  sock = cli_sock;
+  rx_len = 0;
+  SET_NONBLOCK(sock);
+//  printf("Cliente conectado\n");
+  return 0;
+}
+
+int sock_send(const char *data, int len) {
+  int n = send(sock, data, len, 0);
+  return (n > 0) ? n : 0;
+}
+
+int sock_recv(void) { // falta encapsular multiframe
+  int n = recv(sock, rx_buf + rx_len, BUFF_SIZE - rx_len - 1, 0);
+  if (n > 0) {
+    rx_len += n;
+    rx_buf[rx_len] = '\0';
+    return n;
+	}
+  if (n == 0) {return -1;}
+  if (n < 0) {
+#ifdef _WIN32
+    if (LAST_ERROR == WSAECONNRESET || LAST_ERROR == WSAECONNABORTED) {return -1;}
+#else
+    if (LAST_ERROR == ECONNRESET || LAST_ERROR == ECONNABORTED) {return -1;}
+#endif
+  }  
+return 0;
+}
+
+void sock_close(void) {
+  CLOSE_SOCK(sock);
+}
+
+void sock_flush(void) {
+  rx_len=0;rx_buf[0]='\0';
+}
+
+#endif
 
 ////////////////////////////////// DEBUG ///////////////////////////////////
 // 0 - corriendo ( default)
 // 1 - fin
-#define BUFF_SIZE 4096
-
-char rx_buf[BUFF_SIZE];
-
 int state; 
 int bps[100];
 int cntbps=0;
@@ -1857,13 +2033,11 @@ netr.RETU[0]=*(RTOS-3);
 netr.RETU[1]=*(RTOS-2);
 netr.RETU[2]=*(RTOS-1);
 netr.RETU[0]=*RTOS;
-//sock_send((const char*)&netr,sizeof(netr));
+sock_send((const char*)&netr,sizeof(netr));
 }
 
-void startdb() { netr.type=1;//sock_send((const char*)&netr,2);
-}
-void enddb() { netr.type=-1;//sock_send((const char*)&netr,2);
-}
+void startdb() { netr.type=1;sock_send((const char*)&netr,2);}
+void enddb() { netr.type=-1;sock_send((const char*)&netr,2);}
 
 /////////////////////////////////// RUN ////////////////////////////////////
 int conn=0;
@@ -1879,10 +2053,10 @@ if (conn==0) { // sin conexion
 
 startdb();
 while(ip!=0) { //}state!=-1) {
-//	if (sock_recv()>0) {
+	if (sock_recv()>0) {
 		debugr3();
 		infor3();
-//		}
+		}
 #ifdef _WIN32
     Sleep(100);
 #else
@@ -1902,17 +2076,35 @@ if (argc>1)
 else 
 	filename=(char*)"main.r3";
 if (!r3compile(filename)) return -1;
-
 #ifdef DEBUGVER    
+saveimagen("mem/r3code.mem");
+savedicc("mem/r3dicc.mem");
+
+#ifdef NETSERVER
+init_winsock();
+if (argc > 2) { // argv[2] = puerto del debugger
+	//server_create(atoi(argv[2]));
+	client_connect(atoi(argv[2]));
+} else {
+	//server_create(9999);
+	client_connect(9999);
+	}
+conn=check_connection_status();	
 
 #endif
 
-saveimagen("mem/r3code.mem");
-savedicc("mem/r3dicc.mem");
+install_handler();
+#endif
 
 runr3(boot);
 
 #ifdef DEBUGVER
+uninstall_handler();
+
+#ifdef NETSERVER
+sock_close();
+cleanup_winsock();    
+#endif
 
 #endif
 
