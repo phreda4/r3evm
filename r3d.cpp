@@ -21,8 +21,14 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
+
+//////////// shred mem
+#define SHARED_MEMORY_NAME "/debug.mem"
+#define SHAREMD 4096
+
+//////////// shred mem
  
-#if defined(LINUX) || defined(RPI)
+#if defined(LINUX) || defined(RPI) // ----- LINUX
 
 #include <dlfcn.h>
 #include <unistd.h>
@@ -38,15 +44,47 @@ typedef uint64_t __uint64;
 typedef uint32_t __uint32; 
 typedef uint16_t __uint16; 
 
+ int shm_fd;
+__int64* pSharedMsg;
 
-#else	// WINDOWS
+void inishare(void){
+shm_fd = shm_open(SHARED_MEMORY_NAME, O_RDWR, 0666);
+if (shm_fd<0) {
+	shm_fd = shm_open(SHARED_MEMORY_NAME, O_CREAT | O_RDWR, 0666);
+	ftruncate(shm_fd,SHAREMD);
+	}
+pSharedMsg = (__int64*)mmap(NULL, sizeof(SharedMessage),PROT_READ | PROT_WRITE,MAP_SHARED, shm_fd, 0);	
+}    
 
+void endshare(void) {
+munmap(pSharedMsg,SHAREMD);
+close(shm_fd);	
+}
+    
+
+#else	// ------------------------------- WINDOWS
 #include <windows.h>
 
 typedef unsigned __int64 __uint64;
 typedef unsigned __int32 __uint32; 
 typedef unsigned __int16 __uint16;  
 
+HANDLE hMapFile;
+__int64* pSharedMsg;
+
+void inishare(void){
+hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS,NULL,SHARED_MEMORY_NAME);
+if (hMapFile==0) {
+    hMapFile = CreateFileMappingA(INVALID_HANDLE_VALUE,NULL,PAGE_READWRITE,0,SHAREMD,SHARED_MEMORY_NAME);
+	}
+pSharedMsg = (__int64*)MapViewOfFile(hMapFile,FILE_MAP_ALL_ACCESS,0,0,SHAREMD);	
+}    
+
+void endshare(void) {
+UnmapViewOfFile(pSharedMsg);
+CloseHandle(hMapFile);
+}
+    
 #endif
 
 //----------------------
@@ -1109,15 +1147,32 @@ void memset32(__uint32 *dest,__uint32 val, __uint32 count)
 void memset64(__uint64 *dest,__uint64 val,__uint32 count)
 { while (count--) *dest++ = val; }
 
-__int64 datastack[512];
-__int64 retstack[512];
+//--- memsage estado
+// 4kb 
+typedef struct {
+	__int64 type;
+	__int64 info;
+    __int64 ip;
+    __int64 TOS;
+    __int64 *NOS;
+    __int64 *RTOS;
+    __int64 REGA;
+    __int64 REGB;
+    __int64 datastack[252];
+    __int64 retstack[252];
+} VirtualMachine;
 
-__int64 TOS=0;
-__int64 *NOS;
-__int64 *RTOS;
-__int64 REGA=0;
-__int64 REGB=0;
-int ip;
+VirtualMachine vm = {0};
+
+#define ip (vm.ip)
+#define TOS (vm.TOS)
+#define NOS (vm.NOS)
+#define RTOS (vm.RTOS)
+#define REGA (vm.REGA)
+#define REGB (vm.REGB)
+
+#define datastack (vm.datastack)
+#define retstack (vm.retstack)
 
 /////////////////////////////////////////////////////////////
 // write error
@@ -1291,9 +1346,10 @@ void print_error(void* error_code) {
     }
 #endif
 FILE *fe;
+/*
 int i,sd,sr;
 sd=(NOS-(&datastack[0]));
-sr=(&retstack[512-1])-RTOS;
+sr=(&retstack[252-1])-RTOS;
 
 fe=fopen("mem/r3.err","w");
 fprintf(fe,"RUNTIME ERROR: %s ($%lx)\n", msg, code);
@@ -1303,7 +1359,7 @@ fprintf(fe,"B:$%x ",boot);
 fprintf(fe,"I:$%x ",ip);
 fprintf(fe,"IN:%s\n",r3bas[memcode[ip-1]]);
 
-//TOS=0;//NOS = &datastack[0];//RTOS = &retstack[512 - 1];
+//TOS=0;//NOS = &datastack[0];//RTOS = &retstack[256 - 1];
 fprintf(fe,"D:%d\n",sd);
 for(int i=2;i<sd+1;i++) {
 	fprintf(fe,"$%x ",datastack[i]);
@@ -1318,6 +1374,7 @@ fprintf(fe,"A:$%x B:$%x\n",REGA,REGB);
 //fprintf(fe,"DICC:\n");errordicc(fe);
 fprintf(fe,"CODE:\n");errorcode(fe);
 fclose(fe);
+*/
 }
 
 /////////////////////////////////////////////////////////////
@@ -1372,11 +1429,11 @@ void uninstall_handler() {
 /////////////////////////////////////////////////////////////////////
 // run code, from adress "boot"
 void startr3(int boot) {
-retstack[512-1]=0;    
+retstack[252-1]=0;    
 ip=boot;
 TOS=0;
 NOS=&datastack[0];
-RTOS=&retstack[512 - 1];
+RTOS=&retstack[252 - 1];
 REGA=0;REGB=0;
 }
 
@@ -1809,10 +1866,10 @@ case 0x07: // "RESTART"; // no implementado por ahora
 	break;
 //////////////////////////////////////////
 case 0x08: // ADD BP
-	addbp(*(int*)rx_buf[1]);
+	//addbp(*(int*)rx_buf[1]);
 	break;
 case 0x09: // DEL BP
-	delbp(*(int*)rx_buf[1]);
+	//delbp(*(int*)rx_buf[1]);
 	break;
 case 0x0A: // RESETBP
 	cntbps=0;break;
@@ -1829,15 +1886,16 @@ case 0x12: // get arr
 	}
 }
 
-
+/*
 typedef struct {
 	short type;
 	unsigned short ip;
 	short dstack,rstack;
+	unsigned short info;
 	__int64 REGA;
 	__int64 REGB;
-	__int64 DATA[4];
-	__int64 RETU[4];
+	__int64 DATA[16];
+	__int64 RETU[16];
 } netres ;
 
 static netres netr;
@@ -1846,7 +1904,7 @@ void infor3() { // retorna basic info
 netr.type=0;
 netr.ip=ip;
 netr.dstack=(NOS-(&datastack[0]));
-netr.rstack=(&retstack[512-1])-RTOS;
+netr.rstack=(&retstack[252-1])-RTOS;
 netr.REGA=REGA;
 netr.REGB=REGB;
 netr.DATA[0]=*(NOS-2);
@@ -1864,7 +1922,7 @@ void startdb() { netr.type=1;//sock_send((const char*)&netr,2);
 }
 void enddb() { netr.type=-1;//sock_send((const char*)&netr,2);
 }
-
+*/
 /////////////////////////////////// RUN ////////////////////////////////////
 int conn=0;
 
@@ -1877,19 +1935,19 @@ if (conn==0) { // sin conexion
 	return;
 	}
 
-startdb();
+//startdb();
 while(ip!=0) { //}state!=-1) {
 //	if (sock_recv()>0) {
 		debugr3();
-		infor3();
+		//infor3();
 //		}
 #ifdef _WIN32
-    Sleep(100);
+    Sleep(10);
 #else
-    usleep(100000);
+    usleep(10000);
 #endif	
 	}
-enddb();
+//enddb();
 }
 	
 ////////////////////////////////////////////////////////////////////////////
