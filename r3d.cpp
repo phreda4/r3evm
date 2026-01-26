@@ -5,12 +5,9 @@
 //  with cell size of 64 bits, 
 //
 
-#define DEBUGVER
-
 #define INLINEOFF
 
 //#define OPTOFF
-#define DEBUGVER
 //#define DEBUG
 
 #define WINDOWS
@@ -23,8 +20,36 @@
 #include <string.h>
 
 //////////// shred mem
-#define SHARED_MEMORY_NAME "/debug.mem"
-#define SHAREMD 4096
+
+//--- this memory is shared for debugging
+//--- this memory is shared for debugging
+// 4kb 
+typedef struct {
+	__int64 type; // msg
+	__int64 info; // msg
+    __int64 ip;
+    __int64 TOS;
+    __int64 *NOS;
+    __int64 *RTOS;
+    __int64 REGA;
+    __int64 REGB;
+    __int64 datastack[252];
+    __int64 retstack[252];
+} VirtualMachine;
+
+//--- this memory is shared for debugging
+//--- this memory is shared for debugging
+
+VirtualMachine *vm;
+
+#define ip (vm->ip)
+#define TOS (vm->TOS)
+#define NOS (vm->NOS)
+#define RTOS (vm->RTOS)
+#define REGA (vm->REGA)
+#define REGB (vm->REGB)
+#define datastack (vm->datastack)
+#define retstack (vm->retstack)
 
 //////////// shred mem
  
@@ -44,21 +69,20 @@ typedef uint64_t __uint64;
 typedef uint32_t __uint32; 
 typedef uint16_t __uint16; 
 
- int shm_fd;
-__int64* pSharedMsg;
+int hm1,hm2;
 
-void inishare(void){
-shm_fd = shm_open(SHARED_MEMORY_NAME, O_RDWR, 0666);
-if (shm_fd<0) {
-	shm_fd = shm_open(SHARED_MEMORY_NAME, O_CREAT | O_RDWR, 0666);
-	ftruncate(shm_fd,SHAREMD);
+void *iniMshare(char *fn,int size,int *h) {
+*h=shm_open(fn, O_RDWR, 0666);
+if (*h<0) { // si es el primero 
+	*h=shm_open(fn, O_CREAT|O_RDWR, 0666);
+	ftruncate(*h,size);
 	}
-pSharedMsg = (__int64*)mmap(NULL, sizeof(SharedMessage),PROT_READ | PROT_WRITE,MAP_SHARED, shm_fd, 0);	
+return mmap(NULL, SHAREMD,PROT_READ|PROT_WRITE,MAP_SHARED, *h, 0);	
 }    
 
-void endshare(void) {
-munmap(pSharedMsg,SHAREMD);
-close(shm_fd);	
+void endMshare(void *mm,int size,int *h) {
+munmap(mm,size);
+close(*h);	
 }
     
 
@@ -69,20 +93,18 @@ typedef unsigned __int64 __uint64;
 typedef unsigned __int32 __uint32; 
 typedef unsigned __int16 __uint16;  
 
-HANDLE hMapFile;
-__int64* pSharedMsg;
+HANDLE hm1,hm2;
 
-void inishare(void){
-hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS,NULL,SHARED_MEMORY_NAME);
-if (hMapFile==0) {
-    hMapFile = CreateFileMappingA(INVALID_HANDLE_VALUE,NULL,PAGE_READWRITE,0,SHAREMD,SHARED_MEMORY_NAME);
-	}
-pSharedMsg = (__int64*)MapViewOfFile(hMapFile,FILE_MAP_ALL_ACCESS,0,0,SHAREMD);	
+void *iniMshare(char *fn,int size,HANDLE *h) {
+*h=OpenFileMappingA(FILE_MAP_ALL_ACCESS,NULL,fn);
+if (*h==0) { *h=CreateFileMappingA(INVALID_HANDLE_VALUE,NULL,PAGE_READWRITE,0,size,fn); }
+return MapViewOfFile(*h,FILE_MAP_ALL_ACCESS,0,0,size);	
 }    
 
-void endshare(void) {
-UnmapViewOfFile(pSharedMsg);
-CloseHandle(hMapFile);
+
+void endMshare(void *mm,int size,HANDLE *h) {
+UnmapViewOfFile(mm);
+CloseHandle(*h);
 }
     
 #endif
@@ -1100,20 +1122,25 @@ memd=0;
 
 #if defined(LINUX)
  memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
- memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
+ //memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
+ memdata=(char*)iniMshare("/data.mem",memdsize,&hm2); 
+ 
 #elif defined(RPI)
  memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
- memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
+ //memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
+ memdata=(char*)iniMshare("/data.mem",memdsize,&hm2); 
+ 
 #else
  memcode=(int*)malloc(sizeof(int)*memcsize);
- memdata=(char*)malloc(memdsize);
+ //memdata=(char*)malloc(memdsize);
+ memdata=(char*)iniMshare("/data.mem",memdsize,&hm2);  
 #endif
-
 
 // tokenize includes
 for (int i=0;i<cntstacki;i++) {
 	if (!r3token(includes[stacki[i]].str)) {
 		printerror(includes[stacki[i]].nombre,includes[stacki[i]].str);
+		endMshare((void*)memdata,memdsize,&hm2);
 		return 0;
 		}
 	dicclocal=cntdicc;
@@ -1121,6 +1148,7 @@ for (int i=0;i<cntstacki;i++) {
 // last tokenizer		
 if (!r3token(sourcecode)) {
 	printerror(path,sourcecode);
+	endMshare((void*)memdata,memdsize,&hm2);
 	return 0;
 	}
 
@@ -1146,33 +1174,6 @@ void memset32(__uint32 *dest,__uint32 val, __uint32 count)
 
 void memset64(__uint64 *dest,__uint64 val,__uint32 count)
 { while (count--) *dest++ = val; }
-
-//--- memsage estado
-// 4kb 
-typedef struct {
-	__int64 type;
-	__int64 info;
-    __int64 ip;
-    __int64 TOS;
-    __int64 *NOS;
-    __int64 *RTOS;
-    __int64 REGA;
-    __int64 REGB;
-    __int64 datastack[252];
-    __int64 retstack[252];
-} VirtualMachine;
-
-VirtualMachine vm = {0};
-
-#define ip (vm.ip)
-#define TOS (vm.TOS)
-#define NOS (vm.NOS)
-#define RTOS (vm.RTOS)
-#define REGA (vm.REGA)
-#define REGB (vm.REGB)
-
-#define datastack (vm.datastack)
-#define retstack (vm.retstack)
 
 /////////////////////////////////////////////////////////////
 // write error
@@ -1284,12 +1285,15 @@ fread(&memd,sizeof(int),1,file);
 #if defined(LINUX)
  memcode=(int*)mmap(NULL,sizeof(int)*memc,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
  memdata=(char*)mmap(NULL,memd,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
+ //memdata=(char*)iniMshare("/data.mem",memd,&hm2); 
 #elif defined(RPI)
  memcode=(int*)mmap(NULL,sizeof(int)*memc,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
  memdata=(char*)mmap(NULL,memd,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
+ //memdata=(char*)iniMshare("/data.mem",memd,&hm2);
 #else
  memcode=(int*)malloc(sizeof(int)*memc);
  memdata=(char*)malloc(memd);
+ //memdata=(char*)iniMshare("/data.mem",memd,&hm2);
 #endif
 
 fread((void*)memcode,sizeof(int),memc,file);
@@ -1808,7 +1812,7 @@ switch(op&0xff){
 char rx_buf[BUFF_SIZE];
 
 int state; 
-int bps[100];
+int bps[100];	// breakpoint
 int cntbps=0;
 
 void addbp(int b) { bps[cntbps++]=b;}
@@ -1886,68 +1890,29 @@ case 0x12: // get arr
 	}
 }
 
-/*
-typedef struct {
-	short type;
-	unsigned short ip;
-	short dstack,rstack;
-	unsigned short info;
-	__int64 REGA;
-	__int64 REGB;
-	__int64 DATA[16];
-	__int64 RETU[16];
-} netres ;
-
-static netres netr;
-
-void infor3() { // retorna basic info
-netr.type=0;
-netr.ip=ip;
-netr.dstack=(NOS-(&datastack[0]));
-netr.rstack=(&retstack[252-1])-RTOS;
-netr.REGA=REGA;
-netr.REGB=REGB;
-netr.DATA[0]=*(NOS-2);
-netr.DATA[1]=*(NOS-1);
-netr.DATA[2]=*NOS;
-netr.DATA[3]=TOS;
-netr.RETU[0]=*(RTOS-3);
-netr.RETU[1]=*(RTOS-2);
-netr.RETU[2]=*(RTOS-1);
-netr.RETU[0]=*RTOS;
-//sock_send((const char*)&netr,sizeof(netr));
-}
-
-void startdb() { netr.type=1;//sock_send((const char*)&netr,2);
-}
-void enddb() { netr.type=-1;//sock_send((const char*)&netr,2);
-}
-*/
 /////////////////////////////////// RUN ////////////////////////////////////
-int conn=0;
 
 void runr3(int boot) { 
 startr3(boot);
-if (conn==0) { // sin conexion
+
+//if (conn==0) { // sin conexion
 	while (ip!=0) { 
 		stepr3(); 
 		}
 	return;
-	}
+//	}
 
-//startdb();
 while(ip!=0) { //}state!=-1) {
 //	if (sock_recv()>0) {
 		debugr3();
 		//infor3();
 //		}
 #ifdef _WIN32
-    Sleep(10);
+    Sleep(100);
 #else
-    usleep(10000);
+    usleep(100000);
 #endif	
 	}
-//enddb();
 }
 	
 ////////////////////////////////////////////////////////////////////////////
@@ -1961,18 +1926,14 @@ else
 	filename=(char*)"main.r3";
 if (!r3compile(filename)) return -1;
 
-#ifdef DEBUGVER    
-
-#endif
-
 saveimagen("mem/r3code.mem");
 savedicc("mem/r3dicc.mem");
 
+vm=(VirtualMachine*)iniMshare("/debug.mem",4096,&hm1);
+
 runr3(boot);
 
-#ifdef DEBUGVER
-
-#endif
-
+endMshare((void*)vm,4096,&hm1);
+endMshare((void*)memdata,memdsize,&hm2);
 return 0;
 }
