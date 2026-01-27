@@ -25,8 +25,8 @@
 //--- this memory is shared for debugging
 // 4kb 
 typedef struct {
-	__int64 type; // msg
-	__int64 info; // msg
+	__int64 vmstate; // msg
+	__int64 vminfo; // msg
     __int64 ip;
     __int64 TOS;
     __int64 *NOS;
@@ -42,6 +42,8 @@ typedef struct {
 
 VirtualMachine *vm;
 
+#define vmstate (vm->vmstate)
+#define vminfo (vm->vminfo)
 #define ip (vm->ip)
 #define TOS (vm->TOS)
 #define NOS (vm->NOS)
@@ -69,7 +71,7 @@ typedef uint64_t __uint64;
 typedef uint32_t __uint32; 
 typedef uint16_t __uint16; 
 
-int hm1,hm2;
+int hm1,hm2,hm3;
 
 void *iniMshare(char *fn,int size,int *h) {
 *h=shm_open(fn, O_RDWR, 0666);
@@ -93,7 +95,7 @@ typedef unsigned __int64 __uint64;
 typedef unsigned __int32 __uint32; 
 typedef unsigned __int16 __uint16;  
 
-HANDLE hm1,hm2;
+HANDLE hm1,hm2,hm3;
 
 void *iniMshare(char *fn,int size,HANDLE *h) {
 *h=OpenFileMappingA(FILE_MAP_ALL_ACCESS,NULL,fn);
@@ -108,6 +110,7 @@ CloseHandle(*h);
 }
     
 #endif
+// ------------------------------- OS
 
 //----------------------
 /*------COMPILER------*/
@@ -1249,6 +1252,7 @@ fwrite(&cntdicc,sizeof(int),1,file);
 fwrite(&boot,sizeof(int),1,file);
 fwrite(&memc,sizeof(int),1,file);
 fwrite(&memd,sizeof(int),1,file);
+fwrite(&memdsize,sizeof(int),1,file);
 fwrite((void*)memcode,sizeof(int),memc,file);
 fwrite((void*)memdata,1,memd,file);
 fclose(file);
@@ -1304,6 +1308,7 @@ fclose(file);
 
 
 void print_error(void* error_code) {
+int errnro;
 #ifdef _WIN32
     DWORD code = (DWORD)(uintptr_t)error_code;
     const char* msg;
@@ -1333,7 +1338,7 @@ void print_error(void* error_code) {
         case STATUS_FLOAT_MULTIPLE_TRAPS:             msg = "Múltiples trampas flotantes"; break;
         default:                                      msg = "Excepción desconocida"; break;
     }
-  
+  	errnro=code;
 #else
     int code= (int)(uintptr_t)error_code;
     const char* msg;
@@ -1348,37 +1353,9 @@ void print_error(void* error_code) {
         // Opcional: case SIGINT: msg = "Interrupción (Ctrl+C)"; break;
         default:      msg = "Señal desconocida"; break;
     }
+    errnro=code;
 #endif
-FILE *fe;
-/*
-int i,sd,sr;
-sd=(NOS-(&datastack[0]));
-sr=(&retstack[252-1])-RTOS;
-
-fe=fopen("mem/r3.err","w");
-fprintf(fe,"RUNTIME ERROR: %s ($%lx)\n", msg, code);
-fprintf(fe,"MC:$%x ",memcode);
-fprintf(fe,"MD:$%x ",memdata);
-fprintf(fe,"B:$%x ",boot);
-fprintf(fe,"I:$%x ",ip);
-fprintf(fe,"IN:%s\n",r3bas[memcode[ip-1]]);
-
-//TOS=0;//NOS = &datastack[0];//RTOS = &retstack[256 - 1];
-fprintf(fe,"D:%d\n",sd);
-for(int i=2;i<sd+1;i++) {
-	fprintf(fe,"$%x ",datastack[i]);
-	}
-fprintf(fe,"$%x\n",TOS);
-fprintf(fe,"R:%d\n",sr);
-for(int i=510;i>510-sr;i--) {
-	fprintf(fe,"$%x ",retstack[i]);
-	}
-fprintf(fe,"\n");
-fprintf(fe,"A:$%x B:$%x\n",REGA,REGB);
-//fprintf(fe,"DICC:\n");errordicc(fe);
-fprintf(fe,"CODE:\n");errorcode(fe);
-fclose(fe);
-*/
+vmstate=(errnro<<8)|0; //error->stop
 }
 
 /////////////////////////////////////////////////////////////
@@ -1802,119 +1779,59 @@ switch(op&0xff){
 }
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////
 
 ////////////////////////////////// DEBUG ///////////////////////////////////
-// 0 - corriendo ( default)
-// 1 - fin
-#define BUFF_SIZE 4096
+// 0 - wait (
+// 1 - run
+// 0xfe - end
+int cntbreakpoint;
+int *breakpoint;
+int *breakpointpcursor;
 
-char rx_buf[BUFF_SIZE];
-
-int state; 
-int bps[100];	// breakpoint
-int cntbps=0;
-
-void addbp(int b) { bps[cntbps++]=b;}
-void delbp(int b) { for (int i=0;i<cntbps;i++) { if (bps[i]==b) { bps[i]=bps[--cntbps];return;}	} }
-int checkbp() {
-for (int i=0;i<cntbps;i++) { if (bps[i]==ip) return 1; }
-return 0; 
+void checkbreakpoint(void) {
+// if bp
+// state=0x0
 }
 
-void debugr3() {
-int nexti;
-__int64 *markstack;
-
-switch(rx_buf[0]) {
-case 0x00: // "1 STEP";
-	stepr3();
-	break;
-case 0x01: // "STEP_OVER"; // ejecutar palabra completa
-	nexti=ip+1;
-	// ** lit2,litf
-	while (ip!=0) { 
-		stepr3(); 
-		if (ip==nexti) break;
-		}
-	break;
-case 0x02: // "STEP_OUT"; // salir de palabra (
-	markstack=RTOS;
-	while (ip!=0) { 
-		stepr3(); 
-		if (markstack<RTOS) break; // crece para abajo
-		if (checkbp()!=0) break;
-		}
-	break;
-case 0x03: // "SEP STACK"; // hasta que la pila este en el nivel original
-	markstack=NOS;
-	while (ip!=0) {
-		stepr3();
-		if (markstack>=NOS) break;
-		if (checkbp()!=0) break;
-		}
-	break;
-case 0x04: // "PLAY";
-	while (ip!=0) {
-		stepr3();
-		if (checkbp()!=0) break;
-		}
-	break;
-case 0x05: // "PAUSE"; // pausa
-
-	break;
-case 0x06: // "HALT"; // terminar
-	state=-1;ip=0;
-	break;
-case 0x07: // "RESTART"; // no implementado por ahora
-	break;
-//////////////////////////////////////////
-case 0x08: // ADD BP
-	//addbp(*(int*)rx_buf[1]);
-	break;
-case 0x09: // DEL BP
-	//delbp(*(int*)rx_buf[1]);
-	break;
-case 0x0A: // RESETBP
-	cntbps=0;break;
-
-case 0x10: // get var
-	break;
-case 0x11: // get mem
-	break ;
-case 0x12: // get arr
-	break;
-	
-
-
-	}
-}
-
-/////////////////////////////////// RUN ////////////////////////////////////
-
-void runr3(int boot) { 
-startr3(boot);
-
-//if (conn==0) { // sin conexion
-	while (ip!=0) { 
-		stepr3(); 
-		}
-	return;
-//	}
-
-while(ip!=0) { //}state!=-1) {
-//	if (sock_recv()>0) {
-		debugr3();
-		//infor3();
-//		}
+void debugr3(void) {
+if ((vmstate&1)==0) {
+	switch(vmstate&0xff) {
+	case 0x00: // waiting
 #ifdef _WIN32
-    Sleep(100);
+	    Sleep(100);
 #else
-    usleep(100000);
+	    usleep(100000);
 #endif	
+		return;
+	case 0x2: // "1 STEP";
+		vmstate=0;break;
+	case 0x4: // "STEP_OVER"; // ejecutar palabra completa
+		vmstate=0x10;vminfo=ip+1; ;break;
+	case 0x6: // "STEP_OUT"; // salir de palabra (
+		vmstate=0x20;vminfo=RTOS;break;
+	case 0x8: // "STEP STACK"; // hasta que la pila este en el nivel original
+		vmstate=0x30;vminfo=NOS;break;
+	case 0xA: // "PLAY";
+		break;
+	case 0xC: // "RESTART"; // no implementado por ahora
+		break;
+	case 0x10:		
+		if (ip==vminfo) {vmstate=0;return;}
+		break;
+	case 0x20:		
+		if (vminfo<RTOS) {vmstate=0;return;}
+		break;
+	case 0x30:		
+		if (vminfo>=NOS) {vmstate=0;return;}
+		break;
+		}	
 	}
+if (ip==0) { vmstate=0xfe/*0x2*/;return; }	// *** warning vmstate=0xfe<<<sobreescribe
+stepr3();
+if (ip==0) { vmstate=0xfe/*0x2*/;return; }
+checkbreakpoint();
 }
-	
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[])
@@ -1930,9 +1847,17 @@ saveimagen("mem/r3code.mem");
 savedicc("mem/r3dicc.mem");
 
 vm=(VirtualMachine*)iniMshare("/debug.mem",4096,&hm1);
+breakpoint=(int*)iniMshare("/bp.mem",512,&hm3); // 128 ints
 
-runr3(boot);
+////////// RUN /////////////
+startr3(boot);
+vmstate=0;		// start waiting
+while ((vmstate&0xff)!=0xfe) { 
+	debugr3();
+	}
+////////// RUN /////////////
 
+endMshare((void*)breakpoint,512,&hm3);
 endMshare((void*)vm,4096,&hm1);
 endMshare((void*)memdata,memdsize,&hm2);
 return 0;
