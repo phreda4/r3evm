@@ -1252,7 +1252,8 @@ for(int i=0;i<cntdicc;i++) {
 void saveimagen(char *fn) {
 __int64 value;	
 FILE *file=fopen(fn,"wb");if (file==NULL) return;
-fwrite(&cntdicc,sizeof(int),1,file);
+fwrite(&cntdicc,sizeof(short),1,file);
+fwrite(&dicclocal,sizeof(short),1,file);
 fwrite(&boot,sizeof(int),1,file);
 fwrite(&memc,sizeof(int),1,file);
 fwrite(&memd,sizeof(int),1,file);
