@@ -71,7 +71,7 @@ typedef uint64_t __uint64;
 typedef uint32_t __uint32; 
 typedef uint16_t __uint16; 
 
-int hm1,hm2,hm3;
+int hm1,hm2,hm3,hm4;
 
 void *iniMshare(char *fn,int size,int *h) {
 *h=shm_open(fn, O_RDWR, 0666);
@@ -95,7 +95,7 @@ typedef unsigned __int64 __uint64;
 typedef unsigned __int32 __uint32; 
 typedef unsigned __int16 __uint16;  
 
-HANDLE hm1,hm2,hm3;
+HANDLE hm1,hm2,hm3,hm4;
 
 void *iniMshare(char *fn,int size,HANDLE *h) {
 *h=OpenFileMappingA(FILE_MAP_ALL_ACCESS,NULL,fn);
@@ -1124,17 +1124,20 @@ memc=1; // direccion 0 para null
 memd=0;
 
 #if defined(LINUX)
- memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
+ //memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
+ memcode=(int*)iniMshare("/code.mem",sizeof(int)*memcsize,&hm4);
  //memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
  memdata=(char*)iniMshare("/data.mem",memdsize,&hm2); 
  
 #elif defined(RPI)
- memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
+ //memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
+ memcode=(int*)iniMshare("/code.mem",sizeof(int)*memcsize,&hm4); 
  //memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
  memdata=(char*)iniMshare("/data.mem",memdsize,&hm2); 
  
 #else
- memcode=(int*)malloc(sizeof(int)*memcsize);
+ //memcode=(int*)malloc(sizeof(int)*memcsize);
+ memcode=(int*)iniMshare("/code.mem",sizeof(int)*memcsize,&hm4);  
  //memdata=(char*)malloc(memdsize);
  memdata=(char*)iniMshare("/data.mem",memdsize,&hm2);  
 #endif
@@ -1247,14 +1250,20 @@ for(int i=0;i<cntdicc;i++) {
 // same info image
 //
 void saveimagen(char *fn) {
+__int64 value;	
 FILE *file=fopen(fn,"wb");if (file==NULL) return;
 fwrite(&cntdicc,sizeof(int),1,file);
 fwrite(&boot,sizeof(int),1,file);
 fwrite(&memc,sizeof(int),1,file);
 fwrite(&memd,sizeof(int),1,file);
 fwrite(&memdsize,sizeof(int),1,file);
-fwrite((void*)memcode,sizeof(int),memc,file);
-fwrite((void*)memdata,1,memd,file);
+fwrite(&(int){sizeof(int)*memcsize},sizeof(int),1,file);
+value=memcode;
+fwrite(&value,sizeof(__int64),1,file);
+value=memdata;
+fwrite(&value,sizeof(__int64),1,file);
+value=&datastack[0]; // retstack=datastack+(252*8)
+fwrite(&value,sizeof(__int64),1,file);
 fclose(file);
 }
 
@@ -1278,34 +1287,6 @@ for (int i=0;i<cntdicc;i++) {
 	}
 fclose(file);
 }
-
-void loadimagen(char *fn)
-{
-FILE *file=fopen(fn,"rb");if (file==NULL) return;
-fread(&boot,sizeof(int),1,file);
-fread(&memc,sizeof(int),1,file);
-fread(&memd,sizeof(int),1,file);
-
-#if defined(LINUX)
- memcode=(int*)mmap(NULL,sizeof(int)*memc,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
- memdata=(char*)mmap(NULL,memd,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
- //memdata=(char*)iniMshare("/data.mem",memd,&hm2); 
-#elif defined(RPI)
- memcode=(int*)mmap(NULL,sizeof(int)*memc,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
- memdata=(char*)mmap(NULL,memd,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
- //memdata=(char*)iniMshare("/data.mem",memd,&hm2);
-#else
- memcode=(int*)malloc(sizeof(int)*memc);
- memdata=(char*)malloc(memd);
- //memdata=(char*)iniMshare("/data.mem",memd,&hm2);
-#endif
-
-fread((void*)memcode,sizeof(int),memc,file);
-fread((void*)memdata,1,memd,file);
-//memlibre=data+cntdato;
-fclose(file);
-}
-
 
 void print_error(void* error_code) {
 int errnro;
@@ -1843,11 +1824,11 @@ else
 	filename=(char*)"main.r3";
 if (!r3compile(filename)) return -1;
 
-saveimagen("mem/r3code.mem");
-savedicc("mem/r3dicc.mem");
-
 vm=(VirtualMachine*)iniMshare("/debug.mem",4096,&hm1);
 breakpoint=(int*)iniMshare("/bp.mem",512,&hm3); // 128 ints
+
+saveimagen("mem/r3code.mem");
+savedicc("mem/r3dicc.mem");
 
 ////////// RUN /////////////
 startr3(boot);
@@ -1859,6 +1840,7 @@ while ((vmstate&0xff)!=0xfe) {
 
 endMshare((void*)breakpoint,512,&hm3);
 endMshare((void*)vm,4096,&hm1);
+endMshare((void*)memcode,sizeof(int)*memcsize,&hm4);
 endMshare((void*)memdata,memdsize,&hm2);
 return 0;
 }
