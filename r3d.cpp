@@ -1093,13 +1093,13 @@ while(*str!=0) {
 return;
 }
 
+char *sourcecode;
+
 // Compile code in file
 int r3compile(char *name) 
 {
 printf("\nr3debug - PHREDA\n");
 printf("compile:%s...",name);
-
-char *sourcecode;
 
 strcpy(path,name);// para ^. ahora pone el path del codigo origen
 char *aa=path+strlen(path);
@@ -1165,9 +1165,12 @@ if (!r3token(sourcecode)) {
 
 //printf(" ok.\n");
 //printf("inc:%d - words:%d - code:%dKb - data:%dKb - free:%dKb\n\n",cntincludes,cntdicc,memc>>8,memd>>10,(memdsize-memd)>>10);
+return -1;
+}
+
+void freesrc(void){
 freeinc();
 free(sourcecode);
-return -1;
 }
 	
 //----------------------
@@ -1265,8 +1268,15 @@ value=memdata;
 fwrite(&value,sizeof(__int64),1,file);
 value=&datastack[0]; // retstack=datastack+(252*8)
 fwrite(&value,sizeof(__int64),1,file);
+fwrite(&cntincludes,sizeof(short),1,file); // save in call order
+value=0;
+for(int i=0;i<cntincludes;i++) {
+	fword(file,includes[stacki[i]].nombre);
+	fwrite(&value,1,1,file);
+	}
 fclose(file);
 }
+
 
 void savedicc(char *fn) {
 FILE *file=fopen(fn,"wb");if (file==NULL) return;
@@ -1831,6 +1841,7 @@ breakpoint=(int*)iniMshare("/bp.mem",512,&hm3); // 128 ints
 saveimagen("mem/r3code.mem");
 savedicc("mem/r3dicc.mem");
 
+freesrc();
 ////////// RUN /////////////
 startr3(boot);
 vmstate=0;		// start waiting
