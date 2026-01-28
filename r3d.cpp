@@ -19,6 +19,64 @@
 #include <time.h>
 #include <string.h>
 
+#if defined(LINUX) || defined(RPI) // ----- LINUX
+
+#include <dlfcn.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <stdint.h>
+#include <signal.h>
+#include <fcntl.h>
+
+typedef int64_t __int64; 
+typedef int32_t __int32; 
+typedef int16_t __int16; 
+typedef uint64_t __uint64; 
+typedef uint32_t __uint32; 
+typedef uint16_t __uint16; 
+
+int hm1,hm2,hm3,hm4;
+
+void *iniMshare(char *fn,int size,int *h) {
+*h=shm_open(fn, O_RDWR, 0666);
+if (*h<0) { // si es el primero 
+	*h=shm_open(fn, O_CREAT|O_RDWR, 0666);
+	ftruncate(*h,size);
+	}
+return mmap(NULL,size,PROT_READ|PROT_WRITE,MAP_SHARED, *h, 0);	
+}    
+
+void endMshare(void *mm,int size,int *h) {
+munmap(mm,size);
+close(*h);	
+}
+
+#else	// ------------------------------- WINDOWS
+#include <windows.h>
+
+typedef unsigned __int64 __uint64;
+typedef unsigned __int32 __uint32; 
+typedef unsigned __int16 __uint16;  
+
+HANDLE hm1,hm2,hm3,hm4;
+
+void *iniMshare(char *fn,int size,HANDLE *h) {
+*h=OpenFileMappingA(FILE_MAP_ALL_ACCESS,NULL,fn);
+if (*h==0) { *h=CreateFileMappingA(INVALID_HANDLE_VALUE,NULL,PAGE_READWRITE,0,size,fn); }
+return MapViewOfFile(*h,FILE_MAP_ALL_ACCESS,0,0,size);	
+}    
+
+
+void endMshare(void *mm,int size,HANDLE *h) {
+UnmapViewOfFile(mm);
+CloseHandle(*h);
+}
+    
+#endif
+// ------------------------------- OS
+
 //////////// shred mem
 
 //--- this memory is shared for debugging
@@ -54,63 +112,6 @@ VirtualMachine *vm;
 #define retstack (vm->retstack)
 
 //////////// shred mem
- 
-#if defined(LINUX) || defined(RPI) // ----- LINUX
-
-#include <dlfcn.h>
-#include <unistd.h>
-#include <dirent.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <stdint.h>
-
-typedef int64_t __int64; 
-typedef int32_t __int32; 
-typedef int16_t __int16; 
-typedef uint64_t __uint64; 
-typedef uint32_t __uint32; 
-typedef uint16_t __uint16; 
-
-int hm1,hm2,hm3,hm4;
-
-void *iniMshare(char *fn,int size,int *h) {
-*h=shm_open(fn, O_RDWR, 0666);
-if (*h<0) { // si es el primero 
-	*h=shm_open(fn, O_CREAT|O_RDWR, 0666);
-	ftruncate(*h,size);
-	}
-return mmap(NULL, SHAREMD,PROT_READ|PROT_WRITE,MAP_SHARED, *h, 0);	
-}    
-
-void endMshare(void *mm,int size,int *h) {
-munmap(mm,size);
-close(*h);	
-}
-    
-
-#else	// ------------------------------- WINDOWS
-#include <windows.h>
-
-typedef unsigned __int64 __uint64;
-typedef unsigned __int32 __uint32; 
-typedef unsigned __int16 __uint16;  
-
-HANDLE hm1,hm2,hm3,hm4;
-
-void *iniMshare(char *fn,int size,HANDLE *h) {
-*h=OpenFileMappingA(FILE_MAP_ALL_ACCESS,NULL,fn);
-if (*h==0) { *h=CreateFileMappingA(INVALID_HANDLE_VALUE,NULL,PAGE_READWRITE,0,size,fn); }
-return MapViewOfFile(*h,FILE_MAP_ALL_ACCESS,0,0,size);	
-}    
-
-
-void endMshare(void *mm,int size,HANDLE *h) {
-UnmapViewOfFile(mm);
-CloseHandle(*h);
-}
-    
-#endif
-// ------------------------------- OS
 
 //----------------------
 /*------COMPILER------*/
