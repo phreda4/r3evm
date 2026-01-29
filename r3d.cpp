@@ -143,9 +143,9 @@ int cntstacki;
 int stacki[128];
 
 //---- local dicctionary
-struct Indice {	char *nombre;int mem;int info; };
+struct Indice {	char *nombre;int mem;short info;short inc; };
 
-int cntdicc;
+int cntdicc,includenow;
 int dicclocal;
 Indice dicc[8192];
 
@@ -551,6 +551,7 @@ dicc[cntdicc].nombre=str+1;
 //memd+=memd&3; // align data!!!
 dicc[cntdicc].mem=memd;
 dicc[cntdicc].info=ex|0x10;	// 0x10 es dato
+dicc[cntdicc].inc=includenow;
 cntdicc++;
 modo=2;
 }
@@ -564,6 +565,7 @@ if (*(str+1)==':') { ex=1;str++; } // exported
 dicc[cntdicc].nombre=str+1;
 dicc[cntdicc].mem=memc;
 dicc[cntdicc].info=ex;	// 0x10 es dato
+dicc[cntdicc].inc=includenow;
 cntdicc++;
 if (*(str+1)<33) { 
 	ex=boot;boot=memc; 
@@ -1145,6 +1147,7 @@ memd=0;
 
 // tokenize includes
 for (int i=0;i<cntstacki;i++) {
+	includenow=i;
 	if (!r3token(includes[stacki[i]].str)) {
 		printerror(includes[stacki[i]].nombre,includes[stacki[i]].str);
 		endMshare((void*)memdata,memdsize,&hm2);
@@ -1152,7 +1155,8 @@ for (int i=0;i<cntstacki;i++) {
 		}
 	dicclocal=cntdicc;
 	}
-// last tokenizer		
+// last tokenizer
+includenow=cntstacki;
 if (!r3token(sourcecode)) {
 	printerror(path,sourcecode);
 	endMshare((void*)memdata,memdsize,&hm2);
@@ -1192,6 +1196,7 @@ void fword(FILE *f,char *s) {
 while (*s>32) fputc(*s++,f);
 }
 
+/*
 void errorinc(FILE *f)
 {
 fprintf(f,"includes\n");
@@ -1249,7 +1254,7 @@ for(int i=0;i<cntdicc;i++) {
 	fprintf(f,"%x \n",dicc[i].info);	
 	}
 }
-
+*/
 //
 // same info image
 //
@@ -1285,7 +1290,7 @@ __int64 v;
 int pos=0;
 char *p;
 for (int i=0;i<cntdicc;i++) {
-	v=((__int64)pos<<40)|(dicc[i].mem<<8)|dicc[i].info;
+	v=((__int64)dicc[i].inc<<58)|((__int64)pos<<40)|(dicc[i].mem<<8)|dicc[i].info;
 	fwrite((void*)&v,8,1,file);
 	p=dicc[i].nombre;
 	while (*p>32) {	p++;pos++;} 
