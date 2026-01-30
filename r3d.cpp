@@ -569,7 +569,9 @@ dicc[cntdicc].inc=includenow;
 cntdicc++;
 if (*(str+1)<33) { 
 	ex=boot;boot=memc; 
-	if (ex!=-1) { codetok((ex<<8)|CALL); } // call to prev boot code
+	if (ex!=-1) { 
+		dicc[cntdicc-1].info|=0x8;	// flag for call boot
+		codetok((ex<<8)|CALL); } // call to prev boot code
 	}
 modo=1;
 lastblock=memc;
