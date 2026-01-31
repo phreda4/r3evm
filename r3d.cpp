@@ -774,9 +774,11 @@ if (n==4) { dicc[cntdicc-1].info|=4;anonOut();return; }		//]	etiqueta;push
 #ifndef OPTOFF // DISABLE
 ///////////////////////// OPTIMIZATION
 // CONSTANT FOLDING
+#ifndef INLINEOFF
 if (n>=AND && n<=CLZ && (tokpre&0xff)==LIT) {
 	if (constfold(n,tokpre,tokpre2)==1) return;
 	}
+#endif	
 // optimize conditional jump to short version
 if (n>=IFL && n<=IFNAND && (tokpre&0xff)==LIT && (tokpre<<8>>16)==(tokpre>>8)) { 
 	memcode[memc-1]=((tokpre<<8)&0xffff0000)|(n-IFL+IFL1);
