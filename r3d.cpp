@@ -1122,7 +1122,6 @@ cntstacki=0;
 r3includes(name,sourcecode); // load includes
 
 if (cerror!=0) return 0;
-//dumpinc();
 
 cntdicc=0;
 dicclocal=0;
@@ -1166,14 +1165,6 @@ if (!r3token(sourcecode)) {
 	endMshare((void*)memdata,memdsize,&hm2);
 	return 0;
 	}
-
-//memd+=memd&3; // align
-
-//dumpdicc();
-//dumpcode();
-
-//printf(" ok.\n");
-//printf("inc:%d - words:%d - code:%dKb - data:%dKb - free:%dKb\n\n",cntincludes,cntdicc,memc>>8,memd>>10,(memdsize-memd)>>10);
 return -1;
 }
 
@@ -1566,24 +1557,13 @@ switch(op&0xff){
 }
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
-
 ////////////////////////////////// DEBUG ///////////////////////////////////
-// 0 - wait (
-// 1 - run
-// 0xfe - end
-int *breakpoint;
-int *breakpointpcursor;
-
-/////////////////////////////////////////////////////////////
-// write error
 
 void fword(FILE *f,char *s) {
 while (*s>32) fputc(*s++,f);
 }
 
-//
-// same info image
-//
+// save info image
 void saveimagen(char *fn) {
 __int64 value;	
 FILE *file=fopen(fn,"wb");if (file==NULL) return;
@@ -1678,49 +1658,49 @@ void uninstall_handler() {
 
 #endif
 
+int *breakpoint;
 
 void checkbreakpoint(void) {
-// if bp
-// state=0x0
+int *bp=breakpoint;	
+while (*bp!=0) {
+	if (ip==*bp) vmstate=0;
+	bp++;
+	}
 }
 
-void debugr3(void) {
-if ((vmstate&1)==0) {
+void playr3(void) {
+__int64 *RS;
+while ((vmstate&0xff)!=0xfe) { 
 	switch(vmstate&0xff) {
-	case 0x00: // waiting
+	case 0: // stop state
 #ifdef _WIN32
 	    Sleep(100);
 #else
 	    usleep(100000);
 #endif	
-		return;
-	case 0x2: // "1 STEP";
-		vmstate=0;break;
-	case 0x4: // "STEP_OVER"; // ejecutar palabra completa
-		vmstate=0x10;vminfo=ip+1; ;break;
-	case 0x6: // "STEP_OUT"; // salir de palabra (
-		vmstate=0x20;vminfo=RTOS;break;
-	case 0x8: // "STEP STACK"; // hasta que la pila este en el nivel original
-		vmstate=0x30;vminfo=NOS;break;
-	case 0xA: // "PLAY";
 		break;
-	case 0xC: // "RESTART"; // no implementado por ahora
+	case 1: // play state
+		if (ip==0) { vmstate=0xfe/*0x2*/;return; }
+		checkbreakpoint();
+		stepr3();
 		break;
-	case 0x10:		
-		if (ip==vminfo) {vmstate=0;return;}
+	case 2: //step
+		if (ip==0) { vmstate=0xfe/*0x2*/;return; }
+		checkbreakpoint();
+		stepr3();
+		vmstate=0;
 		break;
-	case 0x20:		
-		if (vminfo<RTOS) {vmstate=0;return;}
+	case 3: //over step
+		RS=RTOS;vmstate=4;
 		break;
-	case 0x30:		
-		if (vminfo>=NOS) {vmstate=0;return;}
+	case 4: // step state
+		if (ip==0) { vmstate=0xfe/*0x2*/;return; }
+		checkbreakpoint();
+		stepr3();
+		if (RS<=RTOS) vmstate=0;
 		break;
-		}	
+		}
 	}
-if (ip==0) { vmstate=0xfe/*0x2*/;return; }	// *** warning vmstate=0xfe<<<sobreescribe
-stepr3();
-if (ip==0) { vmstate=0xfe/*0x2*/;return; }
-checkbreakpoint();
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -1744,14 +1724,13 @@ freesrc();
 install_handler();
 ////////// RUN /////////////
 startr3(boot);
+*breakpoint=0;	// empty breakpoinr
 vmstate=0;		// start waiting
-while ((vmstate&0xff)!=0xfe) { 
-	debugr3(); 
-	}
+playr3();
 uninstall_handler();
 ////////// RUN /////////////
 
-endMshare((void*)breakpoint,512,&hm3);
+endMshare((void*)breakpoint,256,&hm3);
 endMshare((void*)vm,4096,&hm1);
 endMshare((void*)memcode,sizeof(int)*memcsize,&hm4);
 endMshare((void*)memdata,memdsize,&hm2);
