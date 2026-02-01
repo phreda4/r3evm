@@ -1193,221 +1193,6 @@ void memset32(__uint32 *dest,__uint32 val, __uint32 count)
 void memset64(__uint64 *dest,__uint64 val,__uint32 count)
 { while (count--) *dest++ = val; }
 
-/////////////////////////////////////////////////////////////
-// write error
-
-void fword(FILE *f,char *s) {
-while (*s>32) fputc(*s++,f);
-}
-
-/*
-void errorinc(FILE *f)
-{
-fprintf(f,"includes\n");
-for(int i=0;i<cntincludes;i++) {
-	fprintf(f,"%d. ",i);
-	fword(f,includes[i].nombre);
-	fprintf(f,"\n");
-	}
-for(int i=0;i<cntstacki;i++) {
-	fprintf(f,"%d. %d\n",i,stacki[i]);
-	}
-}
-
-
-void fprintcode(FILE *f,int n) {
-if ((n&0xff)<5 && n!=0) {
-	fprintf(f,r3asm[n&0xff]);fprintf(f," %x",n>>8);
-} else if (((n&0xff)>=IFL && (n&0xff)<=IFNAND) || (n&0xff)==JMPR) {	
-	fprintf(f,r3bas[n&0xff]);fprintf(f," >> %d",n>>8);
-} else if ((n&0xff)>=IFL1 && (n&0xff)<=IFNAND1) {	
-	fprintf(f,r3bas[n&0xff]);fprintf(f," %d",n>>16);fprintf(f," >> %d",n<<16>>24);
-} else if ((n&0xff)>SYSCALL10 ) {
-	fprintf(f,r3bas[(n&0xff)+1]);fprintf(f," %x",n>>8);	
-} else 
-	fprintf(f,r3bas[n&0xff]);
-fprintf(f,"\n");
-}
-
-void errorcode(FILE *f) {
-int dic=0;
-while (dicc[dic].info&0x10) dic++;
-for(int i=1;i<memc;i++) {
-	if (dicc[dic].mem==i) {
-		fprintf(f,"=== %x. ",dic);
-		fword(f,dicc[dic].nombre-1);
-		fprintf(f," %x ",dicc[dic].mem);	
-		fprintf(f,"%x ===\n",dicc[dic].info);			
-		dic++;
-		while (~(dicc[dic].info&0x10) && dicc[dic].mem==dicc[dic-1].mem) dic++;
-		while (dicc[dic].info&0x10) dic++;
-		}
-	fprintf(f,"%x:%x:",i,memcode[i]);
-	fprintcode(f,memcode[i]);
-	if ((memcode[i]&0xff)>=AFECH) fprintf(f,"***\n");
-	}
-fprintf(f,"\n");
-}
-
-void errordicc(FILE *f)
-{
-for(int i=0;i<cntdicc;i++) {
-	fprintf(f,"%x. ",i);
-	fword(f,dicc[i].nombre-1);
-	fprintf(f," %x ",dicc[i].mem);	
-	fprintf(f,"%x \n",dicc[i].info);	
-	}
-}
-*/
-//
-// same info image
-//
-void saveimagen(char *fn) {
-__int64 value;	
-FILE *file=fopen(fn,"wb");if (file==NULL) return;
-fwrite(&cntdicc,sizeof(short),1,file);
-fwrite(&dicclocal,sizeof(short),1,file);
-fwrite(&boot,sizeof(int),1,file);
-fwrite(&memc,sizeof(int),1,file);
-fwrite(&memd,sizeof(int),1,file);
-fwrite(&memdsize,sizeof(int),1,file);
-fwrite(&(int){sizeof(int)*memcsize},sizeof(int),1,file);
-value=memcode;
-fwrite(&value,sizeof(__int64),1,file);
-value=memdata;
-fwrite(&value,sizeof(__int64),1,file);
-value=&datastack[0]; // retstack=datastack+(252*8)
-fwrite(&value,sizeof(__int64),1,file);
-fwrite(&cntincludes,sizeof(short),1,file); // save in call order
-value=0;
-for(int i=0;i<cntincludes;i++) {
-	fword(file,includes[stacki[i]].nombre);
-	fwrite(&value,1,1,file);
-	}
-fclose(file);
-}
-
-
-void savedicc(char *fn) {
-FILE *file=fopen(fn,"wb");if (file==NULL) return;
-__int64 v;
-int pos=0;
-char *p;
-for (int i=0;i<cntdicc;i++) {
-	v=((__int64)dicc[i].inc<<58)|((__int64)pos<<40)|(dicc[i].mem<<8)|dicc[i].info;
-	fwrite((void*)&v,8,1,file);
-	p=dicc[i].nombre;
-	while (*p>32) {	p++;pos++;} 
-	pos++;
-	}
-
-for (int i=0;i<cntdicc;i++) {
-	p=dicc[i].nombre;
-	while (*p>32) fputc(*p++,file);
-	fputc(0,file);
-	}
-fclose(file);
-}
-
-void print_error(void* error_code) {
-int errnro;
-#ifdef _WIN32
-    DWORD code = (DWORD)(uintptr_t)error_code;
-    const char* msg;
-    switch (code) {
-        case EXCEPTION_ACCESS_VIOLATION:              msg = "MEM INV"; break;
-        case EXCEPTION_DATATYPE_MISALIGNMENT:         msg = "Desalineación de tipo de dato"; break;
-        case EXCEPTION_BREAKPOINT:                    msg = "Punto de interrupción"; break;
-        case EXCEPTION_SINGLE_STEP:                   msg = "Paso único (debug)"; break;
-        case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:         msg = "Límites de array excedidos"; break;
-        case EXCEPTION_FLT_DENORMAL_OPERAND:          msg = "Operando flotante denormal"; break;
-        case EXCEPTION_FLT_DIVIDE_BY_ZERO:            msg = "División flotante por cero"; break;
-        case EXCEPTION_FLT_INEXACT_RESULT:            msg = "Resultado flotante inexacto"; break;
-        case EXCEPTION_FLT_INVALID_OPERATION:         msg = "Operación flotante inválida"; break;
-        case EXCEPTION_FLT_OVERFLOW:                  msg = "Desbordamiento flotante"; break;
-        case EXCEPTION_FLT_STACK_CHECK:               msg = "Verificación de stack flotante"; break;
-        case EXCEPTION_FLT_UNDERFLOW:                 msg = "Subdesbordamiento flotante"; break;
-        case EXCEPTION_INT_DIVIDE_BY_ZERO:            msg = "/0"; break;
-        case EXCEPTION_INT_OVERFLOW:                  msg = "Desbordamiento entero"; break;
-        case EXCEPTION_PRIV_INSTRUCTION:              msg = "Instrucción privilegiada"; break;
-        case EXCEPTION_IN_PAGE_ERROR:                 msg = "Error en página (memoria no residente)"; break;
-        case EXCEPTION_ILLEGAL_INSTRUCTION:           msg = "Instrucción ilegal"; break;
-        case EXCEPTION_NONCONTINUABLE_EXCEPTION:      msg = "Excepción no continuable"; break;
-        case EXCEPTION_STACK_OVERFLOW:                msg = "Desbordamiento de stack"; break;
-        case EXCEPTION_GUARD_PAGE:                    msg = "Página guard (protección memoria)"; break;
-        case CONTROL_C_EXIT:                          msg = "Salida por Ctrl+C"; break;
-        case STATUS_FLOAT_MULTIPLE_FAULTS:            msg = "Múltiples fallos flotantes"; break;
-        case STATUS_FLOAT_MULTIPLE_TRAPS:             msg = "Múltiples trampas flotantes"; break;
-        default:                                      msg = "Excepción desconocida"; break;
-    }
-  	errnro=code;
-#else
-    int code= (int)(uintptr_t)error_code;
-    const char* msg;
-    switch (code) {
-        case SIGABRT: msg = "Señal de abort (ej. assert o abort())"; break;
-        case SIGBUS:  msg = "Error de bus (acceso memoria no alineado o inválido)"; break;
-        case SIGFPE:  msg = "Error de punto flotante (div/0, overflow, etc.)"; break;
-        case SIGILL:  msg = "Instrucción ilegal (opcode inválido)"; break;
-        case SIGSEGV: msg = "Violación de segmento (acceso a ptr NULL o inválido)"; break;
-        case SIGPIPE: msg = "Broken pipe (escritura a canal cerrado)"; break;
-        case SIGTERM: msg = "Señal de terminación (kill -TERM)"; break;
-        // Opcional: case SIGINT: msg = "Interrupción (Ctrl+C)"; break;
-        default:      msg = "Señal desconocida"; break;
-    }
-    errnro=code;
-#endif
-vmstate=(errnro<<8)|0; //error->stop
-}
-
-/////////////////////////////////////////////////////////////
-#ifdef WINDOWS
-
-LONG WINAPI error_filter(PEXCEPTION_POINTERS pExInfo) {
-    DWORD code = pExInfo->ExceptionRecord->ExceptionCode;
-    print_error((void*)(uintptr_t)code);  // Casteo para unificar
-    return EXCEPTION_EXECUTE_HANDLER;  // Re-lanza después de imprimir
-}
-
-void install_handler() { 
-    SetUnhandledExceptionFilter(error_filter);
-}
-
-void uninstall_handler() {
-    SetUnhandledExceptionFilter(NULL);
-}
-
-#else  // Linux/Unix
-  
-void error_handler(int sig) {
-    print_error((void*)(uintptr_t)sig);  // Casteo para unificar
-    signal(sig, SIG_DFL);  // Restaura por defecto
-    raise(sig);  // Re-lanza
-}
-
-void install_handler() {
-    signal(SIGABRT, error_handler);  // Abort (ej. assert fallido)
-    signal(SIGBUS, error_handler);   // Error de bus (acceso memoria inválido)
-    signal(SIGFPE, error_handler);   // Error punto flotante (div/0, overflow)
-    signal(SIGILL, error_handler);   // Instrucción ilegal
-    signal(SIGSEGV, error_handler);  // Violación segmento (null ptr, etc.)
-    signal(SIGPIPE, error_handler);  // Broken pipe (escritura a socket cerrado)
-//        signal(SIGTERM, error_handler);  // Terminación (kill)
-// Opcional: signal(SIGINT, error_handler);  // Ctrl+C (descomenta si quieres)
-}
-
-void uninstall_handler() {
-    signal(SIGABRT, SIG_DFL);
-    signal(SIGBUS, SIG_DFL);
-    signal(SIGFPE, SIG_DFL);
-    signal(SIGILL, SIG_DFL);
-    signal(SIGSEGV, SIG_DFL);
-    signal(SIGPIPE, SIG_DFL);
-//        signal(SIGTERM, SIG_DFL);
-// Opcional: signal(SIGINT, SIG_DFL);
-}
-
-#endif
 
 /////////////////////////////////////////////////////////////////////
 // run code, from adress "boot"
@@ -1786,9 +1571,113 @@ switch(op&0xff){
 // 0 - wait (
 // 1 - run
 // 0xfe - end
-int cntbreakpoint;
 int *breakpoint;
 int *breakpointpcursor;
+
+/////////////////////////////////////////////////////////////
+// write error
+
+void fword(FILE *f,char *s) {
+while (*s>32) fputc(*s++,f);
+}
+
+//
+// same info image
+//
+void saveimagen(char *fn) {
+__int64 value;	
+FILE *file=fopen(fn,"wb");if (file==NULL) return;
+fwrite(&cntdicc,sizeof(short),1,file);
+fwrite(&dicclocal,sizeof(short),1,file);
+fwrite(&boot,sizeof(int),1,file);
+fwrite(&memc,sizeof(int),1,file);
+fwrite(&memd,sizeof(int),1,file);
+fwrite(&memdsize,sizeof(int),1,file);
+fwrite(&(int){sizeof(int)*memcsize},sizeof(int),1,file);
+value=memcode;
+fwrite(&value,sizeof(__int64),1,file);
+value=memdata;
+fwrite(&value,sizeof(__int64),1,file);
+value=&datastack[0]; // retstack=datastack+(252*8)
+fwrite(&value,sizeof(__int64),1,file);
+fwrite(&cntincludes,sizeof(short),1,file); // save in call order
+value=0;
+for(int i=0;i<cntincludes;i++) {
+	fword(file,includes[stacki[i]].nombre);
+	fwrite(&value,1,1,file);
+	}
+fclose(file);
+}
+
+
+void savedicc(char *fn) {
+FILE *file=fopen(fn,"wb");if (file==NULL) return;
+__int64 v;
+int pos=0;
+char *p;
+for (int i=0;i<cntdicc;i++) {
+	v=((__int64)dicc[i].inc<<58)|((__int64)pos<<40)|(dicc[i].mem<<8)|dicc[i].info;
+	fwrite((void*)&v,8,1,file);
+	p=dicc[i].nombre;
+	while (*p>32) {	p++;pos++;} 
+	pos++;
+	}
+
+for (int i=0;i<cntdicc;i++) {
+	p=dicc[i].nombre;
+	while (*p>32) fputc(*p++,file);
+	fputc(0,file);
+	}
+fclose(file);
+}
+
+/////////////////////////////////////////////////////////////
+#ifdef WINDOWS
+
+LONG WINAPI error_filter(PEXCEPTION_POINTERS pExInfo) {
+    DWORD code = pExInfo->ExceptionRecord->ExceptionCode;
+	vmstate=(code<<8)|0; //error->stop
+	while ((vmstate&0xff)!=0xfe) { Sleep(1000); } // espera senial
+    return EXCEPTION_EXECUTE_HANDLER;  
+}
+
+void install_handler() { SetUnhandledExceptionFilter(error_filter); }
+void uninstall_handler() { SetUnhandledExceptionFilter(NULL); }
+
+#else  // Linux/Unix
+  
+void error_handler(int sig) {
+    int code= (int)(uintptr_t)sig;
+    vmstate=(code<<8)|0; //error->stop
+    while ((vmstate&0xff)!=0xfe) { Sleep(1000); } // espera senial
+    signal(sig, SIG_DFL);  // Restaura por defecto
+    raise(sig);  // Re-lanza
+}
+
+void install_handler() {
+    signal(SIGABRT, error_handler);  // Abort (ej. assert fallido)
+    signal(SIGBUS, error_handler);   // Error de bus (acceso memoria inválido)
+    signal(SIGFPE, error_handler);   // Error punto flotante (div/0, overflow)
+    signal(SIGILL, error_handler);   // Instrucción ilegal
+    signal(SIGSEGV, error_handler);  // Violación segmento (null ptr, etc.)
+    signal(SIGPIPE, error_handler);  // Broken pipe (escritura a socket cerrado)
+//        signal(SIGTERM, error_handler);  // Terminación (kill)
+// Opcional: signal(SIGINT, error_handler);  // Ctrl+C (descomenta si quieres)
+}
+
+void uninstall_handler() {
+    signal(SIGABRT, SIG_DFL);
+    signal(SIGBUS, SIG_DFL);
+    signal(SIGFPE, SIG_DFL);
+    signal(SIGILL, SIG_DFL);
+    signal(SIGSEGV, SIG_DFL);
+    signal(SIGPIPE, SIG_DFL);
+//        signal(SIGTERM, SIG_DFL);
+// Opcional: signal(SIGINT, SIG_DFL);
+}
+
+#endif
+
 
 void checkbreakpoint(void) {
 // if bp
@@ -1852,12 +1741,14 @@ saveimagen("mem/r3code.mem");
 savedicc("mem/r3dicc.mem");
 
 freesrc();
+install_handler();
 ////////// RUN /////////////
 startr3(boot);
 vmstate=0;		// start waiting
 while ((vmstate&0xff)!=0xfe) { 
-	debugr3();
+	debugr3(); 
 	}
+uninstall_handler();
 ////////// RUN /////////////
 
 endMshare((void*)breakpoint,512,&hm3);
