@@ -2,22 +2,20 @@
 | PHREDA 2025
 ^r3/util/tui.r3
 ^r3/util/tuiedit.r3
-^r3/lib/trace.r3
+|^r3/lib/trace.r3
 
 ^r3/d4/r3token.r3
 
 #filename * 1024
 
-#mode 0
-#screenstate 
-| 0 - editor only
-| $1 - msg error
-| $2 - debug
-| $100 - list
+#msgstate 0
+#msg * 1024		| lst line msg
 
-#msg * 1024
 #errline
 #errword * 64
+
+#vlist 
+#msglist
 
 #vwords 0 0
 #vincs 0 0
@@ -25,6 +23,31 @@
 #lwords
 #lincs
 
+|--------- botton line --------
+:posmsg
+	fx fy .at fw .nsp ;
+	
+:msgvoid
+	posmsg
+	" ^[7m F2 ^[27mHelp ^[7m F3 ^[27mSearch ^[7m F5 ^[27mRun ^[7m F6 ^[27mDebug  ^[7m F7 ^[27mPlain ^[7m F8 ^[27mCompile"  
+	.printe 
+	;
+	
+:msgok
+	15 .fc 2 .bc posmsg
+	'msg .write ;
+
+:msgerr
+	15 .fc 1 .bc posmsg
+	" " .write 'errword .write " :" .write
+	'msg .write errline " in line %d" .print ;
+
+#statusline 'msgvoid 'msgok 'msgerr
+
+:banner
+	.reset .cls "[01R[023[03f[04o[05r[06t[07h" .awrite .cr .cr .cr .cr .flush ;
+
+|----
 :cntlines
 	1 fuente 
 	( lerror <?
@@ -34,12 +57,12 @@
 :coderror | error --
 	'msg strcpy
 	lerror "%w" sprint 'errword strcpy
-	cntlines
-	lerror 'fuente> !
-	1 'screenstate !
+	cntlines 
+	lerror tuiecursor!
+	2 'msgstate !
 	;
 
-|-------	
+|----
 :makelistwordsfull
 	here 'lwords !
 	0 ( cntdef <?
@@ -90,78 +113,99 @@
 :codeok
 	mark
 	'msg 'here !
-	cnttok cntdef cntinc "inc:%d words:%d tokens:%d" ,print
+	cnttok cntdef cntinc "OK inc:%d words:%d tokens:%d" ,print
 	,eol
 	empty
 	
-	4 'screenstate !
+	1 'msgstate !
 	makelistwords
 	makelistinc
 	;
-	
-|---  F1 RUN
+
 :checkcode
-	0 'screenstate !
+	0 'msgstate !
 	fuente 'filename r3loadmem
-	
 	error 1? ( coderror ; ) drop 
 	codeok 
-	1 'mode !
 	;
 	
-|--- F2 DEBUG
-:debugcode
-	0 'screenstate !
-	fuente 'filename r3loadmem
-	
-	error 1? ( coderror ; ) drop
-	codeok
-	1 'mode !
-	;
 	
 |--- F1 RUN in CHECK	
+
 :runcheck
-	.cls 
-	"[01R[023[03f[04o[05r[06t[07h" .awrite .cr .cr .cr .cr .flush
 	here dup "mem/errorm.mem" load
 	over =? ( 2drop ; ) 
 	0 swap c!
+	banner
 	.cr .bred .white " * ERROR * " .write .cr
 	.reset .write .cr
 	.bblue .white " Any key to continue... " .write .cr
-	.flush 
 	waitkey ;	
 	
 :runcode
+	banner
+	TuSaveCode
 	"mem/errorm.mem" delete
 	'filename
 |WIN| 	"cmd /c r3 ""%s"" 2>mem/errorm.mem"
 |LIN| 	"./r3lin ""%s"" 2>mem/errorm.mem"
 	sprint sys | run
 	.reterm .alsb .flush
-	runcheck
-	tuR! ;
+	runcheck ;
+
+:debugcode
+	checkcode
+	TuSaveCode
+|WIN| 	"r3 r3/d4/r3debug.r3" 
+|LIN| 	"./r3lin r3/d4/r3debug.r3"
+	sys | run
+	.reterm .alsb .flush 
+	0 'msgstate ! ;
 	
+:fileplain
+	TuSaveCode
+	.masb .flush
+|WIN| "r3 r3/editor/r3plain.r3"
+	sys
+	.reterm .alsb .flush 
+	0 'msgstate ! ;
+
+:filecompile
+	TuSaveCode
+
+	.masb .flush
+|WIN| "r3 r3/system/r3compiler.r3"
+	sys
+	.reterm .alsb .flush 
+	0 'msgstate ! ;
+
 |---- screen
+:setcursoride
+	vwords uiNindx str$>nro nip
+	nro>dic @
+	|40 >> src + "%l" sprint 'msg strcpy 
+	40 >>> fuente + |1- | :#
+	tuiecursor!	;
+	
 :scrmapa
 	.reset
-	30 flxE 
-	flxpush
+	cols 2/ flxE 
 	
-	8 flxN
-	tuWina $1 "Includes" .wtitle 1 1 flpad 
-	'vincs lincs tuList
-	
-	flxRest
+|	flxpush
+|	8 flxN
+|	tuWina $1 "Includes" .wtitle 1 1 flpad 
+|	'vincs lincs tuList
+|	flxRest
 	tuWina $1 "Dicc" .wtitle 1 1 flpad 
 	
 	'xwrite.word xwrite!
 	'vwords lwords tuList | 'var list --
+|	tuX? 1? ( setcursoride ) drop
+	setcursoride
 	xwrite.reset
-	flxpop
+|	flxpop
 	;
 	
-
 :scrmsg	
 	.reset
 	8 flxS tuWina $1 "Imm" .wtitle |242 .bc
@@ -169,108 +213,103 @@
 	'msg .print
 	;
 
-:debugcode
-	.reset .cls 
-	1 flxN
 	
-	2 .bc 15 .fc
-	fx fy .at fw .nsp fx .col
-	" R3debug [" .write
-	'filename .write 
-	"] " .write
-	|tudebug .write
+|--- F2 HELP
+#lasthash -1
+:v*********************
+	1 flxS 
+	fx fy .at fw .nsp
+	" |F1| Run |F2| Debug |F3| Check |F4| Profile |F5| Compile"
+	|" ^[7m F2 ^[27mHelp ^[7m F3 ^[27mSearch ^[7m F5 ^[27mRun ^[7m F6 ^[27mDebug " ||C|lon |N|ew " 
+	.printe 
+	;
 
-	1 flxS
-	fx fy .at 
-	" |ESC| Exit |F1| Run |F2| Debug |F3| Check |F4| Profile |F5| Compile"
-	.write
-
-	scrmsg
+:helpmain
+	.reset .home 
+	4 .bc 7 .fc
+	1 flxN 
+	fx fy .at fw .nsp
+	" R3edit [" .write 'filename .write "] " .write tudebug .write
+	
+	1 flxS 
+	msgok
+	
 	scrmapa
 
 	|-----------
-	.reset
-	flxRest tuWina 
-	$4 'filename .wtitle
-	$23 mark tudebug ,s ,eol empty here .wtitle
-	1 1 flpad 
-	tuReadCode | 
-	
+	flxRest
+	tuReadCode
+	tuEditShowCursor .ovec tuC! 
+
 	uiKey
-	[f1] =? ( runcode ) |0 'mode ! ) |checkcode ) |show256 )
-|	[f2] =? ( debugcode ) |show256 )
-	
-|	[f6] =? ( screenstate 1 xor 'screenstate ! )
-|	[f7] =? ( screenstate 2 xor 'screenstate ! )
+	[esc] =? ( exit )
 	drop
 	;
+	
+:helpcode
+	|editfasthash lasthash =? ( moreinfo ; ) 'lasthash !
+	0 'msgstate !
+	fuente 'filename r3loadmem
+	error 1? ( coderror ; ) drop
+	codeok
+	'helpmain onTui
+	0 'msgstate !
+	;
 
-
-:screrr
-	.reset  
-	5 flxS .wfill
-	tuWina $1 " Error " .wtitle
-	1 1 flpad 	
-	fx fy .at 
-	'msg .write flcr
-	15 .fc 1 .bc 'errword .write flcr
-	.reset
-	errline "in line %d" .print
+	
+:maninfo
 	;
 	
-:editcode
-	.reset .home |.cls 
-	1 flxN
-	|4 .bc 7 .fc
-	fx fy .at fw .nsp fx .col
-	" R3edit [" .write
-	'filename .write 
-	"] " .write
-	|tudebug .write
-	
-	1 flxS
-	fx fy .at 
-	" |ESC| Exit |F1| Check |F2| Debug |F3| Check |F4| Profile |F5| Compile"
-	.write
 
-	|-----------
-	screenstate	
-	$1 and? ( screrr )
+:mainedit
+	.reset .home 4 .bc 7 .fc
+	1 flxN 
+	fx fy .at fw .nsp
+	" R3edit [" .write 'filename .write "] " .write tudebug .write
+	
+	1 flxS 
+	msgstate 
+	dup $f and 3 << 'statusline + @ ex
+|	$10 and? ( wordinfo )
+|	$20 and? ( maninfo )
 	drop
 
 	|-----------
-	.reset
-	flxRest tuWina 
-	$4 'filename .wtitle
-	$23 mark tudebug ,s ,eol empty here .wtitle
-	1 1 flpad 
+	flxRest
 	tuEditCode
 	
-	uiKey
-	[f1] =? ( checkcode ) |show256 )
-	[f2] =? ( debugcode ) |show256 )
+|	msgstate 
+|	$10 and? ( tuEditShowCursor .ovec tuC! )
+|	drop
 	
-|	[f6] =? ( screenstate 1 xor 'screenstate ! )
-|	[f7] =? ( screenstate 2 xor 'screenstate ! )
+	uiKey
+| f1 no usada	
+	[f2] =? ( helpcode )
+	|[f3] =? ( search )
+	|[f4] =? ( )
+	[f5] =? ( runcode )
+	[f6] =? ( debugcode ) | a debug /profile/compile
+	
+	[f7] =? ( fileplain )
+	[f8] =? ( filecompile )
+|[f8] =? ( siguiente??)
+|[f9] =? ( breakpoint )
+	
 	drop
 	;
 	
-#listmode 'editcode 'debugcode	
-:main
-	mode 3 << 'listmode + @ ex
-	;
-	
+
 |-----------------------------------
 : 
-	.alsb 
+	.alsb
 	'filename "mem/menu.mem" load	
 	|"r3/test/testasm.r3" 'filename strcpy
 	
 	'filename TuLoadCode
 	|TuNewCode
-	
 	mark
+	'mainedit onTui 
+	TuSaveCode 
 	
-	'main onTui 
 	.masb .free 
 ;

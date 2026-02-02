@@ -1,6 +1,6 @@
 | console words linux - Enhanced and Consistent
 | PHREDA 2022 - Updated 2025
-
+^r3/lib/posix/posix.r3
 ^r3/lib/mem.r3
 ^r3/lib/parse.r3
 
@@ -37,6 +37,10 @@
     0 0 'stermc libc-tcsetattr 
 	0 2 flgs libc-fcntl drop 
 	;
+
+|::reset-terminal-mode
+|    stermp 'sterm 12 + w!
+|    0 0 'sterm libc-tcsetattr  ;
 
 |------- Console Information -------
 ##rows ##cols

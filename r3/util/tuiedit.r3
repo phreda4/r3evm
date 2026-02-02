@@ -2,6 +2,7 @@
 | PHREDA 2025
 
 ^r3/util/tui.r3
+^r3/lib/clipboard.r3
 |^r3/lib/trace.r3
 
 #hashfile 
@@ -18,12 +19,9 @@
 #scrini>	| comienzo de pantalla
 #scrend>	| fin de pantalla
 
-##fuente		| fuente editable
-##fuente> 	| cursor
+##fuente	| fuente editable
+##fuente>	| cursor
 ##$fuente	| fin de texto
-
-#clipboard	|'clipboard
-#clipboard>
 
 #undobuffer |'undobuffer
 #undobuffer>
@@ -35,11 +33,11 @@
 	inisel =? ( 18 .bc ; ) 
 	finsel =? ( fuente> =? ( 233 .bc ; ) 235 .bc ) ;
 
-#1sel #2sel
+#1sel 
 
 :sela	| add to select 
 	inisel 0? ( fuente> '1sel ! ) drop
-	fuente> dup '2sel !
+	fuente>
 	1sel over <? ( swap ) 'finsel ! 'inisel ! ;
 
 :sele | empty select
@@ -129,6 +127,17 @@
 	scrini> <? ( setpantafin ; )
 	scrend> >=? ( setpantaini ; )
 	drop ;
+
+::tuiecursor! | cursor --
+	'fuente> ! fixcur cursorpos ;
+	
+::tuipos! | pos --
+	dup 'fuente> !
+	fh 2/ ( 1? swap 2 - <<13 1+ swap 1- ) drop
+	fuente <? ( fuente nip ) 
+	'scrini> !
+	cursorpos
+	;
 	
 |-----------
 :karriba
@@ -172,6 +181,9 @@
 :simplehash | adr -- hash
 	0 swap ( c@+ 1? rot dup 5 << + + swap ) 2drop ;
 	
+::editfasthash | -- fh
+	0 fuente ( $fuente <? @+ rot 2/ xor swap ) drop ;
+			
 :loadtxt | -- ; cargar texto
 	fuente 'filename 
 	load 0 swap c!
@@ -214,8 +226,6 @@
 |	drop
 	46 .fcc ;
 	
-:setcursor | y c adr
-	focoe 1? ( .savec ) drop ;
 	
 :fillend | nlin cnt adr -- nlin adr 	
 	|nip .eline ;
@@ -234,12 +244,16 @@
 	$22 =? ( .emit 0 'modoline ! codecolor ; ) | ""
 	9 =? ( tabchar ) .emit ;
 
+:linenormal
+	235 .bc 240 .fcc 1+ .d 4 .r. .write .sp ;
+	
 :iniline | adr lin -- adr lin 
 |	.reset |.rever
 	fx over fy + .at
-	dup ylinea +  
+	dup ylinea + 
+	focoe 0? ( drop linenormal ; ) drop
 	ycursor =? ( 233 .bc 7 .fcc 1+ .d 4 .r. .write .sp ; ) |">" .write ; )
-	235 .bc 240 .fcc 1+ .d 4 .r. .write .sp ;
+	linenormal ;
 	
 :drawline | nlin adr -- nlin adr
 	inselect
@@ -247,9 +261,8 @@
 	codecolor
 	fw 5 - 
 	( 1? 1- swap 
-		fuente> =? ( setcursor )
 		atselect
-		c@+ 0? ( drop fuente> =? ( setcursor ) nip 1- ; ) 
+		c@+ 0? ( drop fillend 1- ; ) 
 		13 =? ( drop fillend ; )
 		cemit
 		swap ) drop
@@ -262,9 +275,8 @@
 	inselect
 	fw 5 - 
 	( 1? 1- swap 
-		fuente> =? ( setcursor )
 		atselect
-		c@+ 0? ( drop fuente> =? ( setcursor ) nip 1- ; ) 
+		c@+ 0? ( drop fillend 1- ; ) 
 		13 =? ( drop fillend ; )
 		9 =? ( tabchar ) .emit 
 		swap ) drop
@@ -272,27 +284,27 @@
 		0? ( drop 1- ; ) | end of text
 		drop ) drop ;
 
-|--------------------	
-:lastline
-	dup 1- c@ 13 =? ( drop swap 1+ iniline setcursor fw 5 - .nsp drop ; ) drop
-	setcursor nip ;
+|--------------------
+:emline | adr lin -- adr lin 
+	fx over fy + .at
+	"~" .write fw 1- .nsp ;
+	
+:emptylines
+	235 .bc 240 .fcc
+	swap ( 1+ fh <? emline ) drop ;
 	
 :drawlines | ini -- end
 	0 ( fh <?
 		iniline swap 
 		drawline
-		$fuente =? ( | line adr
-			fuente> =? ( lastline ; ) | cursor in last position
-			nip ; ) | not draw more
+		$fuente =? ( emptylines ; )
 		swap 1+ ) drop ;
 
 :drawlinesmono | ini -- end
 	0 ( fh <?
 		iniline swap 
 		drawlinemono
-		$fuente =? ( | line adr
-			fuente> =? ( lastline ; ) | cursor in last position
-			nip ; ) | not draw more
+		$fuente =? ( emptylines ; ) | not draw more
 		swap 1+ ) drop ;
 		
 |---- mouse & keys
@@ -306,7 +318,7 @@
 	swap fx - 5 - clamp0 swap | 5- line numbers
 	( swap 1? 1- swap 
 		c@+ 
-		9 =? ( rot 2 - clamp0 -rot )
+		9 =? ( rot 1- clamp0 -rot )
 		13 =? ( 0 nip )
 		0? ( drop nip 1- ; ) 
 		drop ) drop ;
@@ -349,8 +361,32 @@
 	tuiw 
 	2 =? ( dns )
 	3 =? ( mos )
-	6 =? ( ups clickMouse 'fuente> ! )
+	6 =? ( ups clickMouse 'fuente> ! cursorpos )
 	drop ;
+
+	
+:txtcopy
+	inisel 0? ( drop ; )
+	finsel over - 1+
+	copyclipboard | 'mem cnt -- 	
+	'inisel here strcpy
+	;
+
+:txtcut
+	txtcopy
+	|remsel
+	;
+
+:txtpaste
+	here pasteclipboard | 'mem -- 	
+	here count 0? ( 2drop ; ) 
+	fuente> dup pick2 + swap | from count to+ 
+	$fuente over - 1+ cmove>	| clip cnt
+	fuente> -rot | f clip cnt
+	dup '$fuente +!
+	cmove
+	here count nip 'fuente> +!
+	;
 	
 :chmode
 	modo 'lins =? ( drop 'lover 'modo ! .ovec ; )
@@ -389,34 +425,56 @@
 	[SHIFT+PGDN] =? ( sela kpgdn sela )
 	[SHIFT+HOME] =? ( sela khome sela )
 	[SHIFT+END] =? ( sela kend sela )
+	$18 =? ( txtcut ) | ctcrl-x
+	$3 =? ( txtcopy ) | ctrl-c
+	$16 =? ( txtpaste ) | ctrl-v
+
 	drop 
 	fixcur 
 	cursorpos ;
-	
+
+
 |---- MAIN words
+::tuEditShowCursor
+	fx xcursor + 5 + fy ycursor + ylinea - .at .savec ;
+	
 ::tuEditCode 
 	EditMouse
 	EditFoco
-	fw 8 <? ( drop ; ) drop
-	scrini> drawlines 'scrend> ! ;
+|	fw 8 <? ( drop ; ) drop
+	scrini> drawlines 'scrend> ! 
+	focoe 0? ( drop ; ) drop
+	tuEditShowCursor
+	;
 
 ::tuReadCode
-	fw 8 <? ( drop ; ) drop
+|	fw 8 <? ( drop ; ) drop
 	scrini> drawlines 'scrend> ! ;
-
+	
 ::tuEditCodeMono
 	EditMouse
 	EditFoco
-	fw 8 <? ( drop ; ) drop
-	scrini> drawlinesmono 'scrend> ! ;
+|	fw 8 <? ( drop ; ) drop
+	scrini> drawlinesmono 'scrend> ! 
+	focoe 0? ( drop ; ) drop
+	tuEditShowCursor
+	;
 
 ::tuReadCodeMono
-	fw 8 <? ( drop ; ) drop
+|	fw 8 <? ( drop ; ) drop
 	scrini> drawlinesmono 'scrend> ! ;
-	
 	
 ::tudebug
 	ycursor 1+ xcursor 1+ " %d:%d " sprint ;
+	
+::TuLoadMem | "" --
+	fuente strcpy
+	fuente only13 1- '$fuente ! |-- queda solo cr al fin de linea
+	fuente dup 'scrini> ! 'fuente> ! ;
+
+::TuLoadMemC | "" -- | already sane
+	fuente strcpyl 1- '$fuente !
+	fuente dup 'scrini> ! 'fuente> ! ;
 	
 ::TuLoadCode | "" --
 	'filename strcpy
@@ -429,6 +487,21 @@
 	0 'hashfile !
 	;
 
+::TuSaveCode 
+	savetxt ;
+
+|----
+::tokenCursor | 'mark --
+	dup $fff and 
+	ylinea <? ( 2drop ; ) 
+	ylinea -
+	fh >? ( 2drop ; ) 
+	over 12 >> $fff and fx + 5 + 
+	swap fy + .at
+	dup 24 >> $ffff and fuente + 
+	swap 40 >> $ff and .type
+	;
+
 |---------------	
 :
 	here
@@ -436,9 +509,6 @@
 	dup 'fuente> !
 	dup '$fuente !
 	$3ffff +			| 256kb texto
-	dup 'clipboard !
-	dup 'clipboard> !
-	$fff +				| 4KB
 	dup 'undobuffer !
 	dup 'undobuffer> !
 	$fff +				| 4kb

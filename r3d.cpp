@@ -1254,7 +1254,7 @@ switch(op&0xff){
 	case DIVMOD:op=*NOS;*NOS=op/TOS;TOS=op%TOS;return;//DIVMOD
 	case MULDIV:TOS=((__int128)(*(NOS-1))*(*NOS)/TOS);NOS-=2;return;//MULDIV
 	case MULSHR:TOS=((__int128)(*(NOS-1)*(*NOS))>>TOS);NOS-=2;return;//MULSHR
-	case CDIVSH:TOS=(__int128)((*(NOS-1)<<TOS)/(*NOS));NOS-=2;return;//CDIVSH
+	case CDIVSH:TOS=((__int128)(*(NOS-1)<<TOS)/(*NOS));NOS-=2;return;//CDIVSH
 	case NOT:TOS=~TOS;return;						//NOT
 	case NEG:TOS=-TOS;return;				//NEG
 	case ABS:if(TOS<0)TOS=-TOS;return;		//ABS
@@ -1442,7 +1442,7 @@ switch(op&0xff){
 	case DIVMOD1:op>>=8;NOS++;*NOS=TOS/op;TOS=TOS%op;return;//DIVMOD
 	case MULDIV1:op>>=8;TOS=(__int128)(*NOS)*TOS/op;NOS--;return;//MULDIV
 	case MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;return;//MULSHR
-	case CDIVSH1:op>>=8;TOS=(__int128)((*NOS)<<op)/TOS;NOS--;return;//CDIVSH
+	case CDIVSH1:op>>=8;TOS=((__int128)(*NOS)<<op)/TOS;NOS--;return;//CDIVSH
 
 	case MULSHR2:op>>=8;TOS=((__int128)TOS*op)>>16;return;//MULSHR .. 234 16 *>>
 	case CDIVSH2:op>>=8;TOS=(__int128)(TOS<<16)/op;return;//CDIVSH ... 23 16 <</
@@ -1573,7 +1573,8 @@ fwrite(&boot,sizeof(int),1,file);
 fwrite(&memc,sizeof(int),1,file);
 fwrite(&memd,sizeof(int),1,file);
 fwrite(&memdsize,sizeof(int),1,file);
-fwrite(&(int){sizeof(int)*memcsize},sizeof(int),1,file);
+value=sizeof(int)*memcsize;
+fwrite(&value,sizeof(int),1,file);
 value=memcode;
 fwrite(&value,sizeof(__int64),1,file);
 value=memdata;
@@ -1629,7 +1630,7 @@ void uninstall_handler() { SetUnhandledExceptionFilter(NULL); }
 void error_handler(int sig) {
     int code= (int)(uintptr_t)sig;
     vmstate=(code<<8)|0; //error->stop
-    while ((vmstate&0xff)!=0xfe) { Sleep(1000); } // espera senial
+    while ((vmstate&0xff)!=0xfe) { usleep(100000); } // espera senial
     signal(sig, SIG_DFL);  // Restaura por defecto
     raise(sig);  // Re-lanza
 }

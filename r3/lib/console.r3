@@ -26,7 +26,7 @@
 ::[SHIFT+PGUP] $7e323b355b1b ; ::[SHIFT+PGDN] $7e323b365b1b ;
 ::[SHIFT+HOME] $48323b315b1b ; ::[SHIFT+END] $46323b315b1b ;
 ::[F1] $504f1b ; ::[F2] $514f1b ; ::[F3] $524f1b ; ::[F4] $534f1b ;
-::[F5] $7E34315B1B ; ::[F6]	$7E37315B1B ; ::[F7] $7E38315B1B ; ::[F8] $7E39315B1B ;
+::[F5] $7E35315B1B ; ::[F6]	$7E37315B1B ; ::[F7] $7E38315B1B ; ::[F8] $7E39315B1B ;
 ::[F9] $7E30325B1B ; ::[F10] $7E31325B1B ; ::[F11] $7E33325B1B ; ::[F12] $7E34325B1B ;
 
 | [CTRL]+A : 01 ..
@@ -50,21 +50,27 @@
     'outbuf> +! ;
 ::.emit | char --
 	outbuf> endbuf =? ( .flush outbuf nip ) c!+ 'outbuf> ! ;
+:.wemit | char2char1 --
+	outbuf> endbuf =? ( .flush outbuf nip ) w!+ 'outbuf> ! ;
 
-::.cr 10 .emit 13 .emit ;
+::.cr $d0a .wemit ; |10 .emit 13 .emit ;
 ::.sp 32 .emit ;
-::.nsp | n -- ;..
-	32 swap 
+|::.nsp | n -- ;..
+|	32 swap 
 ::.nch | char n -- ; WARNIG not multibyte
 	endbuf outbuf> -  >? ( .flush )
 	outbuf> rot pick2 cfill | dvc
 	'outbuf> +! ;
 
 ::.write count .type ;
-::.print sprintc .type ;
-::.println sprintlnc .type .flush ;
 
-::.^[ $1b .emit $5b .emit ;
+::.print 
+	count endbuf outbuf> - >? ( .flush )  drop | %d!!
+	mark outbuf> 'here ! ,print here 'outbuf> ! empty ;
+
+::.println .print .cr .flush ;
+
+::.^[ $5b1b .wemit ; |$1b .emit $5b .emit ;
 ::.[w .^[ .write ;
 ::.[p .^[ .print ;
 
@@ -85,6 +91,7 @@
 ::.ealine "2K" .[w ; | borrar linea actual
 ::.escreen "J" .[w ; | erase from cursor to end of screen
 ::.escreenup "1J" .[w ; | erase from cursor to beginning
+::.nsp "%dX" .[p ; | n --
 
 ::.showc "?25h" .[w ;
 ::.hidec "?25l" .[w ;
@@ -94,10 +101,10 @@
 ::.restorec "u" .[w ; | restore cursor position
 
 |------- Cursor Shapes -------
-::.ovec "0q" .[w ; | default cursor
-::.insc "5q" .[w ; | blinking bar
-::.blockc "2q" .[w ; | steady block
-::.underc "4q" .[w ; | steady underscore
+::.ovec "1 q" .[w ; | default cursor
+::.insc "5 q" .[w ; | blinking bar
+::.blockc "2 q" .[w ; | steady block
+::.underc "4 q" .[w ; | steady underscore
 
 |------- Screen Buffer Control -------
 ::.alsb "?1049h" .[w .flush ; | alternate screen buffer
@@ -173,9 +180,38 @@
 ::waitkey | -- | wait any key
     ( getch 0? drop 10 ms ) drop ;
 	
+|---------- compati
+##pad * 128
+	
+:.char
+	0? ( drop ; )
+	8 =? ( swap 
+		1 - 'pad <? ( 2drop 'pad ; )
+		swap .emit "1P" .[w ; )
+	dup .emit
+	swap c!+ ;
+	
+::.input | --
+	.showc .ovec
+	'pad 
+	( getch [enter] <>? [esc] <>? .char ) drop
+	0 swap c! .cr .flush ;
+	
+:emite | char --
+	$5e =? ( drop 27 .emit ; ) | ^=escape
+	.emit ;
+	
+::.printe | "" --
+	sprint
+	( c@+ 1? emite ) 2drop ;
+
+::strcpybuf | 'mem --
+	0 .emit
+	outbuf swap strcpy .cl ;
+	
 : |||||||||||||||||||||||||||||
 	here 
 	dup 'outbuf ! dup 'outbuf> !
-	$fff +	| 8kb flush buffer
+	$1fff +	| 16kb flush buffer
 	dup 'endbuf ! 'here !
 	;

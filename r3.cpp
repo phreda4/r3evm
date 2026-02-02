@@ -8,7 +8,7 @@
 //#define DEBUG
 //#define LINUX
 //#define RPI   // Tested on a Raspberry PI 4
-#define NOx86 // no x86 arquitecture (or not ASM optimice)
+#define ASMSHIFT // no x86 arquitecture (or not ASM optimice)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1113,12 +1113,12 @@ void memset32(__uint32 *dest,__uint32 val, __uint32 count)
 void memset64(__uint64 *dest,__uint64 val,__uint32 count)
 { while (count--) *dest++ = val; }
 
-#ifndef NOx86
+
+#ifdef ASMSHIFT
 static inline __int64 muldiv(__int64 a, __int64 b, __int64 c)
 {
 __int64 r;
 __asm__ volatile (
-    //"movq %1, %%rax\n\t"
     "imulq %2\n\t"
     "idivq %3\n\t"
     : "=a"(r)  : "a"(a), "r"(b), "r"(c)  : "rdx"
@@ -1130,7 +1130,6 @@ static inline __int64 mulshr(__int64 a, __int64 b, __int64 sh)
 {
 __int64 r;
 __asm__ volatile (
-    //"movq %1, %%rax\n\t"
     "imulq %2\n\t"
     "shrdq %%cl, %%rdx, %%rax\n\t"
     : "=a"(r) : "a"(a), "r"(b), "c"(sh) : "rdx"
@@ -1142,12 +1141,12 @@ static inline __int64 cdivsh(__int64 a, __int64 b, __int64 sh)
 {
 __int64 r;
 __asm__ volatile (
-    //"movq %1, %%rax\n\t"
-    "movq %3, %%rcx\n\t"
+    "cqo\n\t"
+    //"movq %3, %%rcx\n\t"
     "shldq %%cl, %%rax, %%rdx\n\t"
     "shlq %%cl, %%rax\n\t"
     "idivq %2\n\t"
-    : "=a"(r) : "a"(a), "r"(b), "r"(sh) : "rcx", "rdx"
+    : "=a"(r) : "a"(a), "r"(b), "c"(sh) : "rdx"
     );
 return r;
 }
@@ -1167,7 +1166,7 @@ static inline __int64 cdivsh16(__int64 a, __int64 b)
 {
 __int64 r;
 __asm__ volatile (
-    "xorq %%rdx, %%rdx\n\t"      // rdx = 0
+    "cqo\n\t"
     "shldq $16, %%rax, %%rdx\n\t" // rdx = a >> 48, rax sigue igual
     "shlq $16, %%rax\n\t"         // rax = a << 16
     "idivq %2\n\t"
@@ -1315,10 +1314,10 @@ L_SHR0:TOS=((__uint64)*NOS)>>TOS;NOS--;NEXT;	//SHR
 L_MOD:TOS=*NOS%TOS;NOS--;NEXT;					//MOD
 L_DIVMOD:op=*NOS;*NOS=op/TOS;TOS=op%TOS;NEXT;	//DIVMOD
 
-#ifdef NOx86
+#ifndef ASMSHIFT
 L_MULDIV:TOS=((__int128)(*(NOS-1))*(*NOS)/TOS);NOS-=2;NEXT;	//MULDIV
-L_MULSHR:TOS=((__int128)(*(NOS-1)*(*NOS))>>TOS);NOS-=2;NEXT;	//MULSHR
-L_CDIVSH:TOS=(__int128)((*(NOS-1)<<TOS)/(*NOS));NOS-=2;NEXT;//CDIVSH
+L_MULSHR:TOS=((__int128)(*(NOS-1)*(*NOS))>>TOS);NOS-=2;NEXT;//MULSHR
+L_CDIVSH:TOS=((__int128)(*(NOS-1)<<TOS)/(*NOS));NOS-=2;NEXT;//CDIVSH
 #else
 L_MULDIV: TOS = muldiv(*(NOS-1), *NOS, TOS);NOS-=2;NEXT;	//MULDIV
 L_MULSHR: TOS = mulshr(*(NOS-1), *NOS, TOS);NOS-=2;NEXT;	//MULSHR
@@ -1497,10 +1496,10 @@ L_SHR01:TOS=(__uint64)TOS>>(op>>8);NEXT;
 L_MOD1:TOS=TOS%(op>>8);NEXT;
 L_DIVMOD1:op>>=8;NOS++;*NOS=TOS/op;TOS=TOS%op;NEXT;	//DIVMOD
 
-#ifdef NOx86
+#ifndef ASMSHIFT
 L_MULDIV1:op>>=8;TOS=(__int128)(*NOS)*TOS/op;NOS--;NEXT;	//MULDIV
 L_MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;NEXT;	//MULSHR
-L_CDIVSH1:op>>=8;TOS=(__int128)((*NOS)<<op)/TOS;NOS--;NEXT;	//CDIVSH
+L_CDIVSH1:op>>=8;TOS=((__int128)(*NOS)<<op)/TOS;NOS--;NEXT;	//CDIVSH
 
 L_MULSHR2:op>>=8;TOS=((__int128)TOS*op)>>16;NEXT;	//MULSHR .. 234 16 *>>
 L_CDIVSH2:op>>=8;TOS=(__int128)(TOS<<16)/op;NEXT;	//CDIVSH ... 23 16 <</
