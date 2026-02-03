@@ -25,11 +25,4 @@ The last version when tokenize the code make some changes for gain speed.
 All this optimiations are made without intervencion, the tokenizer is automatic and not require programmer indication.
 
 Really R3 have a compiler with much better optimization for now and have space to improve, but this VM is the first step and is good have a speed one.
-
-# Linux version
-
-The VM is working on LINUX and perhaps in RPI too, for MAC need change how access to memory (I do this for previous vm) Apple have a costume of paranoid for make more money !!
-But the system need the conecction with Librarys (in r3) and I not have money for do this, write me if you like to work on this and have a BIG SIGN with you name in the language for help me.
-
-
-  
+ 
