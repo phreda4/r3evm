@@ -5,21 +5,18 @@
 //  with cell size of 64 bits, 
 //
 
+
 #define INLINEOFF
 
 //#define OPTOFF
 //#define DEBUG
-
-#define WINDOWS
-//#define LINUX
-//#define RPI   // Tested on a Raspberry PI 4
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
 
-#if defined(LINUX) || defined(RPI) // ----- LINUX
+#if defined(__linux__)
 
 #include <dlfcn.h>
 #include <unistd.h>
@@ -138,7 +135,7 @@ char path[1024];
 struct Include { char *nombre;char *str; };
 
 int cntincludes;
-Include includes[128];
+struct Include includes[128];
 int cntstacki;
 int stacki[128];
 
@@ -147,7 +144,7 @@ struct Indice {	char *nombre;int mem;short info;short inc; };
 
 int cntdicc,includenow;
 int dicclocal;
-Indice dicc[8192];
+struct Indice dicc[8192];
 
 //----- aux stack for compilation
 int level;
@@ -933,7 +930,7 @@ fprintf(stderr,"^- %s\n",werror);
 // |RPI| Raspberry PI only
 char *nextcom(char *str)
 {
-#if defined(LINUX)
+#if defined(__linux__)
   if (strnicmp(str,"|LIN|",5)==0) {	// linux specific
     return str+5;
   }
@@ -1129,7 +1126,7 @@ boot=-1;
 memc=1; // direccion 0 para null
 memd=0;
 
-#if defined(LINUX)
+#if defined(__linux__)
  //memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
  memcode=(int*)iniMshare("/code.mem",sizeof(int)*memcsize,&hm4);
  //memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
@@ -1369,7 +1366,7 @@ switch(op&0xff){
 	case MEM://"MEM"
 		NOS++;*NOS=TOS;TOS=(__int64)&memdata[memd];return;
 
-#if defined(LINUX) || defined(RPI)
+#if defined(__linux__)
 	case LOADLIB: // "" -- hmo
 		TOS=(__int64)dlopen((char*)TOS,RTLD_NOW);return; //RTLD_LAZY 1 RTLD_NOW 2
 	case GETPROCA: // hmo "" -- ad		
@@ -1575,11 +1572,11 @@ fwrite(&memd,sizeof(int),1,file);
 fwrite(&memdsize,sizeof(int),1,file);
 value=sizeof(int)*memcsize;
 fwrite(&value,sizeof(int),1,file);
-value=memcode;
+value=(__int64)memcode;
 fwrite(&value,sizeof(__int64),1,file);
-value=memdata;
+value=(__int64)memdata;
 fwrite(&value,sizeof(__int64),1,file);
-value=&datastack[0]; // retstack=datastack+(252*8)
+value=(__int64)&datastack[0]; // retstack=datastack+(252*8)
 fwrite(&value,sizeof(__int64),1,file);
 fwrite(&cntincludes,sizeof(short),1,file); // save in call order
 value=0;
@@ -1613,7 +1610,7 @@ fclose(file);
 }
 
 /////////////////////////////////////////////////////////////
-#ifdef WINDOWS
+#ifdef _WIN32
 
 LONG WINAPI error_filter(PEXCEPTION_POINTERS pExInfo) {
     DWORD code = pExInfo->ExceptionRecord->ExceptionCode;
@@ -1625,7 +1622,9 @@ LONG WINAPI error_filter(PEXCEPTION_POINTERS pExInfo) {
 void install_handler() { SetUnhandledExceptionFilter(error_filter); }
 void uninstall_handler() { SetUnhandledExceptionFilter(NULL); }
 
-#else  // Linux/Unix
+#endif 
+
+#ifdef defined(__linux__)  // Linux/Unix
   
 void error_handler(int sig) {
     int code= (int)(uintptr_t)sig;

@@ -71,12 +71,12 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit1]
-FileName=r3.cpp
+FileName=r3.c
 CompileCpp=1
 Folder=
 Compile=1
 Link=1
 Priority=1000
-OverrideBuildCmd=1
-BuildCmd=$(CPP) -c r3.cpp -o r3.o $(CXXFLAGS) -fomit-frame-pointer -fno-exceptions -fno-rtti
+OverrideBuildCmd=0
+BuildCmd=
 
