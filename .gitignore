@@ -3,3 +3,4 @@ mem/r3dicc.mem
 mem/r3code.mem
 mem/error.mem
 mem/menu.mem
+*.o

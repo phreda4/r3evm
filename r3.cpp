@@ -1620,10 +1620,24 @@ L_VWINCSTOR:op=*(__int64*)&memdata[op>>8];*(__int16*)op+=TOS;TOS=*NOS;NOS--;NEXT
 L_VDINCSTOR:op=*(__int64*)&memdata[op>>8];*(__int32*)op+=TOS;TOS=*NOS;NOS--;NEXT;//D+!
 }
 
-	
+#ifdef __linux__
+#include <termios.h>
+#include <unistd.h>
+
+struct termios staterm;
+
+void termsave(void) {tcgetattr(STDIN_FILENO, &staterm);}
+void termreset(void) {tcsetattr(STDIN_FILENO, TCSANOW, &staterm);printf("\033c");fflush(stdout);}
+#endif
+
 ////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[])
 {
+#ifdef __linux__
+termsave();
+atexit(termreset);
+#endif
+
 char *filename;
 if (argc>1) 
 	filename=argv[1]; 
