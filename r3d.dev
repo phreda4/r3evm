@@ -71,12 +71,12 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit1]
-FileName=r3d.c
+FileName=r3d.cpp
 CompileCpp=1
 Folder=
 Compile=1
 Link=1
 Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
+OverrideBuildCmd=1
+BuildCmd=$(CPP) -c r3d.cpp -o r3d.o $(CXXFLAGS) -fpermissive -march=native -mtune=native -fomit-frame-pointer -fno-exceptions -fno-rtti
 

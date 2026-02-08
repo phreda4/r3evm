@@ -20,13 +20,14 @@ clean: clean-custom
 	${RM} $(OBJ) $(BIN)
 
 r3lin: r3.o
-	$(CC) r3.o -o r3lin $(LIBS)
+	$(CPP) r3.o -o r3lin $(LIBS)
 
 r3lind: r3d.o
-	$(CC) r3d.o -o r3lind $(LIBS)
+	$(CPP) r3d.o -o r3lind $(LIBS)
 
-r3.o: r3.c
-	$(CC) -c r3.c -o r3.o $(CXXFLAGS)
+r3.o: r3.cpp
+	$(CPP) -c r3.cpp -o r3.o $(CXXFLAGS)
 
-r3d.o: r3d.c
-	$(CC) -c r3d.c -o r3d.o $(CXXFLAGS)
+
+r3d.o: r3d.cpp
+	$(CPP) -c r3d.cpp -o r3d.o $(CXXFLAGS)

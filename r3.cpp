@@ -6,6 +6,8 @@
 //
 
 //#define DEBUG
+//#define LINUX
+//#define RPI   // Tested on a Raspberry PI 4
 #define ASMSHIFT // no x86 arquitecture (or not ASM optimice)
 
 #include <stdio.h>
@@ -13,15 +15,7 @@
 #include <time.h>
 #include <string.h>
 
-#if _WIN32
-
-#include <windows.h>
-
-typedef unsigned __int64 __uint64;
-typedef unsigned __int32 __uint32; 
-typedef unsigned __int16 __uint16;  
-
-#else //#if __linux__
+#if defined(LINUX) || defined(RPI)
 
 #include <dlfcn.h>
 #include <unistd.h>
@@ -36,6 +30,13 @@ typedef int16_t __int16;
 typedef uint64_t __uint64; 
 typedef uint32_t __uint32; 
 typedef uint16_t __uint16; 
+
+#else	// WINDOWS
+#include <windows.h>
+
+typedef unsigned __int64 __uint64;
+typedef unsigned __int32 __uint32; 
+typedef unsigned __int16 __uint16;  
 
 #endif
 
@@ -64,7 +65,7 @@ char path[1024];
 struct Include { char *nombre;char *str; };
 
 int cntincludes;
-struct Include includes[128];
+Include includes[128];
 int cntstacki;
 int stacki[128];
 
@@ -73,7 +74,7 @@ struct Indice {	char *nombre;int mem;int info; };
 
 int cntdicc;
 int dicclocal;
-struct Indice dicc[8192];
+Indice dicc[8192];
 
 //----- aux stack for compilation
 int level;
@@ -842,15 +843,15 @@ fprintf(stderr,"^- %s\n",werror);
 // |RPI| Raspberry PI only
 char *nextcom(char *str)
 {
-#if __linux_
+#if defined(LINUX)
   if (strnicmp(str,"|LIN|",5)==0) {	// linux specific
     return str+5;
   }
-#elif __EMSCRIPTEN__
+#elif defined(EMSCRIPTEN)
   if (strnicmp(str,"|WEB|",5)==0) {	// web specific
     return str+5;
   }
-#elif __aarch64__
+#elif defined(RPI)
   if (strnicmp(str,"|RPI|",5)==0) {	// raspberry pi specific
     return str+5;
   }
@@ -1039,10 +1040,10 @@ boot=-1;
 memc=1; // direccion 0 para null
 memd=0;
 
-#if __linux__
+#if defined(LINUX)
  memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
  memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
-#elif RPI
+#elif defined(RPI)
  memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
  memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
 #else
@@ -1428,7 +1429,7 @@ L_DFILL://FILL
 L_MEM://"MEM"
 	NOS++;*NOS=TOS;TOS=(__int64)&memdata[memd];NEXT;
 
-#if __linux__
+#if defined(LINUX) || defined(RPI)
 L_LOADLIB: // "" -- hmo
 	TOS=(__int64)dlopen((char*)TOS,RTLD_NOW);NEXT; //RTLD_LAZY 1 RTLD_NOW 2
 L_GETPROCA: // hmo "" -- ad		
