@@ -6,7 +6,6 @@
 //
 
 //#define DEBUG
-//#define LINUX
 //#define RPI   // Tested on a Raspberry PI 4
 #define ASMSHIFT // no x86 arquitecture (or not ASM optimice)
 
@@ -15,7 +14,7 @@
 #include <time.h>
 #include <string.h>
 
-#if defined(LINUX) || defined(RPI)
+#if __linux__
 
 #include <dlfcn.h>
 #include <unistd.h>
@@ -843,15 +842,15 @@ fprintf(stderr,"^- %s\n",werror);
 // |RPI| Raspberry PI only
 char *nextcom(char *str)
 {
-#if defined(LINUX)
+#if __linux__
   if (strnicmp(str,"|LIN|",5)==0) {	// linux specific
     return str+5;
   }
-#elif defined(EMSCRIPTEN)
+#elif EMSCRIPTEN
   if (strnicmp(str,"|WEB|",5)==0) {	// web specific
     return str+5;
   }
-#elif defined(RPI)
+#elif __arch64__
   if (strnicmp(str,"|RPI|",5)==0) {	// raspberry pi specific
     return str+5;
   }
@@ -1040,10 +1039,10 @@ boot=-1;
 memc=1; // direccion 0 para null
 memd=0;
 
-#if defined(LINUX)
+#if __linux__
  memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
  memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
-#elif defined(RPI)
+#elif __arch64__
  memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
  memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
 #else
@@ -1429,7 +1428,7 @@ L_DFILL://FILL
 L_MEM://"MEM"
 	NOS++;*NOS=TOS;TOS=(__int64)&memdata[memd];NEXT;
 
-#if defined(LINUX) || defined(RPI)
+#if __linux__
 L_LOADLIB: // "" -- hmo
 	TOS=(__int64)dlopen((char*)TOS,RTLD_NOW);NEXT; //RTLD_LAZY 1 RTLD_NOW 2
 L_GETPROCA: // hmo "" -- ad		
