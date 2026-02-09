@@ -919,10 +919,12 @@ while (*lc>31||*lc==9) {
 	};
 *le=0;
 *nextcr(name)=0;
-fprintf(stderr,"FILE:%s LINE:%d CHAR:%d\n\n",name,line,cerror-lca);	
-fprintf(stderr,"%4d|%s\n     ",line,linee);
-for(char *p=lca;p<cerror;p++) if (*p==9) fprintf(stderr,"\t"); else fprintf(stderr," ");
-fprintf(stderr,"^- %s\n",werror);	
+FILE *errf = fopen("error.log", "w");
+fprintf(errf,"FILE:%s LINE:%d CHAR:%d\n\n",name,line,cerror-lca);	
+fprintf(errf,"%4d|%s\n     ",line,linee);
+for(char *p=lca;p<cerror;p++) if (*p==9) fprintf(errf,"\t"); else fprintf(errf," ");
+fprintf(errf,"^- %s\n",werror);	
+fclose(errf);
 }
 
 // |WEB| emscripten only
@@ -1000,7 +1002,9 @@ char *buff;
 FILE *f=fopen(filename,"rb");
 if (!f) { 
 	*nextcr(from)=0;
-	fprintf(stderr,"FILE:%s LINE:%d CHAR:%d\n\n%s not found\n",from,cerror,cerror,filename);
+	FILE *errf = fopen("error.log", "w");
+	fprintf(errf,"FILE:%s LINE:%d CHAR:%d\n\n%s not found\n",from,cerror,cerror,filename);
+	fclose(errf);
 	cerror=(char*)1;
 	return 0;
 	}
@@ -1573,11 +1577,11 @@ fwrite(&memd,sizeof(int),1,file);
 fwrite(&memdsize,sizeof(int),1,file);
 value=sizeof(int)*memcsize;
 fwrite(&value,sizeof(int),1,file);
-value=memcode;
+value=(__int64)memcode;
 fwrite(&value,sizeof(__int64),1,file);
-value=memdata;
+value=(__int64)memdata;
 fwrite(&value,sizeof(__int64),1,file);
-value=&datastack[0]; // retstack=datastack+(252*8)
+value=(__int64)&datastack[0]; // retstack=datastack+(252*8)
 fwrite(&value,sizeof(__int64),1,file);
 fwrite(&cntincludes,sizeof(short),1,file); // save in call order
 value=0;

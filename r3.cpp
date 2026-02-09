@@ -6,13 +6,11 @@
 //
 
 //#define DEBUG
-//#define RPI   // Tested on a Raspberry PI 4
 #define ASMSHIFT // no x86 arquitecture (or not ASM optimice)
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-#include <string.h>
+#include <cstring>
 
 #if __linux__
 
@@ -812,6 +810,7 @@ cerror=f;
 }
 
 // print error info 
+
 void printerror(char *name,char *src)
 {
 int line=1;
@@ -828,12 +827,14 @@ le=&linee[0];
 lca=lc;
 while (*lc>31||*lc==9) { *le++=*lc++; };
 *le=0;
-
 *nextcr(name)=0;
-fprintf(stderr,"FILE:%s LINE:%d CHAR:%d\n\n",name,line,cerror-lca);	
-fprintf(stderr,"%4d|%s\n     ",line,linee);
-for(char *p=lca;p<cerror;p++) if (*p==9) fprintf(stderr,"\t"); else fprintf(stderr," ");
-fprintf(stderr,"^- %s\n",werror);	
+
+FILE *errf = fopen("error.log", "w");
+fprintf(errf,"FILE:%s LINE:%d CHAR:%d\n\n",name,line,cerror-lca);	
+fprintf(errf,"%4d|%s\n     ",line,linee);
+for(char *p=lca;p<cerror;p++) if (*p==9) fprintf(errf,"\t"); else fprintf(errf," ");
+fprintf(errf,"^- %s\n",werror);	
+fclose(errf);
 }
 
 // |WEB| emscripten only
@@ -911,7 +912,9 @@ char *buff;
 FILE *f=fopen(filename,"rb");
 if (!f) { 
 	*nextcr(from)=0;
-	fprintf(stderr,"FILE:%s LINE:%d CHAR:%d\n\n%s not found\n",from,cerror,cerror,filename);
+	FILE *errf = fopen("error.log", "w");	
+	fprintf(errf,"FILE:%s LINE:%d CHAR:%d\n\n%s not found\n",from,cerror,cerror,filename);
+	fclose(errf);
 	cerror=(char*)1;
 	return 0;
 	}
@@ -1506,8 +1509,10 @@ L_MULSHR3:TOS=((__int128)(*NOS)*TOS)>>16;NOS--;NEXT;	//MULSHR .. XX 16 *>>
 L_CDIVSH3:TOS=(__int128)((*NOS)<<16)/TOS;NOS--;NEXT;	//CDIVSH .. XX 16 <</	
 #else
 L_MULDIV1:op>>=8;TOS=muldiv(*NOS,TOS,op);NOS--;NEXT;	//MULDIV
+
 //L_MULSHR1:op>>=8;TOS=mulshr(*NOS,TOS,op);NOS--;NEXT;	//MULSHR <<<<<<<<<<<<<
-L_MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;NEXT;	//MULSHR
+L_MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;NEXT;	//MULSHR ???????
+
 L_CDIVSH1:op>>=8;TOS=cdivsh(*NOS,TOS,op);NOS--;NEXT;	//CDIVSH
 
 L_MULSHR2:op>>=8;TOS=mulshr16(TOS,op);NEXT;	//MULSHR .. 234 16 *>>

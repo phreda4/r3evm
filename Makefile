@@ -28,6 +28,5 @@ r3lind: r3d.o
 r3.o: r3.cpp
 	$(CPP) -c r3.cpp -o r3.o $(CXXFLAGS)
 
-
 r3d.o: r3d.cpp
 	$(CPP) -c r3d.cpp -o r3d.o $(CXXFLAGS)

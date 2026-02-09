@@ -51,10 +51,9 @@
 	fuente c@ 0? ( drop ; ) drop
 	banner
 	savem
-	"mem/errorm.mem" delete
 	'fullpath
-|WIN| 	"cmd /c r3 ""%s"" 2>mem/errorm.mem"
-|LIN| 	"./r3lin ""%s"" 2>mem/errorm.mem"
+|WIN| 	"cmd /c r3 ""%s"""
+|LIN| 	"./r3lin ""%s"""
 	sprint sys | run
 	.reterm .alsb .flush
 	runcheck
