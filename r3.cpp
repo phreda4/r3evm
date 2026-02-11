@@ -1632,7 +1632,7 @@ L_VDINCSTOR:op=*(__int64*)&memdata[op>>8];*(__int32*)op+=TOS;TOS=*NOS;NOS--;NEXT
 struct termios staterm;
 
 void termsave(void) {tcgetattr(STDIN_FILENO, &staterm);}
-void termreset(void) {tcsetattr(STDIN_FILENO, TCSANOW, &staterm);printf("\033c");fflush(stdout);}
+void termreset(void) {tcsetattr(STDIN_FILENO, TCSANOW, &staterm);}
 #endif
 
 ////////////////////////////////////////////////////////////////////////////
