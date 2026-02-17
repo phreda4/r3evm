@@ -574,15 +574,15 @@ lastblock=memc;
 // solve conditional void
 int solvejmp(int from,int to) 
 {
-int whi=false;
+int whi=0;
 for (int i=from;i<to;i++) {
 	int op=memcode[i]&0xff;
 	if (op>=ZIF && op<=IFBT && (memcode[i]>>8)==0) { // patch while 
 		memcode[i]|=(memc-i)<<8;	// full dir
-		whi=true;
+		whi=1;
 	} else if (op>=IFL1 && op<=IFNAND1 && (memcode[i]&0xff00)==0) { // patch while 
 		memcode[i]|=((memc-i)<<8)&0xff00; // byte dir
-		whi=true;
+		whi=1;
 		}
 	}
 return whi;
@@ -1128,7 +1128,7 @@ __asm__ volatile (
 return r;
 }
 
-static inline __int64 mulshr(__int64 a, __int64 b, __int64 sh)
+static inline __int64 mulshr2(__int64 a, __int64 b, __int64 sh) // BUUU
 {
 __int64 r;
 __asm__ volatile (
@@ -1139,12 +1139,17 @@ __asm__ volatile (
 return r;
 }
 
+static inline __int64 mulshr(__int64 a, __int64 b, unsigned sh)
+{
+    __int128 tmp = (__int128)a * b;
+    return (long long)(tmp >> sh);
+}
+
 static inline __int64 cdivsh(__int64 a, __int64 b, __int64 sh)
 {
 __int64 r;
 __asm__ volatile (
     "cqo\n\t"
-    //"movq %3, %%rcx\n\t"
     "shldq %%cl, %%rax, %%rdx\n\t"
     "shlq %%cl, %%rax\n\t"
     "idivq %2\n\t"
@@ -1510,8 +1515,8 @@ L_CDIVSH3:TOS=(__int128)((*NOS)<<16)/TOS;NOS--;NEXT;	//CDIVSH .. XX 16 <</
 #else
 L_MULDIV1:op>>=8;TOS=muldiv(*NOS,TOS,op);NOS--;NEXT;	//MULDIV
 
-//L_MULSHR1:op>>=8;TOS=mulshr(*NOS,TOS,op);NOS--;NEXT;	//MULSHR <<<<<<<<<<<<<
-L_MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;NEXT;	//MULSHR ???????
+L_MULSHR1:op>>=8;TOS=mulshr(*NOS,TOS,op);NOS--;NEXT;	//MULSHR <<<<<<<<<<<<<
+//L_MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;NEXT;	//MULSHR ???????
 
 L_CDIVSH1:op>>=8;TOS=cdivsh(*NOS,TOS,op);NOS--;NEXT;	//CDIVSH
 

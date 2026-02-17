@@ -1,0 +1,4 @@
+FILE:r3/d4 LINE:24 CHAR:11
+
+  24|	8 << 8 or ,t >>sp ;
+     	          ^- word not found
