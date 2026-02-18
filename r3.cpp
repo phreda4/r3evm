@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <cstring>
 
-#if __linux__
+#if __linux__ || __APPLE__ 
 
 #include <dlfcn.h>
 #include <unistd.h>
@@ -385,15 +385,24 @@ char toupp(char c)
 return c&0xdf;
 }
 
-// compare two string until len char
-int strnicmp(const char *s1, const char *s2, size_t len)
+/*
+//----- portable?
+static inline int r3tok52(const char *s1, const char *s2)
 {
-int diff=0;
-while (len--&&*s1&&*s2) {
-	if (*s1!=*s2) if (diff=(int)toupp(*s1)-(int)toupp(*s2)) break;
-	s1++;s2++;
-    }
-return diff;
+__uint64 a,b;
+memcpy(&a, s1, 5);
+memcpy(&b, s2, 5);
+a &= 0xffdfdfdfffULL;
+b &= 0xffdfdfdfffULL;
+return a == b;
+}
+*/
+static inline int r3tok5(const char *s1, const char *s2)
+{
+__int32 a=*(int*)(s1+1), b=*(int*)(s2+1);
+a &= 0xffdfdfdf;
+b &= 0xffdfdfdf;
+return a == b;
 }
 
 // compare two words, until space	
@@ -849,19 +858,33 @@ fclose(errf);
 char *nextcom(char *str)
 {
 #if __linux__
-  if (strnicmp(str,"|LIN|",5)==0) {	// linux specific
+  //if (r3strnicmp(str,"|LIN|",5)==0) {	// window specific
+  if (r3tok5(str,"|LIN|",5)) {	// linux specific
     return str+5;
   }
 #elif EMSCRIPTEN
-  if (strnicmp(str,"|WEB|",5)==0) {	// web specific
+  //if (r3strnicmp(str,"|WEB|",5)==0) {	// window specific
+  if (r3tok5(str,"|WEB|",5)) {	// web specific
     return str+5;
   }
-#elif __arch64__
-  if (strnicmp(str,"|RPI|",5)==0) {	// raspberry pi specific
+#elif __aarch64__
+  //if (r3strnicmp(str,"|RPI|",5)==0) {	// window specific
+  if (r3tok5(str,"|RPI|",5)) {	// raspberry pi specific
+    return str+5;
+  }
+#elif __APPLE__  
+  //if (r3strnicmp(str,"|MAC|",5)==0) {	// window specific
+  if (r3tok5(str,"|MAC|",5)) {	// mac
+    return str+5;
+  }
+#elif __ANDROID__  
+  //if (r3strnicmp(str,"|AND|",5)==0) {	// window specific
+  if (r3tok5(str,"|AND|",5)) {	// mac
     return str+5;
   }
 #else
-  if (strnicmp(str,"|WIN|",5)==0) {	// window specific
+  //if (r3strnicmp(str,"|WIN|",5)==0) {	// window specific
+  if (r3tok5(str,"|WIN|")) {	// window specific
     return str+5;
   }
 #endif
@@ -1047,12 +1070,15 @@ boot=-1;
 memc=1; // direccion 0 para null
 memd=0;
 
-#if __linux__
+#if __ANDROID__
+ memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
+ memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
+#elif __linux__ && __aarch64__
+ memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE,-1,0);
+ memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE,-1,0);
+#elif __linux__
  memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
  memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
-#elif __arch64__
- memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
- memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
 #else
  memcode=(int*)malloc(sizeof(int)*memcsize);
  memdata=(char*)malloc(memdsize);

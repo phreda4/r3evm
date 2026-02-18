@@ -1,4 +1,4 @@
-FILE:r3/d4 LINE:24 CHAR:11
+FILE:r3/lib/posix/posix.r3 LINE:1 CHAR:5
 
-  24|	8 << 8 or ,t >>sp ;
-     	          ^- word not found
+   1|| linux system calls
+          ^- word not found
