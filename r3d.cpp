@@ -1052,7 +1052,7 @@ return cntincludes-1;
 void freeinc()
 {
 for (int i=0;i<cntincludes;i++){
-	free(includes[cntincludes].str);
+	free(includes[i].str);
 	}
 }
 

@@ -62,7 +62,7 @@ char path[1024];
 struct Include { char *nombre;char *str; };
 
 int cntincludes;
-Include includes[128];
+struct Include includes[128];
 int cntstacki;
 int stacki[128];
 
@@ -71,7 +71,7 @@ struct Indice {	char *nombre;int mem;int info; };
 
 int cntdicc;
 int dicclocal;
-Indice dicc[8192];
+struct Indice dicc[8192];
 
 //----- aux stack for compilation
 int level;
@@ -85,7 +85,7 @@ int popA(void) { return stacka[--cntstacka]; }
 
 #define iclz(x) __builtin_clzll(x)
 
-// http://www.devmaster.net/articles/fixed-point-optimizations/
+/* 
 static inline __int64 isqrt(__int64 value)
 {
 if (value==0) return 0;
@@ -99,6 +99,11 @@ do {
 } while (bshft--);
 return g;
 }
+*/
+
+static inline __int64 isqrt(__int64 value)
+{ return __builtin_sqrt((double)value); }
+	
 //----- internal tokens, replace 8 first names
 const char *r3asm[]={
 ";","LIT1","ADR","CALL","VAR"
@@ -962,7 +967,7 @@ return cntincludes-1;
 void freeinc()
 {
 for (int i=0;i<cntincludes;i++){
-	free(includes[cntincludes].str);
+	free(includes[i].str);
 	}
 }
 
