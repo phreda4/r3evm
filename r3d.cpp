@@ -454,16 +454,6 @@ char toupp(char c)
 return c&0xdf;
 }
 
-// compare two string until len char
-int strnicmp(const char *s1, const char *s2, size_t len)
-{
-int diff=0;
-while (len--&&*s1&&*s2) {
-	if (*s1!=*s2) if (diff=(int)toupp(*s1)-(int)toupp(*s2)) break;
-	s1++;s2++;
-    }
-return diff;
-}
 
 // compare two words, until space	
 int strequal(char *s1,char *s2)
@@ -927,31 +917,47 @@ fprintf(errf,"^- %s\n",werror);
 fclose(errf);
 }
 
+static inline int r3tok5(const char *s1, const char *s2)
+{
+__int32 a, b;
+memcpy(&a,s1,4);
+memcpy(&b,s2,4);
+return a == b;
+}
+
 // |WEB| emscripten only
 // |LIN| linux only
 // |WIN| windows only
 // |RPI| Raspberry PI only
 char *nextcom(char *str)
 {
+str++;
 #if __linux__
-  if (strnicmp(str,"|LIN|",5)==0) {	// linux specific
-    return str+5;
+  if (r3tok5(str,"LIN|")) {	// linux specific
+    return str+4;
   }
 #elif EMSCRIPTEN
-  if (strnicmp(str,"|WEB|",5)==0) {	// web specific
-    return str+5;
+  if (r3tok5(str,"WEB|")) {	// web specific
+    return str+4;
   }
 #elif __aarch64__
-  if (strnicmp(str,"|RPI|",5)==0) {	// raspberry pi specific
-    return str+5;
+  if (r3tok5(str,"RPI|")) {	// raspberry pi specific
+    return str+4;
+  }
+#elif __APPLE__  
+  if (r3tok5(str,"MAC|")) {	// mac
+    return str+4;
+  }
+#elif __ANDROID__  
+  if (r3tok5(str,"AND|")) {	// mac
+    return str+4;
   }
 #else
-  if (strnicmp(str,"|WIN|",5)==0) {	// window specific
-    return str+5;
+  if (r3tok5(str,"WIN|")) {	// window specific
+    return str+4;
   }
 #endif
-  
-  return nextcr(str);
+return nextcr(str);
 }
 
 // tokeniza string
@@ -1060,7 +1066,7 @@ for (int i=0;i<cntincludes;i++){
 // |MEM 640 		set data memory size (in kb) min 1kb
 char *syscom(char *str)
 {
-if (strnicmp(str,"|MEM ",5)==0) {	// memory in Kb
+if (r3tok5(str+1,"MEM ")) {	// memory in Kb
 	if (isNro(trim(str+5))) {
 		memdsize=nro<<20;
 		if (memdsize<1<<20)	memdsize=1<<20; // 1MB min
@@ -1131,24 +1137,8 @@ boot=-1;
 memc=1; // direccion 0 para null
 memd=0;
 
-#if __linux__
- //memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
- memcode=(int*)iniMshare("/code.mem",sizeof(int)*memcsize,&hm4);
- //memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
- memdata=(char*)iniMshare("/data.mem",memdsize,&hm2); 
- 
-#elif __aarch64__
- //memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
- memcode=(int*)iniMshare("/code.mem",sizeof(int)*memcsize,&hm4); 
- //memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE/*|MAP_32BIT*/,-1,0);
- memdata=(char*)iniMshare("/data.mem",memdsize,&hm2); 
- 
-#else
- //memcode=(int*)malloc(sizeof(int)*memcsize);
- memcode=(int*)iniMshare("/code.mem",sizeof(int)*memcsize,&hm4);  
- //memdata=(char*)malloc(memdsize);
- memdata=(char*)iniMshare("/data.mem",memdsize,&hm2);  
-#endif
+memcode=(int*)iniMshare("/code.mem",sizeof(int)*memcsize,&hm4);  
+memdata=(char*)iniMshare("/data.mem",memdsize,&hm2);  
 
 // tokenize includes
 for (int i=0;i<cntstacki;i++) {

@@ -385,26 +385,6 @@ char toupp(char c)
 return c&0xdf;
 }
 
-/*
-//----- portable?
-static inline int r3tok52(const char *s1, const char *s2)
-{
-__uint64 a,b;
-memcpy(&a, s1, 5);
-memcpy(&b, s2, 5);
-a &= 0xffdfdfdfffULL;
-b &= 0xffdfdfdfffULL;
-return a == b;
-}
-*/
-static inline int r3tok5(const char *s1, const char *s2)
-{
-__int32 a=*(int*)(s1+1), b=*(int*)(s2+1);
-a &= 0xffdfdfdf;
-b &= 0xffdfdfdf;
-return a == b;
-}
-
 // compare two words, until space	
 int strequal(char *s1,char *s2)
 {
@@ -851,41 +831,44 @@ fprintf(errf,"^- %s\n",werror);
 fclose(errf);
 }
 
+static inline int r3tok5(const char *s1, const char *s2)
+{
+__int32 a, b;
+memcpy(&a,s1,4);
+memcpy(&b,s2,4);
+return a == b;
+}
+
 // |WEB| emscripten only
 // |LIN| linux only
 // |WIN| windows only
 // |RPI| Raspberry PI only
 char *nextcom(char *str)
 {
+str++;
 #if __linux__
-  //if (r3strnicmp(str,"|LIN|",5)==0) {	// window specific
-  if (r3tok5(str,"|LIN|",5)) {	// linux specific
-    return str+5;
+  if (r3tok5(str,"LIN|")) {	// linux specific
+    return str+4;
   }
 #elif EMSCRIPTEN
-  //if (r3strnicmp(str,"|WEB|",5)==0) {	// window specific
-  if (r3tok5(str,"|WEB|",5)) {	// web specific
-    return str+5;
+  if (r3tok5(str,"WEB|")) {	// web specific
+    return str+4;
   }
 #elif __aarch64__
-  //if (r3strnicmp(str,"|RPI|",5)==0) {	// window specific
-  if (r3tok5(str,"|RPI|",5)) {	// raspberry pi specific
-    return str+5;
+  if (r3tok5(str,"RPI|")) {	// raspberry pi specific
+    return str+4;
   }
 #elif __APPLE__  
-  //if (r3strnicmp(str,"|MAC|",5)==0) {	// window specific
-  if (r3tok5(str,"|MAC|",5)) {	// mac
-    return str+5;
+  if (r3tok5(str,"MAC|")) {	// mac
+    return str+4;
   }
 #elif __ANDROID__  
-  //if (r3strnicmp(str,"|AND|",5)==0) {	// window specific
-  if (r3tok5(str,"|AND|",5)) {	// mac
-    return str+5;
+  if (r3tok5(str,"AND|")) {	// mac
+    return str+4;
   }
 #else
-  //if (r3strnicmp(str,"|WIN|",5)==0) {	// window specific
-  if (r3tok5(str,"|WIN|")) {	// window specific
-    return str+5;
+  if (r3tok5(str,"WIN|")) {	// window specific
+    return str+4;
   }
 #endif
   
@@ -998,7 +981,7 @@ for (int i=0;i<cntincludes;i++){
 // |MEM 640 		set data memory size (in kb) min 1kb
 char *syscom(char *str)
 {
-if (strnicmp(str,"|MEM ",5)==0) {	// memory in Kb
+if (r3tok5(str+1,"MEM ")) {	// memory in Kb
 	if (isNro(trim(str+5))) {
 		memdsize=nro<<20;
 		if (memdsize<1<<20)	memdsize=1<<20; // 1MB min
