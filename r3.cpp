@@ -1070,21 +1070,13 @@ boot=-1;
 memc=1; // direccion 0 para null
 memd=0;
 
-#if __ANDROID__
- memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
- memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
-#elif __linux__ && __aarch64__
- memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE,-1,0);
- memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE,-1,0);
-#elif __linux__
- memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
- memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS|MAP_POPULATE|MAP_32BIT,-1,0);
+#ifdef _WIN32
+memcode=(int*)VirtualAlloc(NULL, sizeof(int)*memcsize,MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+memdata=(char*)VirtualAlloc(NULL, memdsize,MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
 #else
- memcode=(int*)malloc(sizeof(int)*memcsize);
- memdata=(char*)malloc(memdsize);
+memcode=(int*)mmap(NULL,sizeof(int)*memcsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
+memdata=(char*)mmap(NULL,memdsize,PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_ANONYMOUS,-1,0);
 #endif
-
-
 // tokenize includes
 for (int i=0;i<cntstacki;i++) {
 	if (!r3token(includes[stacki[i]].str)) {

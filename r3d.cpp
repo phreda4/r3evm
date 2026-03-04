@@ -1671,6 +1671,11 @@ while (*bp!=0) {
 	}
 }
 
+static inline void checkr3(void){
+if (NOS<(&datastack[0])) { vmstate=0x10000; }// undeflow
+if (NOS>(&datastack[126])) { vmstate=0x20000; }// overflow
+}
+
 void playr3(void) {
 __int64 *RS;
 while ((vmstate&0xff)!=0xfe) { 
@@ -1685,12 +1690,12 @@ while ((vmstate&0xff)!=0xfe) {
 	case 1: // play state
 		if (ip==0) { vmstate=0xfe/*0x2*/;return; }
 		checkbreakpoint();
-		stepr3();
+		stepr3();checkr3();
 		break;
 	case 2: //step
 		if (ip==0) { vmstate=0xfe/*0x2*/;return; }
 		checkbreakpoint();
-		stepr3();
+		stepr3();checkr3();
 		vmstate=0;
 		break;
 	case 3: //over step
@@ -1699,7 +1704,7 @@ while ((vmstate&0xff)!=0xfe) {
 	case 4: // step state
 		if (ip==0) { vmstate=0xfe/*0x2*/;return; }
 		checkbreakpoint();
-		stepr3();
+		stepr3();checkr3();
 		if (RS<=RTOS) vmstate=0;
 		break;
 		}
