@@ -1653,10 +1653,10 @@ void uninstall_handler() {
 
 int *breakpoint;
 
-void checkbreakpoint(void) {
+static void checkbreakpoint(void) {
 int *bp=breakpoint;	
 while (*bp!=0) {
-	if (ip==*bp) vmstate=0;
+	if (ip==*bp) { vmstate=0x0; } //breakpoint
 	bp++;
 	}
 }
@@ -1664,6 +1664,7 @@ while (*bp!=0) {
 static inline void checkr3(void){
 if (NOS<(&datastack[0])) { vmstate=0x10000; }// undeflow
 if (NOS>(&datastack[126])) { vmstate=0x20000; }// overflow
+checkbreakpoint();
 }
 
 void playr3(void) {
@@ -1679,21 +1680,18 @@ while ((vmstate&0xff)!=0xfe) {
 		break;
 	case 1: // play state
 		if (ip==0) { vmstate=0xfe/*0x2*/;return; }
-		checkbreakpoint();
 		stepr3();checkr3();
 		break;
 	case 2: //step
 		if (ip==0) { vmstate=0xfe/*0x2*/;return; }
-		checkbreakpoint();
 		stepr3();checkr3();
 		vmstate=0;
 		break;
 	case 3: //over step
 		RS=RTOS;vmstate=4;
-		break;
+		//break;
 	case 4: // step state
 		if (ip==0) { vmstate=0xfe/*0x2*/;return; }
-		checkbreakpoint();
 		stepr3();checkr3();
 		if (RS<=RTOS) vmstate=0;
 		break;
@@ -1713,7 +1711,7 @@ else
 if (!r3compile(filename)) return -1;
 
 vm=(VirtualMachine*)iniMshare("/debug.mem",4096,&hm1);
-breakpoint=(int*)iniMshare("/bp.mem",512,&hm3); // 128 ints
+breakpoint=(int*)iniMshare("/bp.mem",64,&hm3); // 16 ints
 
 saveimagen("mem/r3code.mem");
 savedicc("mem/r3dicc.mem");
@@ -1727,8 +1725,9 @@ vmstate=0;		// start waiting
 playr3();
 uninstall_handler();
 ////////// RUN /////////////
+vmstate=0xfe;
 
-endMshare((void*)breakpoint,256,&hm3);
+endMshare((void*)breakpoint,64,&hm3);
 endMshare((void*)vm,4096,&hm1);
 endMshare((void*)memcode,sizeof(int)*memcsize,&hm4);
 endMshare((void*)memdata,memdsize,&hm2);

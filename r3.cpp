@@ -1134,10 +1134,11 @@ __asm__ volatile (
 return r;
 }
 
-static inline __int64 mulshr2(__int64 a, __int64 b, __int64 sh) // BUUU
+static inline __int64 mulshr1(__int64 a, __int64 b, __int64 sh) // BUUU
 {
 __int64 r;
 __asm__ volatile (
+	"cqo\n\t"
     "imulq %2\n\t"
     "shrdq %%cl, %%rdx, %%rax\n\t"
     : "=a"(r) : "a"(a), "r"(b), "c"(sh) : "rdx"
@@ -1148,7 +1149,7 @@ return r;
 static inline __int64 mulshr(__int64 a, __int64 b, unsigned sh)
 {
     __int128 tmp = (__int128)a * b;
-    return (long long)(tmp >> sh);
+    return (__int64)(tmp >> sh);
 }
 
 static inline __int64 cdivsh(__int64 a, __int64 b, __int64 sh)
