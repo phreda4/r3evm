@@ -1679,22 +1679,26 @@ while ((vmstate&0xff)!=0xfe) {
 #endif	
 		break;
 	case 1: // play state
-		if (ip==0) { vmstate=0xfe/*0x2*/;return; }
+		if (ip==0) { vmstate=0xfe;return; }
 		stepr3();checkr3();
 		break;
 	case 2: //step
-		if (ip==0) { vmstate=0xfe/*0x2*/;return; }
+		if (ip==0) { vmstate=0xfe;return; }
 		stepr3();checkr3();
 		vmstate=0;
 		break;
 	case 3: //over step
-		RS=RTOS;vmstate=4;
-		//break;
+		RS=RTOS;
+		vmstate=4;
 	case 4: // step state
-		if (ip==0) { vmstate=0xfe/*0x2*/;return; }
+		if (ip==0) { vmstate=0xfe;return; }
 		stepr3();checkr3();
 		if (RS<=RTOS) vmstate=0;
 		break;
+	case 5: // up step
+		RS=RTOS+1;
+		vmstate=4;
+		break;		
 		}
 	}
 }
