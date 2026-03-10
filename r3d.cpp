@@ -60,16 +60,29 @@ typedef unsigned __int16 __uint16;
 
 HANDLE hm1,hm2,hm3,hm4;
 
-void *iniMshare(char *fn,int size,HANDLE *h) {
-*h=OpenFileMappingA(FILE_MAP_ALL_ACCESS,NULL,fn);
-if (*h==0) { *h=CreateFileMappingA(INVALID_HANDLE_VALUE,NULL,PAGE_READWRITE,0,size,fn); }
-return MapViewOfFile(*h,FILE_MAP_ALL_ACCESS,0,0,size);	
-}    
+    
+void *iniMshare(char *fn, int size, int *h) {
+    *h = shm_open(fn, O_CREAT | O_RDWR, 0666);
+    if (*h == -1) {
+//        perror("shm_open");
+        return MAP_FAILED;
+    }
+    if (ftruncate(*h, size) == -1) {
+//        perror("ftruncate");
+        close(*h);
+        return MAP_FAILED;
+    }
+    void *res = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, *h, 0);
+    if (res == MAP_FAILED) {
+//        perror("mmap");
+        close(*h);
+    }
+    return res;
+}
 
-
-void endMshare(void *mm,int size,HANDLE *h) {
-UnmapViewOfFile(mm);
-CloseHandle(*h);
+void endMshare(void *mm, int size, int *h) {
+    if (mm != MAP_FAILED) munmap(mm, size);
+    if (*h != -1) close(*h);
 }
     
 #endif
