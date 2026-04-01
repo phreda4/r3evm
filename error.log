@@ -1,0 +1,4 @@
+FILE:r3/lib/mem.r3 LINE:59 CHAR:31
+
+  59|	memmap> 8 - @ here over - rot save ;
+     	                              ^- word not found
