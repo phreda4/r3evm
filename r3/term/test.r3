@@ -1,4 +1,4 @@
 :test
- drup ;
+ drop ;
  
 : test ;

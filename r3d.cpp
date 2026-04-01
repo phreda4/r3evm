@@ -17,7 +17,7 @@
 #include <time.h>
 #include <string.h>
 
-#if __linux__
+#if __linux__ || defined(__APPLE__)
 
 #include <dlfcn.h>
 #include <unistd.h>
@@ -1360,7 +1360,7 @@ switch(op&0xff){
 	case MEM://"MEM"
 		NOS++;*NOS=TOS;TOS=(__int64)&memdata[memd];return;
 
-#if __linux__
+#if __linux__ || defined(__APPLE__)
 	case LOADLIB: // "" -- hmo
 		TOS=(__int64)dlopen((char*)TOS,RTLD_NOW);return; //RTLD_LAZY 1 RTLD_NOW 2
 	case GETPROCA: // hmo "" -- ad		

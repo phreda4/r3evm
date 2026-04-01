@@ -6,7 +6,10 @@
 //
 
 //#define DEBUG
+#if !defined(__APPLE__)
 #define ASMSHIFT // no x86 arquitecture (or not ASM optimice)
+#endif
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1443,7 +1446,7 @@ L_DFILL://FILL
 L_MEM://"MEM"
 	NOS++;*NOS=TOS;TOS=(__int64)&memdata[memd];NEXT;
 
-#if __linux__
+#if __linux__ || defined(__APPLE__)
 L_LOADLIB: // "" -- hmo
 	TOS=(__int64)dlopen((char*)TOS,RTLD_NOW);NEXT; //RTLD_LAZY 1 RTLD_NOW 2
 L_GETPROCA: // hmo "" -- ad		
