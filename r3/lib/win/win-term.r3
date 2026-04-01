@@ -28,8 +28,8 @@
 :getterminfo | --
     stdout 'eventBuffer GetConsoleScreenBufferInfo drop 
     'eventBuffer 10 + @
-    dup 32 >> $ffff and over $ffff and - 'cols !
-    dup 48 >> $ffff and swap 16 >> $ffff and - 'rows ! ;
+    dup 32 >> $ffff and over $ffff and - 1+ 'cols !
+    dup 48 >> $ffff and swap 16 >> $ffff and - 1+ 'rows ! ;
 
 #c1 ( $1b ) "[9999;9999H"
 #c2 ( $1b ) "[6n"
@@ -50,8 +50,8 @@
 ::.onresize | 'callback --
     'on-resize ! ; | something the size is wrong at start
 
-:sizecalc
-	'eventBuffer 4 + w@+ 'cols ! w@ 'rows ! ;
+|:sizecalc
+|	'eventBuffer 4 + w@+ 'cols ! w@ 'rows ! ;
 	
 :sizeex
 	getrc prevrc =? ( drop ; ) 'prevrc ! 
@@ -68,7 +68,7 @@
 |   WORD  wVirtualScanCode;| 12
 |   WCHAR/CHAR UnicodeChar;| 14
 |   DWORD dwControlKeyState;
-::evtkey | -- key
+::evtkey | -- key 
 	'eventBuffer dup 4 + c@ 0? ( nip ; ) drop
 	14 + c@ $1b <>? ( ; ) 
 	56 << ( 8 >> 
@@ -78,11 +78,22 @@
 		'eventBuffer 14 + c@ 1? 56 << or ) drop
 	( $ff nand? 8 >> ) ;
 
+::evtkey2 | -- key | <-------- 
+	0 'eventBuffer !
+	stdin 'eventBuffer 32 'ne 0 ReadFile drop
+	eventBuffer ;
+
 :getEvent
 	stdin 'ne GetNumberOfConsoleInputEvents 
     ne 0? ( ; ) drop
     stdin 'eventBuffer 1 'ne ReadConsoleInput
     eventBuffer $ffff and ;
+	
+:isDown? | -- flag
+    eventBuffer 4 + c@ ;
+
+:repeatCount | -- n
+    eventBuffer 6 + w@ ; 
 	
 ##evtmx ##evtmy
 ##evtmb
@@ -102,18 +113,20 @@
 | MOUSE_HWHEELED 0x0008
 
 :evnmouse
-	0 'evtmw !
 	'eventBuffer 16 + c@ 
 	1 =? ( drop 'eventBuffer 4 + w@+ 1+ 'evtmx !  w@ 1+ 'evtmy ! ; )
 	4 =? ( drop 'eventBuffer 8 + d@ 23 >> 1 or 'evtmw ! ; )
 	drop 'eventBuffer 8 + d@ 'evtmb ! ;
 
 :evtsize
-	( 4 =? ( sizecalc ) 
-		getEvent 2 >? drop | collect
-		) drop sizeex ;
+	( |4 =? ( sizecalc ) 
+		getEvent 2 >? drop | collect no use event
+		) drop 
+	getterminfo
+	sizeex ;
 
 ::inevt | -- type | check for event (no wait)
+	0 'evtmw !
 	getEvent
     4 =? ( evtsize ; ) | Handle resize event
 	2 >? ( drop inevt ; ) 
@@ -121,7 +134,7 @@
 	;	
 
 ::getevt | -- type | wait for any event
-	( inevt 0? drop 10 ms ) ;
+	( inevt 0? drop 20 ms ) ;
 
 ::inkey | -- key | 0 if no key pressed
 	inevt 1 =? ( drop evtkey ; ) drop 0 ;
@@ -145,38 +158,35 @@
 | DISABLE_NEWLINE_AUTO_RETURN 0x0008
 | ENABLE_LVB_GRID_WORLDWIDE 0x0010
 
-|::.enable-mouse | -- | enable mouse events
-    | ENABLE_EXTENDED_FLAGS (0x80) allows disabling QUICK_EDIT_MODE
-    | ENABLE_WINDOW_INPUT (0x08) + ENABLE_MOUSE_INPUT (0x10)
-    | ENABLE_VIRTUAL_TERMINAL_INPUT (0x200)
-    | Total: 0x80 | 0x08 | 0x10 | 0x200 = 0x298
-|::.disable-mouse | -- | disable mouse events and restore selection
-    | Re-enable QUICK_EDIT_MODE for normal console behavior
-
+::.enable-mouse
+::.disable-mouse
+	;
+	
 |------- Cleanup -------
 ::.free | -- | free console
 	stdin $7 SetConsoleMode drop 
 	stdout $3 SetConsoleMode drop 
-	FlushConsoleInputBuffer
-    FreeConsole ;
+	stdin FlushConsoleInputBuffer
+	FreeConsole ;
 
 |------- Initialization -------
 ::.reterm  | Set console modes for ANSI/VT sequences and window events
-    stdin $298 SetConsoleMode drop | Enable WINDOW_INPUT
-    stdout $7 SetConsoleMode drop ;
+	stdin $298 SetConsoleMode drop | Enable WINDOW_INPUT
+	stdout $7 SetConsoleMode drop 
+	stdin FlushConsoleInputBuffer ;
 	
-: |:.term
+: 
 	AllocConsole 
 	-10 GetStdHandle 'stdin ! | STD_INPUT_HANDLE
     -11 GetStdHandle 'stdout ! | STD_OUTPUT_HANDLE
     -12 GetStdHandle 'stderr ! | STD_ERROR_HANDLE
-	stdin $7 SetConsoleMode drop 
-	stdout $3 SetConsoleMode drop 
-	getterminfo
+|	stdin $7 SetConsoleMode drop 
+|	stdout $3 SetConsoleMode drop 
 	.reterm
-|	getterminfo2
-	getrc 'prevrc ! 
+	|getterminfo2
     | Enable UTF-8 code page (65001)
     65001 SetConsoleOutputCP  | Output UTF-8
     65001 SetConsoleCP | Input UTF-8
+	getterminfo
+	getrc 'prevrc ! 
 	;

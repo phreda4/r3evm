@@ -28,7 +28,7 @@
 #r3_lib_crc32.r3 'name 'words 'info
 #name "r3/lib/dmath.r3"
 #words  "*.d" "*.df" "/.d" "ceil.d" ".d>i" "i>.d" "f>.d" ".d>f" "cos.d" "sin.d" "tan.d" "tan.dc" "sqrt.d" "log2.d" "pow2.d" "pow.d" "root.d" "ln.d" "exp.d" "tanh.d" "gamma.d" "beta.d" "str>f.d" "f32!" ".fd" 0
-#info ( $2F $2F $2F $10 $10 $10 $10 $10 $10 $10 $10 $10 $10 $10 $10 $2F $2F $0 $0 $11 $10 $2F $11 $2E $10 )
+#info ( $2F $2F $2F $10 $10 $10 $10 $10 $10 $10 $10 $10 $10 $10 $10 $2F $2F $0 $0 $11 $10 $2F $11 $2E $11 )
 #r3_lib_dmath.r3 'name 'words 'info
 #name "r3/lib/escapi.r3"
 #words  "countCaptureDevices" "deinitCapture" "doCapture" "initCapture" "initCOM" "isCaptureDone" "getCaptureDeviceName" "getCaptureProperty" "setCaptureProperty" "setupESCAPI" 0
@@ -91,8 +91,8 @@
 #info ( $1F $2E $0 $1 $6B $2E $3D $1F $3D $3D $10 $1F $1F $1F $3E $5C $5B $4C $2E $1F $1F $4D $1F $4C $79 $1F $2F $6B $5C $5B $5B $9 $1F $1F $4C $2E $2E $3D $1F $4C $1F $2E $2E $3E $8 $3D $3D $5B $2E $2E $6A $5B $2E $2E $2E $1F $10 $1 $2F $1F $2E $10 $1F $1F $1F $1F $10 $2E $2E $1 $5C $3D $10 $2E $1F $1 $1 $10 $1F $80 $80 $80 $80 $3D $3D $4C $3D $2E $0 $2F $0 $0 $80 $80 $80 $80 $80 $80 $80 $1F $0 $1F $80 $1F $0 $0 $0 $11 $10 $10 )
 #r3_lib_sdl2.r3 'name 'words 'info
 #name "r3/lib/sdl2gfx.r3"
-#words  "SDLColor" "SDLColorA" "SDLcls" "SDLPoint" "SDLGetPixel" "SDLLine" "SDLLineH" "SDLLineV" "SDLFRect" "SDLRect" "SDLFEllipse" "SDLEllipse" "SDLTriangle" "SDLFRound" "SDLRound" "SDLFCircle" "SDLCircle" "SDLImage" "SDLImages" "SDLImageb" "SDLImagebb" "tsload" "tscolor" "tsalpha" "tsdraw" "tsdraws" "tsbox" "tsfree" "sprite" "spriteZ" "spriteR" "spriteRZ" "ssload" "sstint" "ssnotint" "sspritewh" "ssprite" "sspriter" "sspritez" "sspriterz" "createSurf" "Surf>pix" "Surf>wha" "Surf>wh" "Surf>pixpi" "texIni" "texEnd" "texEndAlpha" "tex2static" "timer<" "timer." "timer+" "timer-" "ICS>anim" "vICS>anim" "anim>n" "anim>c" "anim>stop" 0
-#info ( $1F $1F $1F $2E $2F $4C $3D $3D $4C $4C $4C $4C $6A $5B $5B $3D $3D $3D $5B $2E $3D $3E $2E $2E $4C $6A $3D $1F $3D $4C $4C $5B $3E $1F $0 $11 $4C $5B $5B $6A $2F $11 $11 $12 $11 $2E $1 $1 $10 $0 $0 $10 $10 $3E $4D $10 $10 $10 )
+#words  "SDLColor" "SDLColorA" "SDLcls" "SDLPoint" "SDLGetPixel" "SDLLine" "SDLLineH" "SDLLineV" "SDLFRect" "SDLRect" "SDLFEllipse" "SDLEllipse" "SDLTriangle" "SDLFRound" "SDLRound" "SDLFCircle" "SDLCircle" "SDLImage" "SDLImages" "SDLImageb" "SDLImagebb" "tsload" "tscolor" "tsalpha" "tsdraw" "tsdraws" "tsbox" "tsfree" "sprite" "spriteZ" "spriteR" "spriteRZ" "ssload" "sstint" "ssnotint" "sspritewh" "ssprite" "sspriter" "sspritez" "sspriterz" "createSurf" "Surf>pix" "Surf>wha" "Surf>wh" "Surf>pixpi" "texIni" "texEnd" "texEndAlpha" "Tex2Surface" "Tex2Static" "timer<" "timer." "timer+" "timer-" "aniInit" "ani+!" "aniFrame" "aniCnt" "ani+timer!" 0
+#info ( $1F $1F $1F $2E $2F $4C $3D $3D $4C $4C $4C $4C $6A $5B $5B $3D $3D $3D $5B $2E $3D $3E $2E $2E $4C $6A $3D $1F $3D $4C $4C $5B $3E $1F $0 $11 $4C $5B $5B $6A $2F $11 $11 $12 $11 $2E $1 $1 $11 $10 $0 $0 $10 $10 $3E $2E $10 $10 $1F )
 #r3_lib_sdl2gfx.r3 'name 'words 'info
 #name "r3/lib/sdl2gl.r3"
 #words  "glCreateProgram" "glCreateShader" "glShaderSource" "glCompileShader" "glGetShaderiv" "glAttachShader" "glGetProgramiv" "glGetAttribLocation" "glClearColor" "glGenBuffers" "glBindBuffer" "glBindRenderbuffer" "glBufferData" "glBufferSubData" "glGetTexImage" "glMapBuffer" "glUnmapBuffer" "glGetUniformBlockIndex" "glUniformBlockBinding" "glBindBufferBase" "glClear" "glUseProgram" "glValidateProgram" "glEnableVertexAttribArray" "glVertexAttribPointer" "glVertexAttribIPointer" "glDrawElements" "glDrawElementsInstanced" "glDrawArrays" "glDrawArraysInstanced" "glDisableVertexAttribArray" "glDeleteProgram" "glIsProgram" "glIsShader" "glGenVertexArrays" "glBindVertexArray" "glGetShaderInfoLog" "glGetProgramInfoLog" "glBindFragDataLocation" "glLinkProgram" "glGenTextures" "glActiveTexture" "glBindTexture" "glTexImage2D" "glUniform1i" "glTexParameteri" "glTexSubImage2D" "glEnable" "glDisable" "glBlendFunc" "glDepthFunc" "glDetachShader" "glDeleteShader" "glDeleteTextures" "glDeleteBuffers" "glDeleteVertexArrays" "glGetError" "glGetString" "glViewport" "glScissor" "glVertexPointer" "glBegin" "glEnd" "glColor4ubv" "glVertex3fv" "glTexCoord2fv" "glVertex2fv" "glGetUniformLocation" "glUniform1iv" "glUniform2iv" "glUniform3iv" "glUniform4iv" "glUniform1fv" "glUniform2fv" "glUniform3fv" "glUniform4fv" "glVertexAttribDivisor" "glUniformMatrix4fv" "glVertexAttrib1fv" "glVertexAttrib2fv" "glVertexAttrib3fv" "glVertexAttrib4fv" "glBindAttribLocation" "glGenFramebuffers" "glTexParameterfv" "glBindFramebuffer" "glFramebufferTexture2D" "glDrawBuffer" "glReadBuffer" "glPixelStorei" "glRenderbufferStorage" "glFramebufferRenderbuffer" "glGenRenderbuffers" "glGenTextures" "InitGLAPI" "SDLinitGL" "SDLinitSGL" "SDLGLcls" "SDLGLupdate" "SDLglquit" "glInfo" 0
@@ -147,8 +147,8 @@
 #info ( $10 $1F $2F $2E $2E $2E $2E $2E $30 $30 $2E $2E $2F $2E $2E $10 $1F )
 #r3_lib_vec3.r3 'name 'words 'info
 #name "r3/lib/webcam.r3"
-#words  "WEBCAM_FMT_RGB24" "WEBCAM_FMT_RGB32" "WEBCAM_FMT_YUYV" "WEBCAM_FMT_YUV420" "WEBCAM_FMT_MJPEG" "WEBCAM_PARAM_BRIGHTNESS" "WEBCAM_PARAM_CONTRAST" "WEBCAM_PARAM_SATURATION" "WEBCAM_PARAM_EXPOSURE" "WEBCAM_PARAM_FOCUS" "WEBCAM_PARAM_ZOOM" "WEBCAM_PARAM_GAIN" "WEBCAM_PARAM_SHARPNESS" "webcam_list_devices" "webcam_free_list" "webcam_query_capabilities" "webcam_free_capabilities" "webcam_find_best_format" "webcam_open" "webcam_capture" "webcam_release_frame" "webcam_close" "webcam_get_actual_width" "webcam_get_actual_height" "webcam_get_format" "webcam_get_parameter" "webcam_set_parameter" "webcam_set_auto" 0
-#info ( $80 $80 $80 $80 $80 $80 $80 $80 $80 $80 $80 $80 $80 $10 $1F $10 $1F $4D $4D $2F $1F $1F $10 $10 $10 $2F $3E $3E )
+#words  "WEBCAM_FMT_RGB24" "WEBCAM_FMT_RGB32" "WEBCAM_FMT_YUYV" "WEBCAM_FMT_YUV420" "WEBCAM_FMT_MJPEG" "WEBCAM_PARAM_BRIGHTNESS" "WEBCAM_PARAM_CONTRAST" "WEBCAM_PARAM_SATURATION" "WEBCAM_PARAM_EXPOSURE" "WEBCAM_PARAM_FOCUS" "WEBCAM_PARAM_ZOOM" "WEBCAM_PARAM_GAIN" "WEBCAM_PARAM_SHARPNESS" "webcam_list_devices" "webcam_free_list" "webcam_query_capabilities" "webcam_free_capabilities" "webcam_find_best_format" "webcam_open" "webcam_capture" "webcam_release_frame" "webcam_close" "webcam_get_actual_width" "webcam_get_actual_height" "webcam_get_format" "webcam_get_parameter" "webcam_set_parameter" "webcam_set_auto" "webcam_set_conversion_size" "webcam_get_converted_frame" 0
+#info ( $80 $80 $80 $80 $80 $80 $80 $80 $80 $80 $80 $80 $80 $10 $1F $10 $1F $4D $4D $2F $1F $1F $10 $10 $10 $2F $3E $3E $3D $3E )
 #r3_lib_webcam.r3 'name 'words 'info
 #name "r3/util/arr16.r3"
 #words  "p.ini" "p.clear" "p.cnt" "p.adr" "p.nro" "p!+" "p!" "p.draw" "p.drawo" "p.del" "p.mapv" "p.mapd" "p.map2" "p.sort" "p.isort" 0
@@ -279,24 +279,24 @@
 #info ( $80 $80 $1F $1F $1F $1F $2E $2E $12 $2F $2F $4 )
 #r3_util_ttfont.r3 'name 'words 'info
 #name "r3/util/tui.r3"
-#words  "fx" "fy" "fw" "fh" "flin?" "flin?1" "flxvalid?" "flx!" "flx" "flxpush" "flxpop" "flxRest" "flxN" "flxS" "flxE" "flxO" "fw%" "fh%" "flpad" "flcr" "uikey" "exit" "tuX?" "tuR!" "tuC!" ".tdebug" "tuiw" "tuiw1" "tuRefocus" "tuif" "tui" "onTui" "onTuia" ".wfill" ".wborde" ".wborded" ".wbordec" ".wtitle" "tuWin" "tuWina" "tuTBtn" "tuBtn" "tuLabel" "tuLabelC" "tuLabelR" "xwrite!" "xwrite.reset" "uiNindx" "tuList" "tuTree" "tuText" "padi>" "tuInputLine" "tuCheck" "tuRadio" "tuSlider" "tuProgress" 0
-#info ( $80 $80 $80 $80 $2F $2F $1 $4C $0 $0 $0 $0 $1F $1F $1F $1F $10 $10 $2E $0 $80 $0 $1 $0 $0 $0 $1 $1 $0 $1 $0 $1F $1F $0 $0 $0 $0 $2E $0 $0 $1F $2E $1F $1F $1F $1F $0 $10 $2E $2E $2F $80 $2E $2E $3D $3D $1F )
+#words  "fx" "fy" "fw" "fh" "flin?" "flin?1" "flxvalid?" "flx!" "flx" "flxpush" "flxpop" "flxRest" "flxN" "flxS" "flxE" "flxO" "fw%" "fh%" "flpad" "flcr" "uikey" "exit" "tuX?" "tuR!" "tuC!" ".tdebug" "tuiw" "tuiw1" "tuRefocus" "tuif" "tui" "onTui" "onTuia" ".wfill" ".wborde" ".wborded" ".wbordec" ".wtitle" "tuWin" "tuWina" "tuTBtn" "tuBtn" "tuLabel" "tuLabelC" "tuLabelR" "xwrite!" "xwrite.reset" "uiNindx" "tuList" "xwriten!" "xwriten.reset" "tuListN" "tuTree" "tuText" "padi>" "tuInputLine" "tuCheck" "tuRadio" "tuSlider" "tuProgress" 0
+#info ( $80 $80 $80 $80 $2F $2F $1 $4C $0 $0 $0 $0 $1F $1F $1F $1F $10 $10 $2E $0 $80 $0 $1 $0 $0 $0 $1 $1 $0 $1 $0 $1F $1F $0 $0 $0 $0 $2E $0 $0 $1F $2E $1F $1F $1F $1F $0 $10 $2E $1F $0 $2E $2E $2F $80 $2E $2E $3D $3D $1F )
 #r3_util_tui.r3 'name 'words 'info
 #name "r3/util/tuiedit.r3"
-#words  "filename" "fuente" "fuente>" "$fuente" "tuiecursor!" "tuipos!" "editfasthash" "tuEditShowCursor" "tuEditCode" "tuReadCode" "tuEditCodeMono" "tuReadCodeMono" "tudebug" "TuLoadMem" "TuLoadMemC" "TuLoadCode" "TuNewCode" "TuSaveCode" "tokenCursor" 0
-#info ( $80 $80 $80 $80 $1F $1F $1 $0 $0 $0 $0 $0 $1 $1F $1F $1F $0 $0 $1F )
+#words  "filename" "fuente" "fuente>" "$fuente" "tuiecursor!" "tuipos!" "editfasthash" "tueKeyMove" "tuEditShowCursor" "tuEditCode" "tuReadCode" "tuEditCodeMono" "tuReadCodeMono" "tuecursor." "TuLoadMem" "TuLoadMemC" "TuLoadCode" "TuNewCode" "TuSaveCode" "tokenCursor" 0
+#info ( $80 $80 $80 $80 $1F $1F $1 $10 $0 $0 $0 $0 $0 $1 $1F $1F $1F $0 $0 $1F )
 #r3_util_tuiedit.r3 'name 'words 'info
 #name "r3/util/txfont.r3"
-#words  "txloadwicon" "txload" "txfont" "txfont@" "txrgb" "txcw" "txw" "txch" "txh" "txat" "tx+at" "txpos" "txemit" "txwrite" "txemitr" "txprint" "txprintr" "txcur" "txcuri" "lwrite" "cwrite" "rwrite" "txalign" "txText" 0
-#info ( $2F $2F $1F $1 $1F $10 $11 $10 $1 $2E $2E $2 $1F $1F $1F $1F $1F $2E $2E $2E $2E $2E $1F $4C )
+#words  "txloadwicon" "txload" "txfont" "txfont@" "txrgb" "txcw" "txw" "txch" "txh" "txat" "tx+at" "txcr" "txpos" "txemit" "txwrite" "txemitr" "txprint" "txprintr" "txcur" "txcuri" "lwrite" "cwrite" "rwrite" "txalign" "txText" 0
+#info ( $2F $2F $1F $1 $1F $10 $11 $10 $1 $2E $2E $0 $2 $1F $1F $1F $1F $1F $2E $2E $2E $2E $2E $1F $4C )
 #r3_util_txfont.r3 'name 'words 'info
 #name "r3/util/utfg.r3"
 #words  ".xwrite" ".awrite" ".vline" ".hline" ".vlined" ".hlined" ".boxl" ".boxc" ".boxd" ".boxf" "lalign" "calign" "ralign" "lwrite" "cwrite" "rwrite" "xalign" "xwrite" "xText" 0
 #info ( $1F $1F $1F $1F $1F $1F $4C $4C $4C $4C $2E $2E $2E $2E $2E $2E $1F $1F $4C )
 #r3_util_utfg.r3 'name 'words 'info
 #name "r3/util/varanim.r3"
-#words  "deltatime" "timeline" "timeline<" "timeline>" "exevar" "vareset" "vaini" "vupdate" "+vanim" "+vboxanim" "+vxyanim" "+vcolanim" "+vexe" "+vvexe" "+vvvexe" "64xy" "64wh" "64xywh" "xywh64" "64xyrz" "xyrz64" "64box" "32xy" "xy32" "vaempty" 0
-#info ( $80 $80 $80 $80 $80 $0 $1F $0 $6A $6A $6A $6A $2E $3D $4C $11 $11 $13 $4D $13 $4D $2E $11 $2F $1 )
+#words  "deltatime" "timeline" "timeline<" "timeline>" "exevar" "vareset" "vaini" "vupdate" "+vanim" "+vanimg" "+vboxanim" "+vboxanimg" "+vxyanim" "+vxyanimg" "+vcolanim" "+vcolanimg" "+vexe" "+vexeg" "+vvexe" "+vvexeg" "+vvvexe" "+vvvexeg" "vkillgroup" "vkillvar" "64xy" "64wh" "64xywh" "xywh64" "64xyrz" "xyrz64" "64box" "32xy" "xy32" "vaempty" 0
+#info ( $80 $80 $80 $80 $80 $0 $1F $0 $6A $79 $6A $79 $6A $79 $6A $79 $2E $3D $3D $4C $4C $5B $1F $1F $11 $11 $13 $4D $13 $4D $2E $11 $2F $1 )
 #r3_util_varanim.r3 'name 'words 'info
 #name "r3/util/vscreen.r3"
 #words  "vscreen" "vini" "vredraw" "vfree" "sdlx" "sdly" "%w" "%h" 0
@@ -316,7 +316,7 @@
 #r3_lib_win_debugapi.r3 'name 'words 'info
 #name "r3/lib/win/ffmpeg.r3"
 #words  "IniVideo" "LoadVideo" "VideoBox" "VideoPoly" "VideoFlag" "VideoTex" "PlayVideo" "StopVideo" "LOADING" "VID_NO_AUDIO" "VID_LOOP" "VID_WAIT" "VideoTime" "VideoSize" "vshow" "vshowZ" "vshowR" "vshowRZ" 0
-#info ( $1F $2F $2E $5B $10 $10 $1F $1F $80 $80 $80 $80 $10 $11 $3D $4C $4C $3D )
+#info ( $1F $2F $2E $5B $10 $10 $1F $1F $80 $80 $80 $80 $10 $11 $3D $4C $4C $5B )
 #r3_lib_win_ffmpeg.r3 'name 'words 'info
 #name "r3/lib/win/inet.r3"
 #words  "InternetOpen" "InternetOpenUrl" "InternetReadFile" "InternetCloseHandle" "DeleteUrlCacheEntry" "openurl" 0
@@ -331,8 +331,8 @@
 #info ( $5C $5C $2F $2F )
 #r3_lib_win_urlmon.r3 'name 'words 'info
 #name "r3/lib/win/win-term.r3"
-#words  "stdin" "stdout" "stderr" "type" "rows" "cols" ".onresize" "evtkey" "evtmx" "evtmy" "evtmb" "evtmw" "evtmxy" "inevt" "getevt" "inkey" ".free" ".reterm" 0
-#info ( $80 $80 $80 $2E $80 $80 $1F $1 $80 $80 $80 $80 $2 $1 $1 $1 $1F $0 )
+#words  "stdin" "stdout" "stderr" "type" "rows" "cols" ".onresize" "evtkey" "evtkey2" "evtmx" "evtmy" "evtmb" "evtmw" "evtmxy" "inevt" "getevt" "inkey" ".enable-mouse" ".disable-mouse" ".free" ".reterm" 0
+#info ( $80 $80 $80 $2E $80 $80 $1F $1 $1 $80 $80 $80 $80 $2 $1 $1 $1 $0 $0 $0 $0 )
 #r3_lib_win_win-term.r3 'name 'words 'info
 #name "r3/lib/win/winhttp.r3"
 #words  "WinHttpOpen" "WinHttpConnect" "WinHttpOpenRequest" "WinHttpSendRequest" "WinHttpReceiveResponse" "WinHttpQueryDataAvailable" "WinHttpReadData" "WinHttpCloseHandle" "loadurl" 0

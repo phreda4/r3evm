@@ -205,25 +205,25 @@
 	
 ::onTui | 'vector --
 	'exvector .onresize
-	tuireset
+	tuireset 0 'uikey !
 	vecdraw swap 'vecdraw ! | stack old value
 	tuiredraw
 	( rflag $4 nand? drop
 		0 'uikey ! 0 'rflag ! |0 'uimouse !
-		inevt
+		|inevt
+		getevt
 		1 =? ( hkey ) |	2 =? ( hmouse )
 		1? ( tuiredraw ) | ?? animation
 		drop
-		5 ms
 		) drop 
-	tuireset 
-	|tuR! 0 'uikey !
+	tuireset 0 'uikey ! |tuR! 	
 	'vecdraw ! | restore old draw
+	tuR! | redraw prev screen
 	;
 
 ::onTuia | 'vector --
 	'exvector .onresize
-	tuireset
+	tuireset 0 'uikey !
 	vecdraw swap 'vecdraw ! | stack old value
 	tuiredraw
 	( rflag $4 nand? drop
@@ -233,12 +233,12 @@
 |		1? ( tuiredraw ) | ?? animation
 		drop
 		tuiredraw
-		5 ms
+		20 ms
 		) drop 
-	tuireset 
+	tuireset 0 'uikey !
 	'vecdraw ! | restore old draw
+	tuR! | redraw prev screen
 	;
-
 
 |---------------------	
 ::.wfill fx fy fw fh .boxf ;
@@ -342,7 +342,7 @@
 :clicklist | 'var h e -- 'var h e
 	evtmy fy -
 	cntlist >=? ( drop ; )
-	pick3 8 + @ + cntlist min 
+	pick3 8 + @ + cntlist 1- min 
 	pick3 ! tuX! ;
 
 |---- WHEEL & SCROLL
@@ -360,7 +360,8 @@
 :cscroll | 'var h --
 	calccs -? ( 2drop ; ) 
 	fx fw + 1-  fy rot + .at
-	1+ 'dnbk .rep ;
+	1+ 
+	'dnbk .rep ;
 	
 :chwheel | 'v h 
 	cntlist >=? ( ; ) 
@@ -421,6 +422,48 @@
 	cscroll
 	2drop
 	empty ;	
+
+|--- list n [words], 0 end
+:lwriten
+	.d cwrite ;
+	
+#(xwriten) 'lwriten
+
+::xwriten!
+	'(xwriten) ! ;
+	
+::xwriten.reset
+	'lwriten '(xwriten) ! ;
+
+:makeindxn | 'adr -- 
+	dup 'indlist !
+	dup ( w@+ 1? drop ) drop
+	swap - 2/ 
+	|dup "cntl:%d" .println waitkey
+	'cntlist ! ;
+
+:uiNindxn
+	cntlist >=? ( drop 0 ; )
+	2* indlist + w@ ;
+
+:ilistn | 'var max n  -- 'var max n
+	pick2 8 + @ over +
+	fx .col | color?
+	cntlist >=? ( drop fw .nsp .cr ; ) 
+	pick3 @ =? ( .rever )
+	uiNindxn 
+	fw swap (xwriten) ex .cr
+	.reset ;
+	
+::tuListN | 'var listn --
+	fx fy .at
+	makeindxn
+	fh
+	mouList
+	focList
+	0 ( over <? ilistn 1+ ) drop
+	cscroll
+	2drop ;	
 	
 |----- TREE
 | #vtree 0 0
@@ -561,7 +604,7 @@
 	dup 'pad> ! 'padf> !
 	'lins  'modo ! ;
 
-:tuInputfoco
+:tuInputfoco | 'buff max -- 'buff max 
 	tuif 0? ( drop ; )
 	1 =? ( drop inInput dup ) drop
 	kbInputLine 

@@ -3,6 +3,7 @@
 
 |WIN|^r3/lib/win/core.r3
 |LIN|^r3/lib/posix/core.r3
+|MAC|^r3/lib/mac/core.r3
 ^r3/lib/math.r3
 
 #sys-IniVideo
@@ -88,7 +89,7 @@
 	
 ::vshowZ | x y zoom img --
 	dup >r VideoSize 
-	pick2 swap 17 *>> 'ym ! 17 *>> 'xm !
+	pick2 17 *>> 'ym ! 17 *>> 'xm !
 	ab[ fillfull fillvertxy ]ba 
 	r> 'vert 4 'index 6 VideoPoly ;
 
@@ -98,8 +99,8 @@
 	r> 'vert 4 'index 6 VideoPoly ;
 
 ::vshowRZ | x y ang zoom img --
-	dup >r VideoSize
-	pick2 swap xm 16 *>> 'xm ! ym 16 *>> 'ym ! 
+	dup >r VideoSize | x y a z w h
+	pick2 16 *>> 'ym ! 16 *>> 'xm ! 
 	ab[ fillfull fillvertr ]ba 
 	r> 'vert 4 'index 6 VideoPoly ;
 	

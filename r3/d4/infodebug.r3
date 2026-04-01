@@ -1,4 +1,32 @@
-^r3/lib/console.r3
+| make map debug
+| PHREDA 2026
+
+|^r3/lib/console.r3
+^r3/lib/trace.r3
+ 
+#vshare 0 0 4096 "/debug.mem"	| vm state
+#bshare 0 0 64 "/bp.mem"		| breakpoint
+#dshare 0 0 0 "/data.mem" 		| memdata
+#cshare 0 0 0 "/code.mem" 		| codedata
+
+::*>end		$fe vshare ! ;
+::*>stop	$0 vshare ! ;
+::*>play	$1 vshare ! ;
+::*>step	$2 vshare ! ;
+::*>stepo	$3 vshare ! ; | 4 is the loop
+::*>stepu	$5 vshare ! ;
+
+::vmSTATE	vshare @ ;
+::vmINFO	vshare 1 3 << + @ ;
+::vmIP		vshare 2 3 << + @ ;
+::vmTOS		vshare 3 3 << + @ ;
+::vmNOS		vshare 4 3 << + @ ;
+::vmRTOS	vshare 5 3 << + @ ;
+::vmREGA	vshare 6 3 << + @ ;
+::vmREGB	vshare 7 3 << + @ ;
+::vmDS		vshare 8 3 << + ;
+::vmRS		vshare 512 3 << + ;
+
 
 #tokenstr
 ";" "LIT1" "ADR" "CALL" "VAR"
@@ -36,12 +64,9 @@
 "SYS6" "SYS7" "SYS8" "SYS9" "SYS10"
 "JMP" "JMPR" "LIT2" "LIT3" "LITF" 
 "AND_L" "OR_L" "XOR_L" "NAND_L" 
-"+_L" "-_L" "*_L" "/_L" 
-"<<_L" ">>_L" ">>>_L" 
+"+_L" "-_L" "*_L" "/_L" "<<_L" ">>_L" ">>>_L" 
 "MOD_L" "/MOD_L" "* /_L" 
-"*>>_L" "<</_L" 
-"*>>16_L" "<<16/_L" 
-"*>>16" "<<16/" 
+"*>>_L" "<</_L" "*>>16_L" "<<16/_L" "*>>16" "<<16/" 
 "<?_L" ">?_L" "=?_L" ">=?_L" "<=?_L" "<>?_L" "AN?_L" "NA?_L" 
 "<<>>_" ">>AND_" 
 "+@_" "+C@_" "+W@_" "+D@_" 
@@ -66,6 +91,7 @@
 "v!+" "vC!+" "vW!+" "vD!+" 
 "v+!" "vC+!" "vW+!" "vD+!" 
 
+#tokenstra * 512
 
 #tokencnt (
 0 0 0 0 0
@@ -133,8 +159,351 @@
 1 1 1 1 |"av!+" "avC!+" "avW!+" "avD!+" 
 1 1 1 1 |"av+!" "avC+!" "avW+!" "avD+!" 
 
-::.token | value -- str
+| make tokenstra for fast resolve names
+::buildtokenstr
+	'tokenstra
+	'tokenstr ( 'tokenstra <?
+		dup 'tokenstr - rot w!+ swap >>0 ) 2drop ;
+		
+::.tokenslow | value -- str
 	'tokenstr swap $ff and n>>0 ;
-	
+
+::.token | value -- str
+	$ff and 2* 'tokenstra + w@ 'tokenstr + ;
+		
 ::token>cnt | value -- cnt
 	$ff and 'tokencnt + c@ ;
+	
+##cntdicc ##localdicc
+#boot
+#memc #memd
+#memdsize #memcsize
+#memcode #memdata
+##mdatastack ##mretstack
+##cntinc ##strinc | includes in order
+##realdicc
+
+#codeinc
+#codedicc #codedicc>
+##codesrc ##codesrc>
+
+	
+|----
+|DICC
+|v=(inc<<56)|(pos<<40)|(dicc[i].mem<<8)|dicc[i].info;
+
+::ndicc@ | n -- entry
+	3 << realdicc + @ ;
+
+|---- view dicc
+::dicc>name | nd -- str
+	40 >> $ffff and realdicc cntdicc 3 << + + ; | name word
+
+
+#xc #yc #state 0 #tokenc
+#srcini
+
+:xycur+ | car -- car
+	13 =? ( 1 'yc +! 0 'xc ! ; )
+	9 =? ( 2 'xc +! ; ) 
+	1 'xc +! ;
+	
+::>>cr | adr -- adr'
+	( c@+ 1? 
+		13 =? ( drop 1- ; ) 
+		xycur+
+		drop ) drop 1- ;
+
+::>>sp | adr -- adr'	; next space
+	( c@+ $ff and 32 >? xycur+
+		drop ) drop 1- ;
+
+:>>str | src -- 'src 
+	c@+ xycur+ drop
+	( c@+ 1? xycur+
+		34 =? ( drop c@+ xycur+
+			34 <>? ( drop ; ) 
+			) drop 
+		) drop ;	
+
+| ftoken=(inc<<48)|(cnt<<40)|(pos<<24)|(xc<<12)|yc
+| ii cc pppp xxx yyy
+:curposxy | str -- str v
+	yc $fff and 
+	xc $fff and 12 << or 
+	over srcini - $ffff and 24 << or  | str
+	over ( c@+ $ff and 32 >? drop ) drop pick2 - 1-
+	40 << or
+	pick2 $ff and 48 << or | src
+	;
+
+:addCharCnt | src ftoken -- src nftoken
+	$ff0000000000 nand | remove cnt
+	over srcini -
+	over 24 >> $ffff and | src ftoken newpos getpos
+	- $ff and 40 << or ;
+	
+:ctoken! | src -- src
+	tokenc 1? ( 1- 'tokenc ! 
+		>>sp 
+		codesrc> 8 - @
+		addCharCnt
+		codesrc> 8 - !
+		; ) drop
+	
+	curposxy
+	da@+ dup token>cnt -? ( 
+		3drop | jmpr is )
+		codesrc> 8 - @ | TODO: calc ) position
+		
+		codesrc> !+ 'codesrc> ! ; ) 
+	'tokenc !
+	drop
+	
+	codesrc> !+ 'codesrc> !
+	dup	w@ 
+	$2100 <? ( $ff and
+		$5b =? ( 0 'tokenc ! ) | [ JMP (1)->(0)
+ 		|$5d =? ( ; ) |]
+		) drop
+	>>sp 
+	;
+
+:,token
+	state 0? ( drop >>sp ; ) drop
+	dup	w@ 
+	$2100 <? ( $ff and
+		$28 =? ( drop >>sp ; ) | (
+		$29 =? ( drop >>sp ; ) | )
+		) drop
+|	dup "%w=" .print
+	ctoken! |"[tok]" .write
+	;
+
+:,str 
+	state 0? ( drop >>str ; ) drop
+|	"<STR>" .print
+	
+	|||||ctoken! |"[str]" .write
+	tokenc 1? ( 1- 'tokenc ! >>str ; ) drop
+	curposxy
+		
+	|da@+ drop |.token .print |$ff and "(%h) | " .print
+	4 a+
+	
+	codesrc> !+ 'codesrc> !
+
+	>>str 1-
+	codesrc> 8 - @
+	addCharCnt
+	codesrc> 8 - !
+	1+
+	;
+	
+|--- build show in code
+:defvar | str --
+|.cr dup "%w " .print
+	b@+ | dicc entry
+	drop
+	curposxy
+	codedicc> !+ 'codedicc> !
+	0 'state ! 
+	;
+	
+:defwor | str --
+|.cr dup "%w " .print
+	b@+ | dicc entry
+	$8 and? ( drop 
+			|da@+ drop |"boot chain...." .println 
+			4 a+
+			curposxy codesrc> !+ 'codesrc> ! 
+			dup ) 
+	drop
+	curposxy
+	codedicc> !+ 'codedicc> !
+	1 'state ! 
+	;
+	
+:coment
+	drop
+|WIN|	"|WIN|" =pre 1? ( drop 5 + ; ) drop | Compila para WINDOWS
+|LIN|	"|LIN|" =pre 1? ( drop 5 + ; ) drop | Compila para LINUX
+|MAC|	"|MAC|" =pre 1? ( drop 5 + ; ) drop | Compila para MAC
+	>>cr ;
+	
+:wrd2token | str -- str'
+	( dup c@ $ff and 33 <? xycur+
+		0? ( nip ; ) drop 1+ )	| trim0
+	$5e =? ( drop >>cr ; )		| $5e ^  Include
+	$7c =? ( coment ; )		| $7c |	 Comentario
+	$3A =? ( drop defwor >>sp ; )	| $3a :  Definicion
+	$23 =? ( drop defvar >>sp ; )	| $23 #  Variable
+	$22 =? ( drop ,str ; )		| $22 "	 Cadena
+	|$27 =? ( drop ,token ; )	| $27 ' Direccion
+	drop
+	,token ;
+
+::inc2src
+	codeinc swap 3 << + @ ;
+
+:translatecode | n -- n ; B=dicc
+	0 'state ! 0 'xc ! 0 'yc ! | reset src
+	0 'tokenc !
+	dup inc2src | src
+	dup 'srcini !
+	( wrd2token 1? ) drop
+	;
+
+|------------------------------------
+#r3path * 512
+
+:realfilename | str -- str
+	dup c@ $2e <>? ( drop ; ) drop | "."
+	2 + 'r3path "%s/%s" sprint ;
+
+::makemapdebug | 'filename --
+| make memory map
+	here 
+	dup 'codeinc ! 
+	cntinc 1+ 3 << +
+	dup 'codedicc ! dup 'codedicc> !
+	cntdicc 3 << +
+	dup 'codesrc ! dup 'codesrc> !
+	memc 3 << +
+	'here !
+
+	dup 'r3path strpath
+| load src includes
+	codeinc >a
+	strinc 
+	0 ( cntinc <? swap
+		here dup a!+ 
+		over realfilename load 0 swap c! here only13 'here !
+		>>0 swap 1+ ) 2drop
+	here dup a!+
+	swap load 0 swap c! here only13 'here !
+	
+| every include+main
+	realdicc >b | dicc
+	cshare 4 + >a | tokencode
+	0 ( cntinc <=? 
+		translatecode
+		1+ ) drop
+|	waitkey
+	;
+
+|---- aux info 
+##dstackoff
+##rstackoff
+##dataoff
+
+:precalc
+	vmDS mdatastack - 8 + 'dstackoff !
+	vmRS mretstack - 8 + 'rstackoff !
+	dshare memdata - 'dataoff !
+	;
+
+::memtokn
+	2 << cshare + d@ ;
+::memtok
+	memtokn .token ;
+
+|LIN|:sysnew
+|LIN|	here "x-terminal-emulator -e bash -c '" ,s swap ,s "'" ,s ,eol
+|LIN|	libc-system drop ;
+	
+|------------------------------------
+::run&loadinfo | "" --
+	| ini loockup 
+	buildtokenstr
+	
+	| delete info files
+	"mem/r3code.mem" delete
+	"mem/r3dicc.mem" delete 
+	
+	| start debug
+	|'filename 
+|WIN|	"cmd /c r3d ""%s""" sprint
+|LIN|	"./r3lind ""%s""" sprint
+	sysnew 
+
+	| wait info files
+	"mem/r3dicc.mem"  
+	( dup filexist 0? drop 
+		inkey [esc] <>? drop
+		200 ms ) 
+	2drop 
+
+	here dup "mem/r3code.mem" load 'here !
+	w@+ 'cntdicc ! w@+ 'localdicc ! 
+	d@+ 'boot !
+	d@+ 'memc ! d@+ 'memd !
+	d@+ 'memdsize ! d@+ 'memcsize !
+	@+ 'memcode ! @+ 'memdata !
+	@+ dup 'mdatastack ! 504 3 << + 'mretstack !
+	w@+ 'cntinc ! 'strinc !
+	here dup "mem/r3dicc.mem" load 'here !
+	'realdicc !
+	|100 ms
+	
+|---- conect shared memory
+	memdsize 'dshare 16 + !		| data mem size
+	memcsize 'cshare 16 + !		| code mem size
+	
+	'vshare inisharev
+	'bshare inisharev
+	'dshare inisharev
+	'cshare inisharev
+	precalc
+	;
+
+|------------------------------------
+::debugend
+|----- end all	
+	*>end
+
+	'cshare endsharev
+	'dshare endsharev
+	'bshare endsharev
+	'vshare endsharev
+	;
+	
+|------------------------------------
+::stoponerror
+	-1 vshare 2 3 << + +! ||-1 vmIP +!
+	vmState 8 >>
+	0 vshare !
+	;
+
+|---- BREAKPOINT
+#bplist>
+
+::clearbp
+	bshare 0 over d! 'bplist> ! ;
+	
+::addbp | bp --
+	bplist> d!+ 0 over d! 'bplist> ! ;
+	
+::bplist | -- bs
+	bshare ;
+	
+::inbp? | bp -- bp exist?
+	bplist ( d@+ 1? 
+		pick2 =? ( drop ; ) 
+		drop ) nip ;
+		
+::delbp | adr --
+	( dup d@ 1? over 4 - d! 4 + ) swap 4 - d! 
+	-4 'bplist> +! ;
+	
+::ftoken>token
+	codesrc - 3 >> 1+ ;
+	
+::token>ftoken
+	1- 3 << codesrc + ;
+	
+::finddicc | ninc -- lastword
+	codedicc> ( 8 - dup @ 48 >> $ff and 
+		pick2 >? drop ) drop nip 
+	codedicc - 3 >> ;
+	

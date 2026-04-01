@@ -55,14 +55,14 @@
 
 #modo 'lins
 
-:kback
+:back
 	fuente> fuente <=? ( drop ; )
 	dup 1- c@ undobuffer> c!+ 'undobuffer> !
 	dup 1- swap $fuente over - 1+ cmove
 	-1 '$fuente +!
 	-1 'fuente> +! ;
 
-:kdel
+:del
 	fuente>	$fuente >=? ( drop ; )
 	1+ fuente <=? ( drop ; )
 	9 over 1- c@ undobuffer> c!+ c!+ 'undobuffer> !
@@ -133,6 +133,15 @@
 	
 ::tuipos! | pos --
 	dup 'fuente> !
+	fh 2/ ( 1? swap 2 - <<13 1+ swap 1- ) drop
+	fuente <? ( fuente nip ) 
+	'scrini> !
+	cursorpos
+	;
+
+::tuiposq! | pos --
+	dup 'fuente> !
+	scrini> scrend> in? ( drop cursorpos ; )
 	fh 2/ ( 1? swap 2 - <<13 1+ swap 1- ) drop
 	fuente <? ( fuente nip ) 
 	'scrini> !
@@ -364,7 +373,18 @@
 	6 =? ( ups clickMouse 'fuente> ! cursorpos )
 	drop ;
 
-	
+:cursordel
+	fuente>
+	inisel <? ( drop ; )
+	finsel <=? ( drop inisel 'fuente> ! ; ) drop
+	finsel inisel - neg 'fuente> +! ;
+
+:remsel
+	inisel 0? ( drop ; )
+	finsel $fuente over - 1+ cmove
+	finsel inisel - neg '$fuente +!
+	cursordel 0 dup 'inisel ! 'finsel ! ;
+
 :txtcopy
 	inisel 0? ( drop ; )
 	finsel over - 1+
@@ -373,9 +393,7 @@
 	;
 
 :txtcut
-	txtcopy
-	|remsel
-	;
+	txtcopy remsel ;
 
 :txtpaste
 	here pasteclipboard | 'mem -- 	
@@ -388,10 +406,29 @@
 	here count nip 'fuente> +!
 	;
 	
+:kdel
+	inisel 0? ( drop del ; )
+	drop remsel ;
+
+:kback
+	inisel 0? ( drop back ; )
+	drop remsel ;
+	
 :chmode
 	modo 'lins =? ( drop 'lover 'modo ! .ovec ; )
 	drop 'lins 'modo ! .insc ;
 
+::tueKeyMove
+	[UP] =? ( karriba sele ) 
+	[DN] =? ( kabajo sele )
+	[RI] =? ( kder sele ) 
+	[LE] =? ( kizq sele )
+	[HOME] =? ( khome sele ) 
+	[END] =? ( kend sele )
+	[PGUP] =? ( kpgup sele ) 
+	[PGDN] =? ( kpgdn sele )
+	;
+	
 :EditFoco
 	tuif 0? ( 'focoe ! ; )
 	|1 =? ( startfocus ) 
@@ -401,19 +438,12 @@
 	uikey 0? ( drop ; )	
 	32 126 in? ( modo ex fixcur cursorpos ; ) 
 	[tab] =? ( modo ex fixcur cursorpos ; ) 
-	[enter] =? ( 
-|LIN| $d nip | in linux [enter] is $a
-		modo ex fixcur cursorpos ; ) 
+	[enter] =? ( modo ex fixcur cursorpos ; ) 
+	
 	[BACK] =? ( kback )
 	[DEL] =? ( kdel )
-	[UP] =? ( karriba sele ) 
-	[DN] =? ( kabajo sele )
-	[RI] =? ( kder sele ) 
-	[LE] =? ( kizq sele )
-	[HOME] =? ( khome sele ) 
-	[END] =? ( kend sele )
-	[PGUP] =? ( kpgup sele ) 
-	[PGDN] =? ( kpgdn sele )
+	
+	tueKeyMove
 	[INS] =? ( chmode )	
 |[SHIFT+DEL] =? ( delword )
 |[SHIFT+INS] =? ( dupword )
@@ -425,7 +455,7 @@
 	[SHIFT+PGDN] =? ( sela kpgdn sela )
 	[SHIFT+HOME] =? ( sela khome sela )
 	[SHIFT+END] =? ( sela kend sela )
-	$18 =? ( txtcut ) | ctcrl-x
+	$18 =? ( txtcut ) | ctrl-x
 	$3 =? ( txtcopy ) | ctrl-c
 	$16 =? ( txtpaste ) | ctrl-v
 
@@ -449,7 +479,10 @@
 
 ::tuReadCode
 |	fw 8 <? ( drop ; ) drop
-	scrini> drawlines 'scrend> ! ;
+	fixcur cursorpos
+	scrini> drawlines 'scrend> !
+	tuEditShowCursor
+	;
 	
 ::tuEditCodeMono
 	EditMouse
@@ -464,8 +497,8 @@
 |	fw 8 <? ( drop ; ) drop
 	scrini> drawlinesmono 'scrend> ! ;
 	
-::tudebug
-	ycursor 1+ xcursor 1+ " %d:%d " sprint ;
+::tuecursor.
+	ycursor 1+ xcursor 1+ "%d:%d " sprint ;
 	
 ::TuLoadMem | "" --
 	fuente strcpy

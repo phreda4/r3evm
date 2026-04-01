@@ -441,15 +441,18 @@
 	texEnd
 	dup 1 SDL_SetTextureBlendMode ;
 	
-::tex2static | tex -- newtexture
+::Tex2Surface | tex -- tex surface
 	dup 'xm 'ym 'dx 'dy SDL_QueryTexture | xm=format 
-	0 dx dy 0 xm SDL_CreateRGBSurfaceWithFormat 
+	0 dx dy 0 xm SDL_CreateRGBSurfaceWithFormat | tex surf
 	SDLrenderer pick2 SDL_SetRenderTarget
 	SDLrenderer 0 xm pick3 Surf>pixpi SDL_RenderReadPixels
-	SDLrenderer 0 SDL_SetRenderTarget	
+	SDlrenderer 0 SDL_SetRenderTarget ;
+
+::Tex2Static | tex -- newtexture
+	Tex2Surface
 	SDLrenderer over SDL_CreateTexturefromSurface | new texture
 	-rot SDL_FreeSurface SDL_destroytexture ;
-			
+	
 |.... time control
 #prevt
 #deltatime
@@ -460,30 +463,35 @@
 | $ffffffff7fffffff and  ; 	| for ring counter
 ::timer- deltatime - ; 								| sub timer
 
-|.... animation
-| fff ff fff ........
-| inicio(12) cnt(8) escala(12) time(32) (49 dias)
-|                      
-::ICS>anim | init cnt scale -- val
-	32 << swap 44 << or swap 52 << or ;
-	
-::vICS>anim | v init cnt scale -- val
-	ICS>anim swap $ffffffff and or ;
-	
-::anim>n | ani -- t
-	dup |$ffffffff and
-	dup 32 >> $fff and * $ffff and
-	over 44 >> $ff and 16 *>>
-	swap 52 >>> +
-	;
+|..... frame animation system
 
-::anim>c | ani -- c
-	dup |$ffffffff and
-	dup 32 >> $fff and * $ffff and
-	swap 44 >> $ff and 16 *>>
-	;
-	
-::anim>stop | ani -- ani
-	$ff00000000000 nand ;
+|init(12) cnt-1(8) now(8) ms(12) acc(24)  = 64 bits
+|63..52   51..44   43..36  35..24  23..0
+::aniInit | ini cnt fps -- V
+	0? ( 2drop 0 1.0 )				| 0fps is still
+	1000.0 swap / $fff and 24 <<	| ms x frame
+	swap $ff and 44 << or	| cnt 0-> not 1-
+	swap $fff and 52 << or ;		| init
+
+::ani+! | dt 'v --
+	swap over +! 
+	dup @ dup $ffffff and	| 'v val acc
+	over 24 >> $fff and -	| 'v val acc-ms ( acc-ms)
+	-? ( 3drop ; ) 
+	over 36 >> $ff and 1+	| 'v val nacc nnow
+	pick2 44 >> $ff and		| 'v val nacc nnow cnt
+	>=? ( 0 nip )			| 'v val nacc now
+	36 << or				| 'v val nn
+	swap $ff000ffffff nand or
+	swap ! ;
+
+::aniFrame | V -- f
+	dup 36 >> $ff and swap 52 >> $fff and + ;
+
+::aniCnt | V -- c
+	36 >> $ff and ;
+
+::ani+timer! | 'V --
+	deltatime swap ani+! ;
 	
 : fillfull ;

@@ -3,15 +3,13 @@
 
 |LIN| ^r3/lib/posix/lin-term.r3
 |WIN| ^r3/lib/win/win-term.r3
+|MAC| ^r3/lib/mac/mac-term.r3
 ^r3/lib/mem.r3
 ^r3/lib/parse.r3
 
 | KEYCODES 
 ::[ESC] $1b ; 
-::[ENTER] 
-|WIN| $d 
-|LIN| $a
-	; 
+::[ENTER] $d ;
 ::[BACK] $7f ;
 ::[TAB] $9 ; ::[DEL] $7E335B1B ; ::[INS] $7E325B1B ;
 ::[UP] $415b1b ; ::[DN] $425b1b ; 
@@ -185,16 +183,16 @@
 	
 :.char
 	0? ( drop ; )
-	8 =? ( swap 
-		1 - 'pad <? ( 2drop 'pad ; )
-		swap .emit "1P" .[w ; )
+	$7f =? ( drop | backspace
+		1- 'pad <? ( drop 'pad ; )
+		8 .emit 32 .emit 8 .emit ; )
 	dup .emit
 	swap c!+ ;
 	
 ::.input | --
 	.showc .ovec
 	'pad 
-	( getch [enter] <>? [esc] <>? .char ) drop
+	( getch $a <>? [enter] <>? [esc] <>? .char ) drop
 	0 swap c! .cr .flush ;
 	
 :emite | char --
@@ -204,10 +202,9 @@
 ::.printe | "" --
 	sprint
 	( c@+ 1? emite ) 2drop ;
-
+	
 ::strcpybuf | 'mem --
-	0 .emit
-	outbuf swap strcpy .cl ;
+	0 .emit outbuf swap strcpy .cl ;
 	
 : |||||||||||||||||||||||||||||
 	here 

@@ -1,52 +1,53 @@
 |main
 ^r3/lib/console.r3
-^r3/lib/dmath.r3
 
 #var1 33
+#var2 0
 
-:cua 
-	dup * ;
+:meminv	
+	23 var1 ! ;
 	
-:tt 
-	var1 + cua 
-	10 <? ( 1 + ) 
-	over
+:stakover
+	10 ( 1? dup ) ;
+	
+:stackunder
+	10 ( 1? nip ) ;
+
+:div0
+	1200 var2 / 'var1 ! ;
+
+:rstack
+	var2 * ;
+	
+:callwithjump
+	31 'var1 !
 	;
 
-#v
+:tcall
+	3 
+	drop
+	"hola" .println
+	var1 var2
+	*
+	callwithjump 
+;
 
-::/.g   16 >> swap 16 << swap / ;
-:
-2 tt 1 cua over 3 + 
-"hola" over tt 
-cua 
-"%d" .println
-128 129 130
-
+	
+: 
+.cls 
+tcall
+"test runtime error" .println
 .cr
-1234567890.123456789 16 <<
-dup
-.fd .write .cr
-3.0 16 << /.d
-.fd .write .cr
-.cr
+( 
+	"f keys.." .print
+	getch [esc] <>? 
+	[F2] =? ( meminv ) 
+	[F3] =? ( stakover )
+	[F4] =? ( stackunder )
+	[F5] =? ( div0 )	
+	" %h" .println
+	) drop
+"finish" .println
 
-"1234567890.123456789" 'v f32!
-v
-dup
-.fd .write .cr
-3.0 16 << /.d
-.fd .write .cr
-.cr
-
-"1234567890.123456789" 'v f32!
-v
-dup
-.fd .write .cr
-3.0 16 << /.g
-.fd .write .cr
-.cr
-
-waitkey
 ;
 

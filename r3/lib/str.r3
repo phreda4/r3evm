@@ -41,10 +41,6 @@
 ::tolow | C -- c
 	$20 or ;
 
-::count | s1 -- s1 cnt ; naive version (not used)
-	0 over ( c@+ 1?
-		drop swap 1+ swap ) 2drop ;
-
 ::count | s1 -- s1 cnt ; version 3 - 8 bytes
 	0 over ( @+ dup $0101010101010101 -
 		swap nand $8080808080808080 nand? 
@@ -57,6 +53,10 @@
 	$800000000000 and? ( 2drop 5 + ; )
 	$80000000000000 and? ( 2drop 6 + ; )	
 	2drop 7 + ;
+
+::count | s1 -- s1 cnt 
+	0 over ( c@+ 1?
+		drop swap 1+ swap ) 2drop ;
 
 |---- UTF-8	
 ::utf8count | str -- str count
@@ -157,6 +157,10 @@
 		pick2 <>? drop ) drop nip
 	1- ;
 
+:findbyte | v64 char -- check
+	$ff and dup 8 << or dup 16 << or dup 32 << or | $0101010101010101 *
+	xor	dup  $0101010101010101 - swap neg and $8080808080808080 and ;
+	
 |----------- find str
 :=p | s1 s2 -- 1/0
 	( c@+ 1?
@@ -220,18 +224,21 @@
 :.f!
 	( 10/mod $30 + pick2 c! swap 1- swap 1? ) drop
 	1+ $2e over c! 1-
-	over abs 16 >>> 
+	swap 16 >>> 
 	( 10/mod $30 + pick2 c! swap 1- swap 1? ) drop
 	swap sign ;
 
 ::.f | fix -- str
-	mbuffi over	abs $ffff and 10000 16 *>> 10000 + .f! ;
+	dup abs 3 + mbuffi | 3 = 0.00005
+	over $ffff and 10000 16 *>> 10000 + .f! ; 
 
 ::.f2 | fix -- str
-	mbuffi over	abs $ffff and 100 16 *>> 100 + .f! ;
+	dup abs 328 + mbuffi | 328 = 0.005
+	over $ffff and 100 16 *>> 100 + .f! ;
 
 ::.f1 | fix -- str
-	mbuffi over abs $ffff and 10 16 *>> 10 + .f! ;
+	dup abs 3277 + mbuffi | 3277 = 0.05
+	over $ffff and 10 16 *>> 10 + .f! ;
 
 ::.r. | b nro -- b ; right spaces
 	'mbuff 63 + swap -
