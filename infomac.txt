@@ -1,0 +1,206 @@
+
+# Porting R3Forth Files from Linux to macOS
+
+This document explains the changes required to adapt the three R3Forth files—`core.r3`, `lin-term.r3`, and `posix.r3`—from Linux to **macOS** (Darwin).  
+Note that iOS is not covered due to sandbox restrictions and a different system architecture.
+
+## 1. System Library Path (`posix.r3`)
+
+Linux uses `/lib/libc.so.6`. macOS uses `/usr/lib/libSystem.dylib`. Update the `loadlib` call accordingly.
+
+```forth
+: "/usr/lib/libSystem.dylib" loadlib
+```
+
+## 2. Directory Entry Structure (`struct dirent`) – `core.r3`
+
+Linux offsets for `struct dirent`:
+- `d_ino` = 0
+- `d_off` = 8
+- `d_reclen` = 16
+- `d_type` = 18
+- `d_name` = 19
+
+macOS (64‑bit) offsets:
+```c
+struct dirent {
+    ino_t      d_ino;      /* 0 */
+    __uint16_t d_reclen;   /* 8 */
+    __uint8_t  d_type;     /* 10 */
+    __uint8_t  d_namlen;   /* 11 */
+    char       d_name[];   /* 12 */
+};
+```
+
+Update the words that rely on these offsets:
+
+### `::FNAME` – filename offset
+```forth
+::FNAME | adr -- adrname
+|MAC| 12 +   ;   | macOS
+```
+
+### `::FDIR` – directory flag (d_type)
+```forth
+::FDIR | adr -- 1/0
+|MAC| 10 + c@ 2 >> 1 and ;   | macOS
+```
+
+## 3. File Status Structure (`struct stat`) – `core.r3`
+
+The Linux code uses fixed offsets into a 160‑byte buffer. macOS `struct stat` is different. You must adjust the offsets for the following words:
+
+- `::FSIZEF` (st_size)
+- `::FCREADT` (creation time – not directly portable; macOS uses `st_birthtimespec`)
+- `::FLASTDT` (last access time)
+- `::FWRITEDT` (last modification time)
+
+To get the correct offsets, compile a small C program and print `offsetof` for each field. Example:
+
+```c
+#include <sys/stat.h>
+#include <stdio.h>
+
+int main() {
+    printf("st_size: %d\n", (int)offsetof(struct stat, st_size));
+    printf("st_atimespec.tv_sec: %d\n", (int)offsetof(struct stat, st_atimespec.tv_sec));
+    printf("st_mtimespec.tv_sec: %d\n", (int)offsetof(struct stat, st_mtimespec.tv_sec));
+    printf("st_birthtimespec.tv_sec: %d\n", (int)offsetof(struct stat, st_birthtimespec.tv_sec));
+    return 0;
+}
+```
+
+Typical values (macOS 64‑bit):
+- `st_size` → 60
+- `st_atimespec.tv_sec` → 64
+- `st_mtimespec.tv_sec` → 72
+- `st_birthtimespec.tv_sec` → 80
+
+Update the words accordingly. For example:
+
+```forth
+::FSIZEF
+    drop 'st 60 + @ ;   | st_size (Linux was 48)
+
+::FWRITEDT | last write
+    drop 'st 72 + libc-localtime ;   | st_mtimespec.tv_sec
+
+::FLASTDT | last access
+    drop 'st 64 + libc-localtime ;   | st_atimespec.tv_sec
+
+::FCREADT | creation (birth)
+    drop 'st 80 + libc-localtime ;   | st_birthtimespec.tv_sec
+```
+
+## 4. File Open Flags (`O_*`) – `core.r3`
+
+The numeric values of `O_CREAT`, `O_TRUNC`, `O_APPEND`, and `O_NONBLOCK` differ between Linux and macOS. Update the constants used in `::save` and `::append`.
+
+Current Linux‑style definitions (in comments):
+
+```forth
+|100 constant O_CREAT $40
+|200 constant O_TRUNC $200
+|2000 constant O_APPEND $400
+|4000 constant O_NONBLOCK $800
+```
+
+For macOS, use the correct values (can be obtained from `/usr/include/sys/fcntl.h`):
+
+```forth
+|$200 constant O_CREAT    (octal 01000)
+|$400 constant O_TRUNC    (octal 02000)
+|$8   constant O_APPEND   (octal 010)
+|$4   constant O_NONBLOCK (octal 04)
+```
+
+Then adjust the `open` calls. Example in `::save`:
+
+```forth
+$241 $1ff libc-open   | Linux: O_CREAT|O_TRUNC|O_WRONLY  (0x241)
+```
+
+On macOS, `O_CREAT|O_TRUNC|O_WRONLY` becomes:
+
+```forth
+O_CREAT O_TRUNC O_WRONLY or or   (i.e., $200 $400 2 or or = $602)
+```
+
+So you might write:
+
+```forth
+::save | 'from cnt "filename" --
+    0? ( 3drop ; )
+    O_CREAT O_TRUNC O_WRONLY or or $1ff libc-open   | macOS flags
+    32>64 -? ( 3drop ; )
+    dup >r
+    -rot libc-write drop
+    r> libc-close drop 
+    ;
+```
+
+## 5. Terminal Window Size (`TIOCGWINSZ`) – `lin-term.r3`
+
+In `::.getterminfo`, the `ioctl` request code `$5413` is Linux‑specific. For macOS, use the correct constant defined in `<sys/ioctl.h>`:
+
+```c
+#define TIOCGWINSZ _IOWR('t', 104, struct winsize)   /* 0x40087468 */
+```
+
+Replace the line:
+
+```forth
+1 $5413 'flgs libc-ioctl   | TIOCGWINSZ
+```
+
+with:
+
+```forth
+1 $40087468 'flgs libc-ioctl   | TIOCGWINSZ for macOS
+```
+
+## 6. Clock Source – `core.r3`
+
+The word `::msec` uses `CLOCK_MONOTONIC_RAW` (value 4). On macOS, `CLOCK_MONOTONIC_RAW` does not exist. Use `CLOCK_MONOTONIC` (value 1) or `CLOCK_UPTIME_RAW` (value 6) if available. The simplest is:
+
+```forth
+1 constant CLOCK_MONOTONIC   | instead of 4
+```
+
+Update the `libc-clock_gettime` call accordingly.
+
+## 7. Terminal Emulator Launch – `lin-term.r3`
+
+The commented code uses `gnome-terminal` or `xterm`. On macOS you can use `open` to launch a new terminal window. Example replacement for `::sysnew`:
+
+```forth
+::sysnew | "" -- ;
+    |here "open -a Terminal.app ./emulador_r3forth" ,s ,eol
+    libc-system drop ;
+```
+
+If you need more control, consider using `osascript` or launching a separate terminal session with `script`.
+
+## 8. Miscellaneous
+
+- **`libc-fstatat`**: The function exists on macOS. The `flags` argument (0 in the code) works fine (default `AT_SYMLINK_NOFOLLOW` is not required).
+- **`libc-signal`**: The signal numbers are the same; the function is available.
+- **Networking functions** (`socket`, `bind`, etc.) are POSIX‑compatible and require no change.
+- **Locale**: `setlocale` works the same way.
+
+## Summary of Changes by File
+
+### `posix.r3`
+- Replace library path with `"/usr/lib/libSystem.dylib"`.
+
+### `core.r3`
+- Update `::FNAME` and `::FDIR` with macOS offsets.
+- Adjust `struct stat` offsets in `::FSIZEF`, `::FLASTDT`, `::FWRITEDT`, `::FCREADT`.
+- Change file open flags to macOS values.
+- Modify `CLOCK_MONOTONIC_RAW` to `CLOCK_MONOTONIC` (or another appropriate clock).
+
+### `lin-term.r3`
+- Change `TIOCGWINSZ` constant in `::.getterminfo`.
+- Optionally update `::sysnew` to launch a macOS terminal.
+
+With these modifications, the R3Forth core and terminal modules should compile and run correctly on macOS. Test each word after porting to ensure correct behavior.
