@@ -50,7 +50,8 @@
 #prevrc 0
 
 ::.getterminfo | --
-	1 $5413 'flgs libc-ioctl | TIOCGWINSZ
+|	1 $5413 'flgs libc-ioctl | TIOCGWINSZ
+	1 $40087468 'flgs libc-ioctl   | TIOCGWINSZ for macOS
 	flgs dup 16 >> $ffff and 1 - 'cols !
 	$ffff and 1 - 'rows ! ;
 

@@ -10,7 +10,7 @@
 #te 0 0 
 
 ::msec | -- msec
-	4 'te libc-clock_gettime drop |4 constant CLOCK_MONOTONIC_RAW
+	1 'te libc-clock_gettime drop |4 constant CLOCK_MONOTONIC_RAW
 	'te @+ 1000* swap @ 1000000/ + ;
 
 |struct tm {
@@ -72,24 +72,21 @@
 	;
 
 ::FDIR | adr -- 1/0
-|WIN| @ 4 >>
-|LIN| 18 + c@ 2 >>
-|RPI| 10 + c@ 2 >>
-|MAC| 20 + c@ 2 >>       | when _DARWIN_FEATURE_64_BIT_INODE is set !
+	20 + c@ 2 >>       | when _DARWIN_FEATURE_64_BIT_INODE is set !
 	1 and ;
 
 ::FSIZEF
-	drop 'st 48 + @ ;
+    drop 'st 60 + @ ;   | st_size (Linux was 48)
 
-::FCREADT | adr -- 'timedate | creation date
-	drop 'st 88 + libc-localtime ;
+::FWRITEDT | last write
+    drop 'st 72 + libc-localtime ;   | st_mtimespec.tv_sec
 
-::FLASTDT | adr -- 'timedate  | last acces date
-	drop 'st 72 + libc-localtime ;
+::FLASTDT | last access
+    drop 'st 64 + libc-localtime ;   | st_atimespec.tv_sec
 
-::FWRITEDT | adr -- 'timedate | last write date
-	drop 'st 104 + libc-localtime ;
-
+::FCREADT | creation (birth)
+    drop 'st 80 + libc-localtime ;   | st_birthtimespec.tv_sec
+	
 ::findata 'dirp ;
 
 ::ffirst | "path//*" -- fdd/0
@@ -105,14 +102,10 @@
 	1? ( ; ) 
 	dirp libc-closedir drop ;	
 
-|0 constant O_RDONLY octal
-|1 constant O_WRONLY
-|2 constant O_RDWR
-|100 constant O_CREAT $40
-|200 constant O_TRUNC $200
-|2000 constant O_APPEND $400
-|4000 constant O_NONBLOCK $800
-| 077 octal $1ff
+|$200 constant O_CREAT    (octal 01000)
+|$400 constant O_TRUNC    (octal 02000)
+|$8   constant O_APPEND   (octal 010)
+|$4   constant O_NONBLOCK (octal 04)
 
 :32>64 32 << 32 >> ;
 	
@@ -125,7 +118,7 @@
 
 ::save | 'from cnt "filename" --
 	0? ( 3drop ; )
-	$241 $1ff libc-open 32>64 -? ( 3drop ; )
+	$602 $1ff libc-open 32>64 -? ( 3drop ; )
 	dup >r
 	-rot libc-write drop
 	r> libc-close drop 
@@ -133,7 +126,7 @@
 
 ::append | 'from cnt "filename" -- 
 	0? ( 3drop ; )
-	$441 $1ff libc-open 32>64 -? ( 3drop ; )
+	$209 $1ff libc-open 32>64 -? ( 3drop ; )
 	dup >r
 	-rot libc-write drop
 	r> libc-close drop 
