@@ -523,7 +523,8 @@ memcode[memc++]=nro;
 void closevar() 
 {
 if (cntdicc==0) return;
-if (!dicc[cntdicc-1].info&0x10) return; // prev is var
+//if (!dicc[cntdicc-1].info&0x10) return; // prev is var
+if (!(dicc[cntdicc-1].info&0x10)) return; // prev is var
 if (dicc[cntdicc-1].mem<memd) return;  		// have val
 memdata[memd]=0;memd+=8; // now 64 bits
 }

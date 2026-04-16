@@ -457,7 +457,8 @@ memcode[memc++]=nro;
 void closevar() 
 {
 if (cntdicc==0) return;
-if (!dicc[cntdicc-1].info&0x10) return; // prev is var
+//if (!dicc[cntdicc-1].info&0x10) return; // prev is var
+if (!(dicc[cntdicc-1].info&0x10)) return; // prev is var
 if (dicc[cntdicc-1].mem<memd) return;  		// have val
 memdata[memd]=0;memd+=8; // now 64 bits
 }
@@ -1118,10 +1119,10 @@ while (TOS<=T) {
 }
 #endif
 
-void memset32(__uint32 *dest,__uint32 val, __uint32 count)
+static void memset32(__uint32 *dest,__uint32 val, __uint32 count)
 { while (count--) *dest++ = val; }
 
-void memset64(__uint64 *dest,__uint64 val,__uint32 count)
+static void memset64(__uint64 *dest,__uint64 val,__uint32 count)
 { while (count--) *dest++ = val; }
 
 
