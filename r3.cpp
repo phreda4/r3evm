@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <cstring>
 
-#if __linux__ || __APPLE__ 
+#if defined(__linux__) || defined(__APPLE__ )
 
 #include <dlfcn.h>
 #include <unistd.h>
@@ -850,7 +850,7 @@ return a == b;
 char *nextcom(char *str)
 {
 str++;
-#if __linux__
+#if defined(__linux__)
   if (r3tok5(str,"LIN|")) {	// linux specific
     return str+4;
   }
@@ -862,7 +862,7 @@ str++;
   if (r3tok5(str,"RPI|")) {	// raspberry pi specific
     return str+4;
   }
-#elif __APPLE__  
+#elif defined(__APPLE__)
   if (r3tok5(str,"MAC|")) {	// mac
     return str+4;
   }
@@ -1447,7 +1447,7 @@ L_DFILL://FILL
 L_MEM://"MEM"
 	NOS++;*NOS=TOS;TOS=(__int64)&memdata[memd];NEXT;
 
-#if __linux__ || defined(__APPLE__)
+#if defined(__linux__) || defined(__APPLE__)
 L_LOADLIB: // "" -- hmo
 	TOS=(__int64)dlopen((char*)TOS,RTLD_NOW);NEXT; //RTLD_LAZY 1 RTLD_NOW 2
 L_GETPROCA: // hmo "" -- ad		
@@ -1641,7 +1641,7 @@ L_VWINCSTOR:op=*(__int64*)&memdata[op>>8];*(__int16*)op+=TOS;TOS=*NOS;NOS--;NEXT
 L_VDINCSTOR:op=*(__int64*)&memdata[op>>8];*(__int32*)op+=TOS;TOS=*NOS;NOS--;NEXT;//D+!
 }
 
-#ifdef __linux__
+#ifdef defined(__linux__)
 #include <termios.h>
 #include <unistd.h>
 
@@ -1654,7 +1654,7 @@ void termreset(void) {fflush(stdout);tcsetattr(STDIN_FILENO, TCSADRAIN, &staterm
 ////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[])
 {
-#ifdef __linux__
+#ifdef defined(__linux__)
 termsave();
 atexit(termreset);
 #endif
