@@ -48,6 +48,6 @@ tcall
 	" %h" .println
 	) drop
 "finish" .println
-
+.free
 ;
 

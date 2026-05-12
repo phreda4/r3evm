@@ -20,4 +20,4 @@
 		) drop
 	;
 	
-: main ;
+: main .free ;

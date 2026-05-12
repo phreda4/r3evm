@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cstring>
+#include <signal.h>
+#include <setjmp.h>
 
 #if defined(__linux__) || defined(__APPLE__ )
 
@@ -23,6 +25,7 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <stdint.h>
+#include <termios.h>
 
 typedef int64_t __int64; 
 typedef int32_t __int32; 
@@ -1277,15 +1280,38 @@ register __int64 REGA=0;
 register __int64 REGB=0;
 register __int64 op=0;
 register int ip=boot;
+__int64 *NOS_LIMIT = RTOS - 16;
+__int64 *RTOS_LIMIT = &stack[16];
+
+if (0) {
+L_STACK_ERROR:
+	fprintf(stderr, "\rruntime error: stack overflow\r\n");
+	goto L_RECOVER;
+L_STACK_UNDERFLOW:
+	fprintf(stderr, "\rruntime error: stack underflow\r\n");
+	goto L_RECOVER;
+L_DIV_ZERO:
+	fprintf(stderr, "\rruntime error: division by zero\r\n");
+	goto L_RECOVER;
+L_RECOVER:
+	NOS = &stack[0];
+	RTOS = &stack[STACKSIZE-1];
+	TOS = 0;
+	REGA = 0;
+	REGB = 0;
+	NOS_LIMIT = RTOS - 16;
+	ip = boot;
+	NEXT;
+}
 
 NEXT;
 L_FIN:ip=*RTOS;RTOS++;if (ip==0) return;
 	NEXT; 													// ;
 L_LIT:NOS++;*NOS=TOS;TOS=op>>8;NEXT;					// LIT1
 L_ADR:NOS++;*NOS=TOS;TOS=(__int64)&memdata[op>>8];NEXT;	// LIT adr
-L_CALL:RTOS--;*RTOS=ip;ip=(unsigned int)op>>8;NEXT;		// CALL
+L_CALL:RTOS--;if(RTOS<=RTOS_LIMIT)goto L_STACK_ERROR;*RTOS=ip;ip=(unsigned int)op>>8;NEXT;		// CALL
 L_VAR:NOS++;*NOS=TOS;TOS=*(__int64*)&memdata[op>>8];NEXT;// VAR
-L_EX:RTOS--;*RTOS=ip;ip=TOS;TOS=*NOS;NOS--;NEXT;		//EX
+L_EX:RTOS--;if(RTOS<=RTOS_LIMIT)goto L_STACK_ERROR;*RTOS=ip;ip=TOS;TOS=*NOS;NOS--;NEXT;		//EX
 L_ZIF:if (TOS!=0) {ip+=(op>>8);}; NEXT;//ZIF
 L_UIF:if (TOS==0) {ip+=(op>>8);}; NEXT;//UIF
 L_PIF:if (TOS<0) {ip+=(op>>8);}; NEXT;//PIF
@@ -1325,21 +1351,21 @@ L_NAND:TOS=(~TOS)&(*NOS);NOS--;NEXT;		//NAND
 L_ADD:TOS=*NOS+TOS;NOS--;NEXT;				//SUMA
 L_SUB:TOS=*NOS-TOS;NOS--;NEXT;				//RESTA
 L_MUL:TOS=*NOS*TOS;NOS--;NEXT;				//MUL
-L_DIV:TOS=(*NOS/TOS);NOS--;NEXT;			//DIV
+L_DIV:if(TOS==0)goto L_DIV_ZERO;TOS=(*NOS/TOS);NOS--;NEXT;			//DIV
 L_SHL:TOS=*NOS<<TOS;NOS--;NEXT;				//SAl
 L_SHR:TOS=*NOS>>TOS;NOS--;NEXT;				//SAR
 L_SHR0:TOS=((__uint64)*NOS)>>TOS;NOS--;NEXT;	//SHR
-L_MOD:TOS=*NOS%TOS;NOS--;NEXT;					//MOD
-L_DIVMOD:op=*NOS;*NOS=op/TOS;TOS=op%TOS;NEXT;	//DIVMOD
+L_MOD:if(TOS==0)goto L_DIV_ZERO;TOS=*NOS%TOS;NOS--;NEXT;					//MOD
+L_DIVMOD:if(TOS==0)goto L_DIV_ZERO;op=*NOS;*NOS=op/TOS;TOS=op%TOS;NEXT;	//DIVMOD
 
 #ifndef ASMSHIFT
-L_MULDIV:TOS=((__int128)(*(NOS-1))*(*NOS)/TOS);NOS-=2;NEXT;	//MULDIV
+L_MULDIV:if(TOS==0)goto L_DIV_ZERO;TOS=((__int128)(*(NOS-1))*(*NOS)/TOS);NOS-=2;NEXT;	//MULDIV
 L_MULSHR:TOS=((__int128)(*(NOS-1)*(*NOS))>>TOS);NOS-=2;NEXT;//MULSHR
-L_CDIVSH:TOS=((__int128)(*(NOS-1)<<TOS)/(*NOS));NOS-=2;NEXT;//CDIVSH
+L_CDIVSH:if(*NOS==0)goto L_DIV_ZERO;TOS=((__int128)(*(NOS-1)<<TOS)/(*NOS));NOS-=2;NEXT;//CDIVSH
 #else
-L_MULDIV: TOS = muldiv(*(NOS-1), *NOS, TOS);NOS-=2;NEXT;	//MULDIV
+L_MULDIV:if(TOS==0)goto L_DIV_ZERO;TOS = muldiv(*(NOS-1), *NOS, TOS);NOS-=2;NEXT;	//MULDIV
 L_MULSHR: TOS = mulshr(*(NOS-1), *NOS, TOS);NOS-=2;NEXT;	//MULSHR
-L_CDIVSH: TOS = cdivsh(*(NOS-1), *NOS, TOS);NOS-=2;NEXT;//CDIVSH
+L_CDIVSH:if(*NOS==0)goto L_DIV_ZERO;TOS = cdivsh(*(NOS-1), *NOS, TOS);NOS-=2;NEXT;//CDIVSH
 #endif
 
 L_NOT:TOS=~TOS;NEXT;							//NOT
@@ -1495,7 +1521,7 @@ L_SYSCALL10: // a1 a0 adr -- rs
 //	L_ENDWORD: NEXT;
 //----------------- ONLY INTERNAL
 L_JMP:ip=(op>>8);NEXT;//JMP							// JMP
-L_JMPR:ip+=(op>>8);NEXT;//JMP						// JMPR	
+L_JMPR:ip+=(op>>8);if(NOS>=NOS_LIMIT)goto L_STACK_ERROR;if(NOS<&stack[0])goto L_STACK_UNDERFLOW;NEXT;// JMPR
 L_LIT2:TOS=(TOS&0xffffff)|((op>>8)<<24);NEXT;		// LIT ....xxxxxxaaaaaa
 L_LIT3:TOS=(TOS&0xffffffffffff)|((op>>8)<<48);NEXT;	// LIT xxxx......aaaaaa	
 L_LITF:NOS++;*NOS=TOS;TOS=*(__int64*)(&memcode[ip]);ip+=2;NEXT; // insegure for optimization
@@ -1517,24 +1543,24 @@ L_DIVMOD1:op>>=8;NOS++;*NOS=TOS/op;TOS=TOS%op;NEXT;	//DIVMOD
 #ifndef ASMSHIFT
 L_MULDIV1:op>>=8;TOS=(__int128)(*NOS)*TOS/op;NOS--;NEXT;	//MULDIV
 L_MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;NEXT;	//MULSHR
-L_CDIVSH1:op>>=8;TOS=((__int128)(*NOS)<<op)/TOS;NOS--;NEXT;	//CDIVSH
+L_CDIVSH1:op>>=8;if(TOS==0)goto L_DIV_ZERO;TOS=((__int128)(*NOS)<<op)/TOS;NOS--;NEXT;	//CDIVSH
 
 L_MULSHR2:op>>=8;TOS=((__int128)TOS*op)>>16;NEXT;	//MULSHR .. 234 16 *>>
 L_CDIVSH2:op>>=8;TOS=(__int128)(TOS<<16)/op;NEXT;	//CDIVSH ... 23 16 <</
 L_MULSHR3:TOS=((__int128)(*NOS)*TOS)>>16;NOS--;NEXT;	//MULSHR .. XX 16 *>>
-L_CDIVSH3:TOS=(__int128)((*NOS)<<16)/TOS;NOS--;NEXT;	//CDIVSH .. XX 16 <</	
+L_CDIVSH3:if(TOS==0)goto L_DIV_ZERO;TOS=(__int128)((*NOS)<<16)/TOS;NOS--;NEXT;	//CDIVSH .. XX 16 <</
 #else
 L_MULDIV1:op>>=8;TOS=muldiv(*NOS,TOS,op);NOS--;NEXT;	//MULDIV
 
 L_MULSHR1:op>>=8;TOS=mulshr(*NOS,TOS,op);NOS--;NEXT;	//MULSHR <<<<<<<<<<<<<
 //L_MULSHR1:op>>=8;TOS=((__int128)(*NOS)*TOS)>>op;NOS--;NEXT;	//MULSHR ???????
 
-L_CDIVSH1:op>>=8;TOS=cdivsh(*NOS,TOS,op);NOS--;NEXT;	//CDIVSH
+L_CDIVSH1:op>>=8;if(TOS==0)goto L_DIV_ZERO;TOS=cdivsh(*NOS,TOS,op);NOS--;NEXT;	//CDIVSH
 
 L_MULSHR2:op>>=8;TOS=mulshr16(TOS,op);NEXT;	//MULSHR .. 234 16 *>>
 L_CDIVSH2:op>>=8;TOS=cdivsh16(TOS,op);NEXT;	//CDIVSH ... 23 16 <</
 L_MULSHR3:TOS=mulshr16(*NOS,TOS);NOS--;NEXT;	//MULSHR .. XX 16 *>>
-L_CDIVSH3:TOS=cdivsh16(*NOS,TOS);NOS--;NEXT;	//CDIVSH .. XX 16 <</	
+L_CDIVSH3:if(TOS==0)goto L_DIV_ZERO;TOS=cdivsh16(*NOS,TOS);NOS--;NEXT;	//CDIVSH .. XX 16 <</	
 #endif
 
 L_IFL1:if ((op>>16)<=TOS) ip+=(op<<48>>56);NEXT;	//IFL <<32>>49
@@ -1651,6 +1677,17 @@ void termsave(void) {tcgetattr(STDIN_FILENO, &staterm);}
 void termreset(void) {fflush(stdout);tcsetattr(STDIN_FILENO, TCSADRAIN, &staterm);}
 #endif
 
+static sigjmp_buf jmp_env;
+static struct termios saved_term;
+
+void sig_handler(int sig) {
+	siglongjmp(jmp_env, sig);
+}
+
+void restore_term() {
+	tcsetattr(0, TCSADRAIN, &saved_term);
+}
+
 ////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[])
 {
@@ -1671,6 +1708,16 @@ if (!r3compile(filename)) return -1;
 //dumpcode();
 #endif
 
+tcgetattr(0, &saved_term);
+atexit(restore_term);
+
+signal(SIGSEGV, sig_handler);
+signal(SIGBUS, sig_handler);
+
+int sig = sigsetjmp(jmp_env, 1);
+if (sig != 0) {
+	fprintf(stderr, "\rruntime error: invalid memory access (signal %d)\r\n", sig);
+}
 runr3(boot);
 return 0;
 }

@@ -6,35 +6,32 @@
 
 ::type 1 -rot libc-write drop ;
 
-#sterm * 64		| termios structure copy (0=no copy)
+#sterm * 80		| termios structure (72 bytes on macOS arm64)
 #flgs
 
-|#define F_DUPFD 0 /* Duplicate file descriptor */
-|#define F_GETFD 1 /* Get file descriptor flags */
-|#define F_SETFD 2 /* Set file descriptor flags */
-|#define F_GETFL 3 /* Get file status flags */
-|#define F_SETFL 4 /* Set file status flags */
-|#define OFF_IFLAG  0   // 4 bytes, uint32
-|#define OFF_OFLAG  4   // 4 bytes, uint32
-|#define OFF_CFLAG  8   // 4 bytes, uint32
-|#define OFF_LFLAG  12  // 4 bytes, uint32
-|#define OFF_LINE   16  // 1 byte
-|#define OFF_CC     17  // 32 bytes
+| macOS arm64 termios layout (tcflag_t = 8 bytes):
+|  offset 0:  c_iflag  (8 bytes)
+|  offset 8:  c_oflag  (8 bytes)
+|  offset 16: c_cflag  (8 bytes)
+|  offset 24: c_lflag  (8 bytes)
+|  offset 32: c_cc     (20 bytes)
+|  offset 56: c_ispeed (8 bytes)
+|  offset 64: c_ospeed (8 bytes)
+| VERASE=3  VMIN=16  VTIME=17
 |------- Initialization -------
 ::.reterm | --
 	sterm 0? ( 0 'sterm libc-tcgetattr ) drop
-	'sterm >a here >b |'stermc >b
-	da@+ $FFFFFACD and db!+	| set32(raw, OFF_IFLAG, get32(raw, OFF_IFLAG) & 0xFFFFFACD);
-    da@+ $FFFFFFFE and db!+	| set32(raw, OFF_OFLAG, get32(raw, OFF_OFLAG) & 0xFFFFFFFE);
-    da@+ $30 or db!+		| set32(raw, OFF_CFLAG, get32(raw, OFF_CFLAG) | 0x30);
-	da@+ $FFFF7FF4 and db!+	| set32(raw, OFF_LFLAG, get32(raw, OFF_LFLAG) & 0xFFFF7FF4);	
-	ca@ cb!+ | line
-    a@+ b!+ a@+ b!+ a@+ b!+ a@ b!
-    here 17 + >b | cc[32]
-    $7f b> 2 + c!
-    1 b> 5 + c!
-    0 b> 6 + c!
-	0 0 here libc-tcsetattr 
+	'sterm >a here >b
+	a@+ $FFFFFCCD and b!+	| IFLAG: clear BRKINT|INPCK|ISTRIP|ICRNL|IXON
+	a@+ $FFFFFFFE and b!+	| OFLAG: clear OPOST
+	a@+ $300 or b!+		| CFLAG: set CS8
+	a@+ $FFFFFA77 and b!+	| LFLAG: clear ECHO|ICANON|IEXTEN|ISIG
+	a@+ b!+ a@+ b!+ a@+ b!+ a@+ b!+ a@ b! | c_cc + ispeed + ospeed
+	here 32 + >b | c_cc at offset 32
+	$7f b> 3 + c!	| VERASE
+	1 b> 16 + c!	| VMIN
+	0 b> 17 + c!	| VTIME
+	0 0 here libc-tcsetattr
 	;
 
 #showc ( $1B $5B $3f $32 $35 $68 )
