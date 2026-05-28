@@ -1641,7 +1641,7 @@ L_VWINCSTOR:op=*(__int64*)&memdata[op>>8];*(__int16*)op+=TOS;TOS=*NOS;NOS--;NEXT
 L_VDINCSTOR:op=*(__int64*)&memdata[op>>8];*(__int32*)op+=TOS;TOS=*NOS;NOS--;NEXT;//D+!
 }
 
-#ifdef defined(__linux__)
+#if defined(__linux__)
 #include <termios.h>
 #include <unistd.h>
 
@@ -1654,7 +1654,7 @@ void termreset(void) {fflush(stdout);tcsetattr(STDIN_FILENO, TCSADRAIN, &staterm
 ////////////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[])
 {
-#ifdef defined(__linux__)
+#if defined(__linux__)
 termsave();
 atexit(termreset);
 #endif
