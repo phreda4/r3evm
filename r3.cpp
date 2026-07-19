@@ -1074,7 +1074,7 @@ for (int i=0;i<cntstacki;i++) {
 	}
 // last tokenizer		
 if (!r3token(sourcecode)) {
-	printerror(path,sourcecode);
+	printerror(name,sourcecode);
 	return 0;
 	}
 

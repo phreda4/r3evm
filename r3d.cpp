@@ -1153,7 +1153,7 @@ for (int i=0;i<cntstacki;i++) {
 // last tokenizer
 includenow=cntstacki;
 if (!r3token(sourcecode)) {
-	printerror(path,sourcecode);
+	printerror(name,sourcecode);
 	endMshare((void*)memdata,memdsize,&hm2);
 	return 0;
 	}
