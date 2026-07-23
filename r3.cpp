@@ -278,42 +278,42 @@ if ((n&0xff)<5 && n!=0) {
 	printf(r3bas[(n&0xff)+1]);printf(" %x",n>>8);	
 } else 
 	printf(r3bas[n&0xff]);
-printf("\n");
+printf("\r\n");
 }
 
 void dumpcode()
 {
-printf("code\n");
-printf("boot:%x\n",boot);
+printf("code\r\n");
+printf("boot:%x\r\n",boot);
 for(int i=1;i<memc;i++) {
 	printf("%x:%x:",i,memcode[i]);
 	printcode(memcode[i]);
-	if ((memcode[i]&0xff)>=AFECH) printf("***\n");
+	if ((memcode[i]&0xff)>=AFECH) printf("***\r\n");
 	}
-printf("\n");
+printf("\r\n");
 }
 
 void dumpinc()
 {
-printf("includes\n");
+printf("includes\r\n");
 for(int i=0;i<cntincludes;i++) {
 	printf("%d. ",i);
 	printword(includes[i].nombre);
-	printf("\n");
+	printf("\r\n");
 	}
 for(int i=0;i<cntstacki;i++) {
-	printf("%d. %d\n",i,stacki[i]);
+	printf("%d. %d\r\n",i,stacki[i]);
 	}
 }
 
 void dumpdicc()
 {
-printf("diccionario\n");
+printf("diccionario\r\n");
 for(int i=0;i<cntdicc;i++) {
 	printf("%d. ",i);
 	printword(dicc[i].nombre);
 	printf("%x ",dicc[i].mem);	
-	printf("%x \n",dicc[i].info);	
+	printf("%x \r\n",dicc[i].info);	
 	}
 }
 
@@ -828,10 +828,10 @@ while (*lc>31||*lc==9) { *le++=*lc++; };
 *nextcr(name)=0;
 
 FILE *errf = fopen("error.log", "w");
-fprintf(errf,"FILE:%s LINE:%d CHAR:%d\n\n",name,line,cerror-lca);	
-fprintf(errf,"%4d|%s\n     ",line,linee);
+fprintf(errf,"FILE:%s LINE:%d CHAR:%d\r\r\n\n",name,line,cerror-lca);	
+fprintf(errf,"%4d|%s\r\n     ",line,linee);
 for(char *p=lca;p<cerror;p++) if (*p==9) fprintf(errf,"\t"); else fprintf(errf," ");
-fprintf(errf,"^- %s\n",werror);	
+fprintf(errf,"^- %s\r\n",werror);	
 fclose(errf);
 }
 
@@ -928,7 +928,7 @@ FILE *f=fopen(filename,"rb");
 if (!f) { 
 	*nextcr(from)=0;
 	FILE *errf = fopen("error.log", "w");	
-	fprintf(errf,"FILE:%s LINE:%d CHAR:%d\n\n%s not found\n",from,cerror,cerror,filename);
+	fprintf(errf,"FILE:%s LINE:%d CHAR:%d\r\n\r\n%s not found\r\n",from,cerror,cerror,filename);
 	fclose(errf);
 	cerror=(char*)1;
 	return 0;
@@ -1030,7 +1030,7 @@ return;
 // Compile code in file
 int r3compile(char *name) 
 {
-printf("\nr3vm - PHREDA\n");
+printf("\r\nr3vm - PHREDA\r\n");
 printf("compile:%s...",name);
 
 char *sourcecode;
@@ -1083,8 +1083,8 @@ if (!r3token(sourcecode)) {
 //dumpdicc();
 //dumpcode();
 
-printf(" ok.\n");
-printf("inc:%d - words:%d - code:%dKb - data:%dKb\n\n",cntincludes,cntdicc,memc>>8,memd>>10);
+printf(" ok.\r\n");
+printf("inc:%d - words:%d - code:%dKb - data:%dKb\r\n\r\n",cntincludes,cntdicc,memc>>8,memd>>10);
 freeinc();
 free(sourcecode);
 return -1;
