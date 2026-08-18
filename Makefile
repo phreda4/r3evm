@@ -4,12 +4,12 @@
 CPP      = g++
 CC       = gcc
 OBJ      = r3.o r3d.o
-LIBS     = -ldl -s -flto
+LIBS     = -ldl -lrt -s -flto
 INCS     = 
 CXXINCS  = 
 BIN      = r3lin r3lind
-CXXFLAGS = $(CXXINCS) -Oz -fpermissive -fomit-frame-pointer -fno-exceptions -fno-rtti 
-CFLAGS   = $(INCS) -Oz
+CXXFLAGS = $(CXXINCS) -Os -fpermissive -fomit-frame-pointer -fno-exceptions -fno-rtti 
+CFLAGS   = $(INCS) -Os
 RM       = rm -f
 
 .PHONY: all all-before all-after clean clean-custom
