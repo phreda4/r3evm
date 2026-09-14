@@ -27,13 +27,12 @@
 ::f>.d 16 << ;
 ::.d>f 16 >> ;
 
-
 :sinp
 	$7fffffff and $40000000 -
 	dup dup *.d
-	dup 308640022 *.d        | c1 = 0.0719
-	2757855059 - *.d         | c2 = 0.6421  
-	6744473128 + *.d ;       | c3 = 1.5703 (p/2)
+	dup 319329696830 *.d     | c3 minimax
+	176857405652 - *.d       | c2 minimax
+	26986075409 + *.d ;      | c1 = 2pi * 2^32
 	
 ::cos.d | bangle -- r
 	$80000000 + $80000000 nand? ( sinp ; ) sinp neg ;
@@ -44,10 +43,9 @@
 	$40000000 +
 	$7fffffff and $40000000 -
 	dup dup *.d
-	
-	dup 8524742410240 *.d
-	334217830400 + *.d
-	26986729472 + *.d ; 
+	dup 8791996850651 *.d
+	334539478585 + *.d
+	26986075409 + *. ;
 
 ::tan.dc
 	dup sin.d swap cos.d 0? ( 1+ ) /. ;
@@ -61,7 +59,7 @@
 ::sqrt.d | x -- r
 	0 <=? ( drop 0 ; ) |1.0 =? ( ; )
 	0 
-	1 63 pick3 clz - 1 nand <<
+	1 pick2 msb 1 nand <<
 	( 1? | op res one
 		2dup + | op res one r+o
 		step 2 >> )
@@ -72,27 +70,37 @@
 	
 ::log2.d | x -- r
 	0 <=? ( 0 nip ; ) 
-	63 over clz - | x bitpos
+	dup msb | x bitpos
 	32 - dup 32 << -rot 		| bp x bp
 	mc $100000000 -	| bp x
-	
-	-1032911231 
-	over *.d 1239493478 +
-	over *.d -1549366847 +
-	over *.d 2065822463 +
-	over *.d -3098733694 +
-	over *.d 6197467388 +
+    | Polinomio grado 12 Minimax (Remez), err max 2.33e-10 (piso Q32.32)
+	-8164909                  | c12 = -0.0019010410
+	over *.d 57541287 +       | c11 =  0.0133973750
+	over *.d -190003479 +     | c10 = -0.0442386324
+	over *.d 400733151 +      | c9  =  0.0933029575
+	over *.d -630804128 +     | c8  = -0.1468705312
+	over *.d 833827030 +      | c7  =  0.1941404841
+	over *.d -1020126191 +    | c6  = -0.2375166377
+	over *.d 1237257380 +     | c5  =  0.2880714321
+	over *.d -1548890166 +    | c4  = -0.3606290942
+	over *.d 2065433125 +     | c3  =  0.4808961239
+	over *.d -3098163823 +    | c2  = -0.7213474770
+	over *.d 6196328018 +     | c1  =  1.4426950407
 	*.d + ;
-
+	
 ::pow2.d | y -- r
 	dup $ffffffff and
-    | Polinomio grado 3 óptimo
-    429496729                 | c3 = 0.1
-    over *.d 858993459 +      | c2 = 0.2
-    over *.d 3013174610 +     | c1 ˜ ln(2)
+    | Polinomio grado 7 Minimax (Remez), err max 2.33e-10 (piso Q32.32)
+	89118                      | c7 = 0.0000207489
+	over *.d 627254 +          | c6 = 0.0001460394
+	over *.d 5750807 +         | c5 = 0.0013389...
+	over *.d 41300961 +        | c4 = 0.0096169...
+	over *.d 238389783 +       | c3 = 0.0555005...
+	over *.d 1031764899 +      | c2 = 0.2402266...
+	over *.d 2977044473 +      | c1 = 0.6931471...
     *.d $100000000 +          | +1.0
 	swap 32 >>
-	+? ( << ; ) neg >> ;
+	+? ( << ; ) neg >> ;	
 	
 ::pow.d | x y -- r
 	|0? ( 2drop 1.0 ; ) 
@@ -193,23 +201,4 @@
 
 ::f32! swap str>f.d nip swap ! ;
 
-|----- print
-#mbuff * 64
-
-:mbuffi | -- adr
-	'mbuff 63 + 0 over c! 1- ;
-
-:sign | adr sign -- adr'
-	-? ( drop $2d over c! ; ) drop 1+ ;
-
-:.f!
-	( 10/mod $30 + pick2 c! swap 1- swap 1? ) drop
-	1+ $2e over c! 1-
-	over 32 >>> 
-	( 10/mod $30 + pick2 c! swap 1- swap 1? ) drop
-	swap sign ;
-	
-::.fd | fix -- str
-	dup abs 21 + | 0.000000005
-	mbuffi over	abs $ffffffff and 100000000 32 *>> 100000000 + .f! ;
 

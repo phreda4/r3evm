@@ -3,7 +3,7 @@
 | r3 to r3 optimizer translator
 | plan:
 |
-| x remove noname definitions
+| + remove noname definitions
 | - reorder stack?, minimice heigth ( 2 3 4 + + =>> 3 4 + 2 + )
 |
 | + reemplace constant
@@ -12,12 +12,17 @@
 | + folder constant
 | + cte * transform
 | + cte / transform
-| - cte mod transform
+| + cte mod transform
+| + cte /mod transform
+| + cte *>> transform
+| + cte <</ transform
 |-----------------
 ^r3/d4/r3token.r3
 ^r3/d4/r3vmd.r3
 
-##biglit * 80 | 10 bigliteral !!!!!!!
+|^r3/lib/trace.r3
+
+##biglit * 320 | 40 bigliteral !!!!!!!
 ##biglit>
 ##tokana * $ffff | 8192 tokens !!!!!!!
 ##tokana>
@@ -61,7 +66,7 @@
 
 |-------------------------------- NAME >> NUMBER
 :.lits	8 >> 'biglit + @ "$%h" ,print ;
-:.lit	8 >> -? ( neg "-$%h" ,print ; ) "$%h" ,print ; | literal in opt is bigger
+:.lit	8 >> -? ( "%d" ,print ; ) "$%h" ,print ; 
 :.word	8 >> $ffffffff and "w%h" ,print ;
 :.wadr	8 >> $ffffffff and "'w%h" ,print ;
 :.var	8 >> $ffffffff and "w%h" ,print ;
@@ -85,8 +90,7 @@
 	
 ::,tokenstrd
 	dup $ff and 
-|	dup "%h" .println
-|	.input
+|	dup "%h" .println .input
 	6 >? ( 7 - basename ,s drop ; )
 	3 << 'bmacro + @ ex ;
 		
@@ -96,12 +100,13 @@
 :reseta	
 	'tokana 'tokana> ! 
 	'biglit 'biglit> ! ;
-:,<< | --
-	-8 'tokana> +! 
-	| big? -8 'biglit> +! | reuse bigliteral 
-	;
+	
+:,back | --
+	-8 'tokana> +! ;
+	
 :,t	| tok --
 	tokana> !+ 'tokana> !  ;
+	
 :,tlit | lit --
 	8 << 1 or ,t ;
 	
@@ -115,30 +120,59 @@
 	40 >> src + str>anro nip | get the number from src
 	,nlit ;
 	
-:1lit?	
+:1lit?	||||  LIT --
 	tokana> 8 - 'tokana <? ( drop 0 ; ) 
 	@ $ff and 1 >? ( drop 0 ; ) drop 1 ;
-:2lit?	
+	
+:01lit?	||||  LIT NRO -- 
+	tokana> 16 - 'tokana <? ( drop 0 ; ) 
+	@+ $ff and 1 >? ( 2drop 0 ; ) drop
+	@ $ff and 2 =? ( drop 0 ; )  | no call
+	6 >? ( drop 0 ; ) drop 1 ;
+	
+:2lit?	||||  LIT LIT --
 	tokana> 16 - 'tokana <? ( drop 0 ; ) 
 	@+ $ff and 1 >? ( 2drop 0 ; ) drop 
 	@ $ff and 1 >? ( drop 0 ; ) drop 1 ;
-:3lit?	
+	
+:3lit?	||||  LIT LIT LIT --
 	tokana> 24 - 'tokana <? ( drop 0 ; ) 
 	@+ $ff and 1 >? ( 2drop 0 ; ) drop 
 	@+ $ff and 1 >? ( 2drop 0 ; ) drop 	
 	@ $ff and 1 >? ( drop 0 ; ) drop 1 ;
+	
+:13lit?	||||  LIT NRO LIT --
+	tokana> 24 - 'tokana <? ( drop 0 ; ) 
+	@+ $ff and 1 >? ( 2drop 0 ; ) drop 
+	@+ $ff and 2 =? ( drop 0 ; ) | no call
+	6 >? ( 2drop 0 ; ) drop 
+	@ $ff and 1 >? ( drop 0 ; ) drop 1 ;
+	
+
+:01swap |||| a b -- b a
+	tokana> 16 - @+ swap @ | [nos] tos
+	tokana> 16 - !+ ! ;	
+
+:12swap |||| a b c -- b a c
+	tokana> 24 - @+ swap @ | [nos-1] [nos]
+	tokana> 24 - !+ ! ;
+
+|-----------------------	
 :nlit? | n -- n 0/1
 	tokana> over 3 << - 'tokana <? ( drop 0 ; ) | n tok
-	over ( 1? 1 - swap							| n n tok
+	over ( 1? 1- swap							| n n tok
 		@+ $ff and 1 >? ( 3drop 0 ; ) drop		| n n tok 
 		swap ) 2drop 1 ; 						| n 1
 
-:litpush | tok --
+:litpush | tok -- value
 	dup $ff and 1? ( drop 8 >> ; ) 
 	drop 8 >> 'biglit + @ ;
 
 :getTOS | -- TOSV
 	tokana> 8 - @ litpush ;
+
+:getNOS | -- NOSV
+	tokana> 16 - @ litpush ;
 	
 :1litpush
 	tokana> 8 - dup 'tokana> !
@@ -152,7 +186,7 @@
 	
 :nlitpush | n --
 	tokana> over 3 << - dup 'tokana> !
-	swap ( 1? 1 - swap
+	swap ( 1? 1- swap
 		@+ litpush NPUSH swap ) 2drop ;
 
 :,TOSLIT | -- ; TOS to tokana>
@@ -162,9 +196,9 @@
 :,ntoslit | n --
 	0? ( drop ; )
 	NOS over 2 - 3 << - over | n NOS n
-	( 1 - 1? swap @+ ,nlit swap ) 2drop
+	( 1- 1? swap @+ ,nlit swap ) 2drop
 	TOS ,nlit
-	( 1? 1 - .drop ) drop ;
+	( 1? 1- .drop ) drop ;
 	
 :dic@	| tok -- info1
 	8 >> $ffffffff and 4 << dic + @ ;
@@ -181,209 +215,347 @@
 | $..............08	1 r esta desbalanceada		| var cte
 | $..............10	0 un ; 1 varios ;
 | $..............20	1 si es recursiva	
+
 :,inlinecode | ; inline code ?
-	dup dic@ $38 and 1? ( drop ,t ; ) drop	| not inlline
+	dup dic@ $38 and 1? ( drop ,t ; ) drop	| not inline
 	dup dic@len 7 >? ( drop ,t ; ) drop		| min len inline
 	deferinline ex ;
 	
 :,code | tok --
-	dup dic@ $100 and? ( drop ,inlinecode ; ) drop	| no pure code -> normal tokenizer
+	dup dic@ $3f00 and? ( drop ,inlinecode ; ) drop	| no pure code -> normal tokenizer
 	dup dic@use										| tok stack use
-	nlit? 0? ( 2drop ,inlinecode ; ) drop			| all are literal?
-	nlitpush		| push the numbers in virtual stack
-	dup exncode		| exec code in compile time
+	nlit? 0? ( 	2drop ,inlinecode ; ) drop			| all are literal?
+	
+	nlitpush				| push the numbers in virtual stack
+	dup exncode				| exec code in compile time
 	dic@loa ,ntoslit		| pop the numbers to code
 	;
 	
+| $..............10	var not int, is not a cte
+| $............2000 definition has address
+
 :,data | tok --
-	dup dic@ $4 and? ( drop ,t ; ) drop | real var
-	dic@len fmem + @ ,nlit		| detect cte var
+	dup dic@ 
+	$14 and? ( drop ,t ; ) 			| real var
+	$2000 and? ( dic>tok @ ,t ; )	| detect cte var (address)
+	drop	
+	|--- var is cte but is and address (***)
+	|dup dic@ dic>tok @ $ff and		| tipo del token guardado en el cuerpo de la var
+	|3 =? ( drop dic@ dic>tok @ ,t ; )	| .wadr -- cte es direccion de codigo
+	|5 =? ( drop dic@ dic>tok @ ,t ; )	| .vadr -- cte es direccion de var
+	|drop	
+	|---------------
+	dic@len fmem + @ ,nlit		| detect cte var (number)
 	;
 
-#tkdup 26 #Tkover 28 #tkswap 32
-#TKand 44 #tk+ 47 #tk- 48 #tk* 49 
-#tk<< 51 #TK>> 52 #TK>>> 53 #TK*>> 57
-#tknot 59 #tkneg 60
+#TKdup 26 #TKover 28 #TKswap 32
+#TKand 45 #TK+ 49 #TK- 50 #TK* 51 #TK/ 52
+#TK<< 53 #TK>> 54 #TK>>> 55 
+#TK*/ 58 #TK*>> 59 #TK<</ 60
+#TKnot 61 #TKneg 62
 
 :,lAND
-	getTOS -1 =? ( 2drop ,<< ; ) drop ,t ;
+	getTOS 
+	0? ( 2drop ,back ,back 0 ,nlit ; ) 
+	-1 =? ( 2drop ,back ; ) 
+	drop ,t ;
 :,AND
 	2lit? 1? ( 2drop 2litpush .AND ,TOSLIT ; ) drop
 	1lit? 1? ( drop ,lAND ; ) drop	
+	01lit? 1? ( drop 01swap ,lAND ; ) drop
 	,t ;
 	
 :,lOR
-	getTOS 0? ( 2drop ,<< ; ) drop ,t ;
+	getTOS
+	0? ( 2drop ,back ; ) 
+	-1 =? ( 2drop ,back ,back -1 ,nlit ; ) 
+	drop ,t ;
 :,OR
 	2lit? 1? ( 2drop 2litpush .OR ,TOSLIT ; ) drop
 	1lit? 1? ( drop ,lOR ; ) drop	
+	01lit? 1? ( drop 01swap ,lOR ; ) drop	
 	,t ;
 
 :,lXOR
 	getTOS 
-	0? ( 2drop ,<< ; ) 
-	-1 =? ( 2drop ,<< TKnot ,t ; )
+	0? ( 2drop ,back ; ) 
+	-1 =? ( 2drop ,back TKnot ,t ; )
 	drop ,t ;
 :,XOR
 	2lit? 1? ( 2drop 2litpush .XOR ,TOSLIT ; ) drop 
 	1lit? 1? ( drop ,lXOR ; ) drop		
+	01lit? 1? ( drop 01swap ,lXOR ; ) drop
 	,t ;
 
+:,lNAND
+	getTOS 
+	0? ( 2drop ,back ; )
+	-1 =? ( 2drop ,back ,back 0 ,nlit ; ) 
+	drop ,t ;
+:,NAND
+	2lit? 1? ( 2drop 2litpush .NAND ,TOSLIT ; ) drop
+	1lit? 1? ( drop ,lNAND ; ) drop	
+	01lit? 1? ( drop 01swap ,lNAND ; ) drop	
+	,t ;
+	
+:,l+
+	getTOS 
+	0? ( 2drop ,back ; ) 
+	drop ,t	;
 :,+
 	2lit? 1? ( 2drop 2litpush .+ ,TOSLIT ; ) drop 
-	1lit? 1? ( getTOS 0? ( 3drop ,<< ; ) drop ) drop
+	1lit? 1? ( drop ,l+ ; ) drop
+	01lit? 1? ( drop 01swap ,l+ ; ) drop | lit nro + --> nro lit +
 	,t ;
 	
 :,- 
 	2lit? 1? ( 2drop 2litpush .- ,TOSLIT ; ) drop 
-	1lit? 1? ( getTOS 0? ( 3drop ,<< ; ) drop ) drop
+	1lit? 1? ( getTOS 0? ( 3drop ,back ; ) drop ) drop
 	,t ;
 	
 |----------------------- *	
 |>>>> 8 * --> 3 <<	
-:,*pot | tok tos --
-	nip ,<<
-	63 swap clz - ,tlit
-	TK<< ,t ;
+:,*pot | tos --
+	,back
+	msb ,tlit TK<< ,t ;
+	
 |>>>> 9 * --> dup 3 << +
-:,*pot+1 | tok tos --
-	nip ,<< TKdup ,t
-	64 swap clz - 1 - ,tlit
-	TK<< ,t TK+ ,t ;
+:,*pot+1 | tos --
+	,back TKdup ,t
+	msb ,tlit TK<< ,t TK+ ,t ;
+	
 |>>>> 7 * --> dup 3 << swap -
-:,*pot-1 | tok tos --
-	nip ,<< TKdup ,t
-	64 swap clz - ,tlit
-	TK<< ,t TKswap ,t TK- ,t ;
+:,*pot-1 | tos --
+	,back TKdup ,t
+	msb ,tlit TK<< ,t TKswap ,t TK- ,t ;
+	
 :,lit* 	
 	getTOS
-	0? ( 2drop TKand ,t ; ) 
-	1 =? ( 2drop ,<< ; ) 	| 1 * --> _
-	-1 =? ( 2drop ,<< tkneg ,t ; )
-	dup 1 - nand? ( ,*pot ; )
-	dup 1 - dup 1 - nand? (  drop ,*pot+1 ; ) drop
-	dup 1 + nand? ( ,*pot-1 ; )
+	0? ( drop ,back ,back 0 ,tlit ; ) 
+	1 =? ( drop ,back ; ) 	| 1 * --> _
+	-1 =? ( drop ,back tkneg ,t ; )
+	dup 1- nand? ( ,*pot ; )
+	dup 1- dup 1- nand? (  drop ,*pot+1 ; ) drop
+	dup 1+ nand? ( ,*pot-1 ; )
 	drop
-	,t ;
-	
+	TK* ,t ;
+
 :,* 
 	2lit? 1? ( 2drop 2litpush .* ,TOSLIT ; ) drop 
-	1lit? 1? ( drop ,lit* ; ) drop
+	1lit? 1? ( 2drop ,lit* ; ) drop
+	01lit? 1? ( 2drop 01swap ,lit* ; ) drop
 	,t ;
 	
 |----------------------- /
 |----- division by constant
 | http://www.flounder.com/multiplicative_inverse.htm
 
-#ad		| d absoluto
-#t #anc #p #q1 #r1 #q2 #r2
+#ad		| d abs
+#anc 
 
 #divm	| magic mult
 #divs   | shift mult
 
-:calcstep
-	1 'p +!
-	q1 1 << 'q1 ! r1 1 << 'r1 !
-	r1 anc >=? ( 1 'q1 +! anc neg 'r1 +! ) drop
-	q2 1 << 'q2 ! r2 1 << 'r2 !
-	r2 ad >=? ( 1 'q2 +! ad neg 'r2 +! ) drop
-	;
-
 :calcmagic | d --
 	dup abs 'ad !
-    $80000000 over 31 >>> + 't !
-    t dup 1 - swap ad mod - 'anc !
-    31 'p !
-    $80000000 anc / abs 'q1 !
-    $80000000 q1 anc * - abs 'r1 !
-	$80000000 ad / abs 'q2 !
-	$80000000 q2 ad * - abs 'r2 !
-	( calcstep
-		ad r2 -	| delta
-		q1 =? ( r1 0? ( swap 1 + swap ) drop )
-		q1 >? drop ) drop
-	q2 1 +
-	swap -? ( drop neg 'divm ! p 'divs ! ; ) drop
-	'divm ! p 'divs ! ;
+    $4000000000000000 over 62 >>> +
+    dup 1- swap ad mod - 'anc !
+    $4000000000000000 anc / abs
+    $4000000000000000 over anc * - abs
+	$4000000000000000 ad / abs
+	$4000000000000000 over ad * - abs
+	62 | cnt bits
+	( 1+ >r | q1 r1 q2 r2
+		2swap |  q2 r2 q1 r1
+		2* swap 2* swap
+		anc >=? ( swap 1+ swap anc - ) 
+		2swap |  q1 r1 q2 r2 
+		2* swap 2* swap
+		ad >=? ( swap 1+ swap ad - ) 
+		ad over -
+		pick4 =? ( pick3 0? ( swap 1+ swap ) drop ) 
+		pick4 >? drop 
+		r>
+		) drop
+	drop 1+ nip nip | d q2
+	swap -? ( drop neg 'divm ! r> 'divs ! ; ) drop
+	'divm ! r> 'divs ! ;
 	
 |--- ajuste por signo
 :,sigadj | --
 	TKdup ,t 63 ,tlit TK>> ,t TK- ,t ;
 	
 |>>>> n / 	log(n) >> dup 63 >> - ; | shift and adjust
-:,/pot | tok tos --
-	nip ,<<
-	63 swap clz - ,tlit
-	TK>> ,t ,sigadj ;	
+:,/pot | tos --
+	,back
+	msb ,tlit TK>> ,t ,sigadj ;	
 	
-:,lit/
+:,lit/ | tok --
 	getTOS
-	0? ( 2drop 0 "0 division" error! ; )
-	1 =? ( 2drop ,<< ; ) 
-	-1 =? ( 2drop ,<< tkneg ,t ; )
-	dup 1 - nand? ( ,/pot ; )	
-	nip ,<< 
+	0? ( drop 0 "0 division" error! ; )
+	1 =? ( drop ,back ; ) 
+	-1 =? ( drop ,back tkneg ,t ; )
+	dup 1- nand? ( ,/pot ; )	
+	,back 
 	calcmagic
-	divm ,tlit divs ,tlit TK*>> ,t ,sigadj ;
+	divm ,nlit divs ,tlit TK*>> ,t ,sigadj ;
 	
 :,/ 
 	2lit? 1? ( 2drop 2litpush ./ ,TOSLIT ; ) drop 
-	1lit? 1? ( drop ,lit/ ; ) drop
+	1lit? 1? ( 2drop ,lit/ ; ) drop
 	,t ;
 	
 |------------------------	
 :,<< 
 	2lit? 1? ( 2drop 2litpush .<< ,TOSLIT ; ) drop 
-	1lit? 1? ( getTOS 0? ( 3drop ,<< ; ) drop ) drop
+	1lit? 1? ( getTOS 0? ( 3drop ,back ; ) drop ) drop
 	,t ;
 :,>> 
 	2lit? 1? ( 2drop 2litpush .>> ,TOSLIT ; ) drop 
-	1lit? 1? ( getTOS 0? ( 3drop ,<< ; ) drop ) drop	
+	1lit? 1? ( getTOS 0? ( 3drop ,back ; ) drop ) drop	
 	,t ;
 :,>>>	
 	2lit? 1? ( 2drop 2litpush .>>> ,TOSLIT ; ) drop 
-	1lit? 1? ( getTOS 0? ( 3drop ,<< ; ) drop ) drop	
+	1lit? 1? ( getTOS 0? ( 3drop ,back ; ) drop ) drop	
 	,t ;
 	
 |----------------------- mod	
-:,litmod | *****
+:,modpot | n -- ;  8 mod -> 7 and
+	1- ,nlit TKand ,t ;
+	
+:,litmod | --
 	getTOS
-|	0? ( 2drop 0 "0 division" error! ; )
-|	1 =? ( 2drop ,<< ; ) 
-|	-1 =? ( 2drop ,<< tkneg ,t ; )
-|	dup 1 - nand? ( ,modpot ; )	
-	nip ,<< 
+	,back 
+	0? ( drop 0 "0 division" error! ; )
+	1 =? ( drop ,back 0 ,tlit ; ) 
+|	-1 =? ( 2drop ,back tkneg ,t ; )
+	dup 1- nand? ( ,modpot ; )	
 	dup calcmagic 
-	TKdup ,t divm ,tlit	divs ,tlit TK*>> ,t ,sigadj
-	,tlit TK* ,t TK- ,t 
+	TKdup ,t divm ,nlit	divs ,tlit TK*>> ,t ,sigadj
+	,nlit TK* ,t TK- ,t 
 	;
 
 :,mod
 	2lit? 1? ( 2drop 2litpush .mod ,TOSLIT ; ) drop 
-	|1lit? 1? ( drop ,litmod ; ) drop
+	1lit? 1? ( 2drop ,litmod ; ) drop
 	,t ;
+
+|----------------------------
+:,mod/pot | n -- ;  v 8 mod -> v dup 3 >> swap 7 and 
+	TKdup ,t
+	dup msb ,tlit TK>> ,t
+	TKswap ,t
+	1- ,nlit TKand ,t ;
+	
+:,lit/mod | -- 
+	getTOS
+	,back 
+	0? ( drop 0 "0 division" error! ; )
+	1 =? ( drop 0 ,tlit ; )
+	dup 1- nand? ( ,mod/pot ; ) 
+	dup calcmagic
+	TKdup ,t 
+	divm ,nlit	divs ,tlit TK*>> ,t ,sigadj
+	TKswap ,t TKover ,t
+	,nlit TK* ,t TK- ,t 	
+	;
 	
 :,/mod
 	2lit? 1? ( 2drop 2litpush ./mod ,2TOSLIT ; ) drop
-|	1lit? 1? ( ) drop
+	1lit? 1? ( 2drop ,lit/mod ; ) drop
 	,t ;
 	
+|----------------------------
+:,lit*/
+	getTOS ,back      | c
+	getTOS ,back      | c l
+	swap 
+	0? ( 2drop 0 "0 division" error! ; )
+	/ ,nlit TK* ,t ; | mmmmm, que pasa cuando pierde precision..convertir a /
+	
+:gcd | a b -- gcd
+	|0? ( ; )
+	( 1? swap over mod ) drop ;
+	
+|----------------------------
+:,lit*/ | -- ; a(runtime) b c(TOS) literales -- a*b/c
+	getTOS ,back
+	0? ( drop 0 "0 division" error! ; ) 	| c==0
+	getTOS ,back 			| c b		; vv b c */
+	2dup abs swap abs gcd 	| b c gcd	; nunca 0
+	rot over / -rot / 		| b' c'		; reduzco	
+	0? ( 2drop 0 ,nlit TKand ,t ; ) | res=0
+	1 =? ( drop | c=1
+		1 =? ( drop ; )				| b=1
+		-1 =? ( drop TKneg ,t ; )	| b=-1
+		,nlit TK/ ,t ; ) |,/ ; )		!!!
+	swap | 'c 'b
+	|0? ( 2drop 0 ,nlit TKand ,t ; ) | res=0
+	1 =? ( drop | b=1 
+		,nlit TK* ,t ; ) |,* ; )		!!!
+	,nlit ,nlit TK*/ ,t ;	| no exact division
+
 :,*/
 	3lit? 1? ( 2drop 3litpush .*/ ,TOSLIT ; ) drop
-|	2lit? 1? ( ) drop
-|	1lit? 1? ( ) drop
+	2lit? 1? ( 2drop ,lit*/ ; ) drop
+	13lit? 1? ( 2drop 12swap ,lit*/ ; ) drop
 	,t ;
+
+|----------------------------	
+:,lit2pot*>> | c b --
+	msb -				| c-pot(b)
+	-? ( neg ,tlit TK<< ,t  ; )	| multiplica
+	,tlit TK>> ,t ,sigadj ;
+	
+:,lit2pot0*>> | c d cp -- ;  4.0 16 *>> -->  4 * --> 2 << 
+	drop swap >> ,nlit ,lit* ;
+	
+:2lit*>>	
+	getTOS ,back      | c
+	getTOS ,back      | c l
+	
+	| var 0 cc *>> !! ojo 3er token puede ser cualquiera
+	| y si tengo 0.0000001 lo va a codificar como 0 !!
+	|0? ( 2drop ,back 0 ,tlit ; ) 		
+	0? ( 2drop 0 ,tlit TKand ,t ; )
+	
+	1 =? ( drop ,tlit TK>> ,t ; )            | var cc >> 
+	-1 =? ( drop TKneg ,t ,tlit TK>> ,t ; )  | var neg cc >>
+	dup 1- nand? ( ,lit2pot*>> ; ) | 2pot 2pot *>>
+	dup ctz pick2 >=? ( ,lit2pot0*>> ; ) drop
+	,nlit ,tlit TK*>> ,t ;
+	
 :,*>> 
 	3lit? 1? ( 2drop 3litpush .*>> ,TOSLIT ; ) drop
-|	2lit? 1? ( ) drop	
-|	1lit? 1? ( ) drop
-	,t ;
-:,<</
-	3lit? 1? ( 2drop 3litpush .<</ ,TOSLIT ; ) drop
-|	2lit? 1? ( ) drop	
-|	1lit? 1? ( ) drop
+	2lit? 1? ( 2drop 2lit*>> ; ) drop	
+|	13lit? 1? ( 2drop 12swap 2lit*>> ; ) drop | lit any * --> any lit * >>opt
 	,t ;
 	
+|----------------------------	
+:,lit2pot<</ | c b -- ;lit2 b = pot2
+	msb -				| c-pot(b)
+	-? ( neg ,tlit TK>> ,t ,sigadj ; )	| multiplica
+	,tlit TK<< ,t ;
+	
+:,lit2<</ | -- 
+	getTOS ,back      | c
+	getTOS ,back      | c b
+	0? ( 2drop 0 "0 division" error! ; )
+	1 =? ( drop ,nlit TK<< ,t ; )              | (a<<c)/1 = a<<c
+	-1 =? ( drop ,nlit TK<< ,t tkneg ,t ; )     | (a<<c)/-1 = -(a<<c)
+	dup 1- nand? ( ,lit2pot<</ ; )	
+	calcmagic
+	divm ,nlit 
+	divs swap - | divs-c 
+	-? ( TK* ,t neg ,tlit TK<< ,t ; )
+	,tlit TK*>> ,t ,sigadj ;
+	
+:,<</
+	3lit? 1? ( 2drop 3litpush .<</ ,TOSLIT ; ) drop
+	2lit? 1? ( 2drop ,lit2<</ ; ) drop	
+	,t ;
+
+|----------------------------
 :,NOT 
 	1lit? 1? ( 2drop 1litpush .not ,TOSLIT ; ) drop 
 	,t ;
@@ -409,11 +581,12 @@
 ,LIT ,LIT ,CODE ,t ,DATA ,t ,t 	|.lit .lit .code .acode .data .adata .str
 ,t ,t ,t ,[ ,] 				|.; .( .) .[ .] 
 ,t ,t ,t ,t ,t 				|.EX .0? .1? .+? .-? 
-,t ,t ,t ,t ,t ,t ,t ,t ,t 	|.<? .>? .=? .>=? .<=? .<>? .A? .N? .B? 
+,t ,t ,t ,t ,t ,t ,t ,t ,t 	|.<? .>? .=? .>=? .<=? .<>? .A? .N? .IN? 
 ,t ,t ,t ,t ,t ,t ,t ,t 	|.DUP .DROP .OVER .PICK2 .PICK3 .PICK4 .SWAP .NIP 
-,t ,t ,t ,t ,t ,t ,t 		|.ROT .2DUP .2DROP .3DROP .4DROP .2OVER .2SWAP 
+,t ,t ,t ,t ,t ,t ,t ,t 	|.ROT .-ROT .2DUP .2DROP .3DROP .4DROP .2OVER .2SWAP 
 ,t ,t ,t 					|.>R .R> .R@ 
-,AND ,OR ,XOR ,+ ,- ,* ,/ ,<< ,>> ,>>>
+,AND ,OR ,XOR ,NAND 
+,+ ,- ,* ,/ ,<< ,>> ,>>>
 ,MOD ,/MOD ,*/ ,*>> ,<</ 			
 ,NOT ,NEG ,ABS ,SQRT ,CLZ 
 ,t ,t ,t ,t 		|.@ .C@ .W@ .D@ 
@@ -427,6 +600,7 @@
 ,t ,t ,t ,t ,t ,t ,t |.>B .B> .B+ .B@ .B! .B@+ .B!+ 
 ,t ,t ,t ,t 		|.cB@ .cB! .cB@+ .cB!+ 
 ,t ,t ,t ,t 		|.dB@ .dB! .dB@+ .dB!+ 
+,t ,t				| ab[ ]ba
 ,t ,t ,t 			|.MOVE .MOVE> .FILL 
 ,t ,t ,t 			|.CMOVE .CMOVE> .CFILL 
 ,t ,t ,t 			|.DMOVE .DMOVE> .DFILL 
@@ -436,8 +610,10 @@
 0	
 	
 :,ana | nro --
-|	dup 40 >> src + "%w " .print
-	dup $ff and 3 << 'optw + @ ex ;
+	|dup 40 >> src + "%w " filelog
+	dup $ff and 
+	|dup "(%d)%." filelog
+	3 << 'optw + @ ex ;
 	
 |--------------
 :lenword | dicc - toklast tokini
@@ -447,13 +623,17 @@
 	toklen 3 << over + swap ;
 	
 :dataw | dicc --
-	lenword ( over <? @+ ,ana ) 2drop ;
+	lenword ( over <? @+ ,ana 
+		| error?
+		) 2drop ;
 	
 :codew | dicc --
-	lenwor ( over <? @+ ,ana ) 2drop ;
+	lenwor ( over <? @+ ,ana 
+		| error?
+		) 2drop ;
 		
 :inlineword | tok --
-	tok>dic toklen 1 - | ini cnt | remove ;
+	tok>dic toklen 1- | ini cnt | remove ;
 	3 << over + swap 
 	( over <? @+ ,ana ) 2drop ;
 
@@ -464,7 +644,7 @@
 ::wordanalysis | nro --
 	reseta
 	4 << dic + 
-	dup @ 1 and? ( drop dataw ; ) drop
+	dup @ 1 and? ( drop dataw "DATA" .println ; ) drop |******** !!! no analizar
 	codew ;
 	
 ::wordanon | tok> tok --
@@ -486,4 +666,6 @@
 ::datause? | nro -- 0/1
 	4 << dic + dup 8 + @
 	16 >> $ffff and 0? ( nip ; ) drop	| no calls-> NOT need code
-	@ $4 and? ( ; ) drop 0 ;
+	@ 
+	$14 and? ( ; ) | not init var or used in adress
+	drop 0 ;

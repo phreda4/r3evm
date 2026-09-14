@@ -112,6 +112,7 @@ $f07b $f07c $f007 $f03e $f15b $f030 $f133 $f06e $f002 $f00c $f0c9 $f00d
 	newTab 32 3 << + @	| width ESP
 	dup newTab !			| 0
 	dup newTab 13 3 << + !	| cr
+	dup newTab 10 3 << + !	| ln
 	dup $ffff0000 and 2 << swap $ffffffff0000ffff and or 
 	newTab 9 3 << + !	| tab
 	newTex ;	| reuturn ini font
@@ -133,6 +134,7 @@ $f07b $f07c $f007 $f03e $f15b $f030 $f133 $f06e $f002 $f00c $f0c9 $f00d
 	newTab 32 3 << + @	| width ESP
 	dup newTab !			| 0
 	dup newTab 13 3 << + !	| cr
+	dup newTab 10 3 << + !	| ln
 	dup $ffff0000 and 2 << swap $ffffffff0000ffff and or 
 	newTab 9 3 << + !	| tab
 	newTex ;	| reuturn ini font
@@ -160,6 +162,15 @@ $f07b $f07c $f007 $f03e $f15b $f030 $f133 $f06e $f002 $f00c $f0c9 $f00d
 	
 ::txw | "" -- "" width
 	0 over ( c@+ 1? txcw rot + swap ) 2drop ;
+	
+::txfit | w "" -- ncar
+	0 over
+	( c@+ 1? txcw	| w "" l "" cw
+		rot +		| w "" "" cw+l
+		pick3 >? ( drop swap - nip ; )
+		swap
+		) drop nip 
+	swap - nip ;
 	
 ::txch | car -- height
 	decode
@@ -243,12 +254,11 @@ $f07b $f07c $f007 $f03e $f15b $f030 $f133 $f06e $f002 $f00c $f0c9 $f00d
 		dup c@ $ff and 32 >? 
 		drop 1- ) drop nip nip ;
 
-:testw | str -- str
-	pick4 >r utf8count 
-	r> swap >? ( drop ; ) | str count
-	over a!+ | newline
-	utf8bytes | str bytes
-	over + <<sp
+:testw | w h x y str -- str
+	pick4 over txfit | w h x y str ncar
+	over count nip >=? ( drop ; )
+	over a!+ 		| newline
+	over + <<sp		
 	0 swap c!+
 	testw ;
 	
@@ -306,3 +316,69 @@ $f07b $f07c $f007 $f03e $f15b $f030 $f133 $f06e $f002 $f00c $f0c9 $f00d
 		txh + ) drop
 	3drop
 	]ba empty ;	
+	
+|--- Edita linea
+#cmax
+#padi>	| inicio
+#pad>	| cursor
+#padf>	| fin
+
+:lins  | c -- ;
+	padf> padi> - cmax >=? ( 2drop ; ) drop
+	pad> dup 1- padf> over - 1+ cmove> 1 'padf> +!
+:lover | c -- ;
+	pad> c!+ dup 'pad> !
+	padf> <=? ( drop ; )
+	dup padi> - cmax >=? ( swap 1- swap -1 'pad> +! ) drop
+	'padf> ! ;
+:0lin 0 padf> c! ;
+:kdel pad> padf> >=? ( drop ; ) drop 1 'pad> +! | --;
+:kback pad> padi> <=? ( drop ; ) dup 1- swap padf> over - 1+ cmove -1 'padf> +! -1 'pad> +! ;
+:kder pad> padf> <? ( 1+ ) 'pad> ! ;
+:kizq pad> padi> >? ( 1- ) 'pad> ! ;
+:kup
+	pad> ( padi> >?
+		1- dup c@ $ff and 32 <? ( drop 'pad> ! ; )
+		drop ) 'pad> ! ;
+:kdn
+	pad> ( c@+ 1?
+		$ff and 32 <? ( drop 'pad> ! ; )
+		drop ) drop 1- 'pad> ! ;
+
+#modo 'lins
+
+::pad.reset | 'var max -- 'var max
+	1- 'cmax !
+	dup dup 'padi> !
+	( c@+ 1? drop ) drop 1-
+	dup 'pad> ! 'padf> !
+	'lins 'modo ! ;
+
+:chmode
+	modo 'lins =? ( drop 'lover 'modo ! ; )
+	drop 'lins 'modo ! ;
+
+:drawcur
+	msec $100 and? ( drop ; ) drop
+	$a0a0a0 color
+	padi> pad> 
+	modo 'lins =? ( drop txcur ; ) drop
+	txcuri ;
+
+::pad.draw | 'buff --
+	txpos drawcur
+	txat txwrite
+	
+	SDLchar 1? ( modo ex ; ) drop
+	
+	SDLkey
+	<ins> =? ( chmode )
+	
+	|--pc mode
+	<le> =? ( kizq ) <ri> =? ( kder )
+	<back> =? ( kback ) <del> =? ( kdel )
+	<home> =? ( padi> 'pad> ! ) <end> =? ( padf> 'pad> ! )
+	|-- vim ...
+	
+	drop
+	;

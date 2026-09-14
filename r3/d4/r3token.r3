@@ -6,6 +6,7 @@
 ^r3/d4/r3map.r3
 ^r3/d4/r3vmd.r3
 
+##switchmem 10
 #sst * 512 	| stack for blocks and count
 #sst> 'sst
 
@@ -31,6 +32,7 @@
 | $.............400 a
 | $.............800 >B
 | $............1000 b
+| $............2000 tiene 'word
 | $......ffffff....	-> tok+ -> code
 | $ffffff.......... -> src+ -> src
 |
@@ -42,15 +44,20 @@
 
 |-------------------------------------------
 |-------------------------------- includes
-:escom
+:iscom
+	1+
 |WIN|	"WIN|" =pre 1? ( drop 4 + ; ) drop | Compila para WINDOWS
 |LIN|	"LIN|" =pre 1? ( drop 4 + ; ) drop | Compila para LINUX
 |MAC|	"MAC|" =pre 1? ( drop 4 + ; ) drop | Compila para MAC
 |RPI|	"RPI|" =pre 1? ( drop 4 + ; ) drop | Compila para RPI
+	"MEM" =pre 1? ( drop				| MEM 640
+		4 +
+		trim str>nro 'switchmem !
+		>>cr ; ) drop
     >>cr ;
 
 :includepal | str car -- str'
-	$7c =? ( drop escom ; )		| $7c |	 Comentario
+	$7c =? ( drop 1- iscom ; )		| $7c |	 Comentario
 	$22 =? ( drop >>str ; )		| $22 "	 Cadena
 	drop >>sp ;
 	
@@ -94,18 +101,7 @@
 	
 |-------------------------------------------
 |-------------------------------- 1pass
-:iscom | adr -- 'adr
-	1+
-|WIN|	"WIN|" =pre 1? ( drop 4 + ; ) drop | Compila para WINDOWS
-|LIN|	"LIN|" =pre 1? ( drop 4 + ; ) drop | Compila para LINUX
-|MAC|	"MAC|" =pre 1? ( drop 4 + ; ) drop | Compila para MAC
-|RPI|	"RPI|" =pre 1? ( drop 4 + ; ) drop | Compila para RPI
-|	"MEM" =pre 1? ( drop				| MEM 640
-|		4 +
-|		trim str>nro 'switchmem !
-|		>>cr ; ) drop
-    >>cr ;
-	
+
 :isstr | adr -- 'adr
 	flag 1? ( drop >>str ; ) drop
 	1+ | skyp "
@@ -161,11 +157,11 @@
 	
 :emptyvar
 	flag 1 nand? ( drop ; ) drop | only var
+	$10 'flag +! | var empty...if used then not a constant
 	0 ,qv ;
 	
 :callend
 	flag 1 and? ( drop ; ) drop | only code
-	
 	tok> codeini - 3 >> | code_length
 	32 <<
 	dic> 8 - ! | info in wordnow
@@ -175,11 +171,12 @@
 	drop ;
 	
 :endef
-	level 1? ( over "missing )" error! ) drop
+	level 1? ( drop "missing )" error! 0 ; ) drop
 	tok> codeini - 0? ( emptyvar ) drop	| no token in def
 	codeini 1? ( callend ) drop	 |callend	|??
 	tok> 'codeini !
-	flag 
+	flag  
+|	$10 or | <<<< avoid inline ( mark all multiple ; )
 	dic> 16 - +! | store flag
 	;
 	
@@ -192,7 +189,7 @@
 	8 << 2 or ,t ; | call prev	
 	
 :.def 
-	endef
+	endef 0? ( ; ) 
 	0 'flag !
 	0 'endcnt !
 	0 'noboot !
@@ -208,7 +205,7 @@
 	;
 
 :.var 
-	endef
+	endef 0? ( ; ) 
 	1 'flag !
 	1+ dup c@
 	$23 =? ( 3 'flag ! swap 1+ swap ) 	|##
@@ -329,6 +326,7 @@
 	;
 	
 :.wordinvar | adr nro -- adr
+	flag $2000 or 'flag ! | with addr word
 	1- dup 4 << dic + 
 	@ 1 and? ( drop 
 		dup 4 << dic + 8 + @ 32 >>> fmem + ,qv 
@@ -347,6 +345,7 @@
 	
 :.adr | adr nro -- adr
 	flag 1 and? ( drop .wordinvar ; ) drop	| in var always adr
+	flag $2000 or 'flag ! | with addr word
 	1- dup 4 << dic +
 	@ 1 and? ( drop 8 << 5 or ,t >>sp ; ) | adata
 	drop 8 << 3 or ,t >>sp ; | acode
@@ -358,7 +357,7 @@
 	|over "%w " .print |** debug
 	
 	$5e =? ( drop >>cr ; )	| $5e ^  Include
-	$7c =? ( drop >>cr ; )	| $7c |	 Comentario
+	$7c =? ( drop iscom ; )	| $7c |	 Comentario
 	$3A =? ( drop .def ; )	| $3a :  Definicion
 	$23 =? ( drop .var ; )	| $23 #  Variable
 	$22 =? ( drop .str ; )	| $22 "	 Cadena
@@ -470,7 +469,7 @@
 #finlist * 800  | 100 ;
 #lastdircode
 
-:resetinfo | --
+::resetinfo | --
 	0 'flag !
 	'sst 'sst> !		| stack
 	0 'pano ! 0 'cano ! 0 'cntfin !
@@ -507,24 +506,29 @@
 		34 =? ( drop c@+ 34 <>? ( 2drop ; ) )
 		is25 ) 2drop ;
 		
+|------------		
 :.blit 
 :.lit
+:.data 
+:.adata 
+	drop
 	;
+	
 :.code 
-	dup 8 - @ tok>dic 
+	|dup 8 - @
+	tok>dic 
 	dup @ 8 >> $ff and flag or 'flag !	| copy flags2 from called word
 	8 + @ 								| get info2 from word
 	dup $ff and deltaD swap - neg clamp0 usoD max 'usoD !
 	48 << 56 >> 'deltaD +!
 	;
+	
 :.acode 
-	dup 8 - @ 8 >> $ffffff and 'lastdircode ! ;
-:.data 
-:.adata 
-	;
+	|dup 8 - @ 
+	8 >> $ffffff and 'lastdircode ! ;
+	
 :.str
- 	dup 8 - @ 
-|	dup "%h " .print
+ 	|dup 8 - @ 
 	8 >> $ffffffff and strm + | string
 |	dup .write .cr
 	strusestack 
@@ -532,25 +536,32 @@
 	neg 'deltaD +!
 	;
 :.;
-	pano 1? ( drop ; ) drop
+	|drop
+	pano 1? ( 2drop ; ) 2drop
 	deltaD $ff and 8 << 
 	usoD $ff and or 8 << 
 	deltaR $ff and or
 	cntfin 3 << 'finlist + !
 	1 'cntfin +! ;
 :.(
+	drop
 	pushvar ;
 :.)
+	drop
 	popvar ;
 :.[
+	drop
 	pushvar 1 'pano +! 1 'cano +! ;
 :.]
+	drop
 	popvar -1 'pano +! 1 'deltad +! ; | push adr
 :.??
-	dup 8 - @ 24 << 32 >> over + 8 - 		| go to )
+	|dup 8 - @ 
+	24 << 32 >> over + 8 - 		| go to )
 	@ 8 >> $ffffff and 0? ( drop ; ) drop	| IF -> do nothing
 	dropvar pushvar ; 						| WHILE -> copy stack
 :.ex
+	drop
 	lastdircode nro>dic 8 + @
 	dup $ff and deltaD swap - neg clamp0 usoD max 'usoD !
 	48 << 56 >> 'deltaD +!
@@ -569,23 +580,21 @@
 	6 >? ( dup 7 - basename .print ) drop
 	;
 	
-::tokeninfo | t --
-|	dup $ffffffff and "%h " .print
+::tokeninfo | tok --
 |	debuginfo
-	$ff and dup r3ainfo
+	dup $ff and | tok ntok
+	dup r3ainfo
 	c@+ deltaD swap - neg clamp0 usoD max 'usoD !
 	c@+ 'deltaD +!
 	c@+ 'deltaR +!
 	c@ $ff and flag or 'flag !
 |	usoD deltaD " d:%d u:%d " .println
-	25 >? ( drop ; )
+	25 >? ( 2drop ; )
 	3 << 'toklis + @ ex	
 	;
 
-
 :anacode | dic --
 	|dup @ dic>name "%w" .println
-	
 	resetinfo
 	dup toklen ( 1? 1- swap
 		@+ tokeninfo 
@@ -599,7 +608,14 @@
 	usod $ff and deltad $ff and 8 << or
 	swap 8 + dup @ rot or swap ! | store stackmov
 	;
-
+	
+::wwinfo	
+	deltaD $ff and 8 << 
+	usoD $ff and or 8 << 
+	deltaR $ff and or 
+	sst> 'sst - 2 >> $ff and 32 << or
+	;
+	
 :resetinfod | --
 	;
 	
@@ -611,7 +627,7 @@
 :StaticStackAnalisis
 	dup @ 1 and? ( drop anadata ; ) drop anacode ;
 	
-::pass4
+:pass4
 	0 ( cntdef <?
 	|dup "%d" .println 
 		dup nro>dic 
@@ -622,7 +638,31 @@
 |-------------------------------------------
 ::r3loadmem | mem 'filename --
 |-------------------------------------------
-	empty mark | reuse mem (need 1 mark)
+	empty mark | reuse mem (need 1 mark) CAUTION
+	0 0 error!
+	dup 'filename strcpy
+	'r3path strpath
+	'src !
+	'inc 'inc> ! 
+	
+	'filename src includes drop | load includes
+	pass1			| calc sizes
+	makemem			| reserve mem
+	pass2			| tokenize code
+	error 1? ( drop ; ) drop	
+|	cnttok cntdef "%d %d" .println	
+	tok> tok - 3 >> 'cnttok !	| real token use
+	dic> dic - 4 >> 'cntdef !	| real definition use
+	inc> 'inc - 4 >> 'cntinc !
+|	cnttok cntdef "%d %d" .println
+	fmem> 'here !	| mark memory for vars
+	pass3			| calc tree calls
+	pass4
+	;
+
+::r3loadmemd | mem 'filename --
+|-------------------------------------------
+	empty mark | reuse mem (need 1 mark) CAUTION
 	0 0 error!
 	dup 'filename strcpy
 	'r3path strpath
@@ -639,9 +679,7 @@
 	dic> dic - 4 >> 'cntdef !	| real definition use
 	inc> 'inc - 4 >> 'cntinc !
 |	cnttok cntdef "%d %d" .println
-	fmem> 'here !	| mark memory for vars
-	pass3			| calc tree calls
-	pass4
+	fmem> 'here !	| mark memory for vars	
 	;
 	
 |-------------------------------------------
@@ -652,6 +690,7 @@
 	here =? ( "no source code" error! drop ; ) 
 	0 swap c! 
 	src only13 'here !
+	mark | <<< reload includes from here CAUTION
 	src swap r3loadmem
 	;
 	

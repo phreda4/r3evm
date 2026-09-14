@@ -81,6 +81,9 @@
 #id	#idh #ida 	| now hot active
 #idf #idfh #idfa | focus
 
+##uistate
+##keymd	
+
 ##wix ##wiy ##wiw ##wih
 
 ::immBox | x y w h --
@@ -92,7 +95,11 @@
 ::immIni
 	immFull
 	idfh -? ( id nip ) id >? ( 0 nip ) dup 'idf ! 'idfh !
-	idh 'ida ! -1 'id ! ;
+	idh 'ida ! -1 'id ! 
+	sdlkey
+	<shift> =? ( keymd 1 or 'keymd ! ) 
+	>shift< =? ( keymd 1 nand 'keymd ! ) 
+	drop ;
 	
 :immIn? | -- 0/-1
 	sdlx wix - $ffff and wiw >? ( drop 0 ; ) drop
@@ -113,10 +120,24 @@
 	sdlb 1? ( drop 3 ; ) drop 		| active->3
 	-1 'idh ! 6 ; 					| click->6		
 
-##uistate
+| 0 - No
+| 1 - Start focus
+| 2 - In focus
+:stFocus | -- flag
+	id 
+	idf <>? ( drop 0 ; )
+	idfa <>? ( 'idfa ! $10 ; ) | in 
+	drop $20 ; | stay
+
+::uiRefocus	-1 'idfa ! ;
+::uiFocus>> 1 'idfh +! ; | cambia id y luego wid
+::uiFocus<< -1 'idfh +! ;
+
+::tabfocus
+	keymd 1 and? ( drop uiFocus<< ; ) drop uiFocus>> ;
 
 ::immZone | -- ; Interaction is cx,cy,cw,th
-	immMouse 'uistate ! ;
+	immMouse stFocus or 'uistate ! ;
 
 ::uiEx?		uistate $100 and ;
 ::uiEx!		uistate $100 or 'uistate ! ;
@@ -135,6 +156,8 @@
 ::uiUp		uiState $f and 5 <>? ( 2drop ; ) drop ex ;  | 'v --
 ::uiClk		uiState $f and 6 <>? ( 2drop ; ) drop ex ; | 'v --
 
+::uiFocusIn uiState $10 nand? ( 2drop ; ) drop ex ;
+::uiFocus 	uiState $20 nand? ( 2drop ; ) drop ex ;
 
 | --- API Wrappers ---
 ::glClearBufferfv sys-glClearBufferfv sys3 drop ;
@@ -510,23 +533,23 @@
 :SDL_GL_DOUBLEBUFFER	5 ;
 :SDL_GL_DEPTH_SIZE	6 ;
 	
-#colorgl [ 0 0 0 1.0 1.0 ]
-#basegl [ 1.0 ]
+##vcolorgl [ 0 0 0 1.0 ]
+##vbasegl [ 1.0 ]
 
 ::GLpaper | $ffffff --
-	'colorgl >a
-	dup 16 >> $ff and 1.0 8 *>> da!+
-	dup 8 >> $ff and 1.0 8 *>> da!+
-	$ff and 1.0 8 *>> da!+
-	1.0 da!
-	5 'colorgl memfloat ;
+	'vcolorgl >a
+	dup 8 >> $ff00 and da!+
+	dup $ff00 and da!+
+	$ff and 8 << da!+
+	1.0 da! 
+	4 'vcolorgl memfloat ;
 	
-::GlDepth
-	'basegl ! 1 'basegl memfloat ;
+::GlDepth | deeph --
+	'vbasegl ! 1 'vbasegl memfloat ;
 	
 ::GLcls
-	$1800 0 'colorgl glClearBufferfv | GL_COLOR
-	$1801 0 'basegl glClearBufferfv | GL_DEPTH
+	$1800 0 'vcolorgl glClearBufferfv | GL_COLOR
+	$1801 0 'vbasegl glClearBufferfv | GL_DEPTH
 	;
 	
 ::GLIni | w h --
@@ -541,7 +564,22 @@
     SDL_windows SDL_GL_CreateContext 'SDL_context !
     1 SDL_GL_SetSwapInterval
     InitGLAPI
-	5 'colorgl memfloat
+	5 'vcolorgl memfloat
+	;
+
+::GLIniFull |--
+    $3231 SDL_init
+	0 SDLdfullsw 'sh ! 'sw !
+    SDL_GL_CONTEXT_MAJOR_VERSION 4 SDL_GL_SetAttribute
+    SDL_GL_CONTEXT_MINOR_VERSION 4 SDL_GL_SetAttribute
+    SDL_GL_CONTEXT_PROFILE_MASK SDL_GL_CONTEXT_PROFILE_CORE SDL_GL_SetAttribute
+    SDL_GL_DOUBLEBUFFER 1 SDL_GL_SetAttribute
+    SDL_GL_DEPTH_SIZE 24 SDL_GL_SetAttribute
+    $1FFF0000 dup sw sh $22 SDL_CreateWindow 'SDL_windows !
+    SDL_windows SDL_GL_CreateContext 'SDL_context !
+    1 SDL_GL_SetSwapInterval
+    InitGLAPI
+	5 'vcolorgl memfloat
 	;
 	
 ::GLend

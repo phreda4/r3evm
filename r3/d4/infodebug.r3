@@ -2,7 +2,7 @@
 | PHREDA 2026
 
 |^r3/lib/console.r3
-^r3/lib/trace.r3
+|^r3/lib/trace.r3
  
 #vshare 0 0 4096 "/debug.mem"	| vm state
 #bshare 0 0 64 "/bp.mem"		| breakpoint
@@ -409,8 +409,9 @@
 	memtokn .token ;
 
 |LIN|:sysnew
-|LIN|	here "x-terminal-emulator -e bash -c '" ,s swap ,s "'" ,s ,eol
-|LIN|	libc-system drop ;
+|LIN|	here "x-terminal-emulator -e bash -c '" ,s swap ,s "' &" ,s ,eol 
+|LIN|	libc-system drop
+|LIN| ;
 	
 |------------------------------------
 ::run&loadinfo | "" --
@@ -425,6 +426,7 @@
 	|'filename 
 |WIN|	"cmd /c r3d ""%s""" sprint
 |LIN|	"./r3lind ""%s""" sprint
+|MAC|	"./r3macd ""%s""" sprint
 	sysnew 
 
 	| wait info files
@@ -441,7 +443,9 @@
 	d@+ 'memdsize ! d@+ 'memcsize !
 	@+ 'memcode ! @+ 'memdata !
 	@+ dup 'mdatastack ! 504 3 << + 'mretstack !
-	w@+ 'cntinc ! 'strinc !
+	w@+ 'cntinc ! 
+	'strinc !
+|	cntinc n>>0 'here !
 	here dup "mem/r3dicc.mem" load 'here !
 	'realdicc !
 	|100 ms

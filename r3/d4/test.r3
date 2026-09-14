@@ -1,53 +1,20 @@
-|main
 ^r3/lib/console.r3
 
-#var1 33
-#var2 0
+#t #y #k #e #d #q #c #xp #yp
 
-:meminv	
-	23 var1 ! ;
-	
-:stakover
-	10 ( 1? dup ) ;
-	
-:stackunder
-	10 ( 1? nip ) ;
+:gcd | a b -- gcd
+	0? ( ; )
+	( 1? swap over mod ) drop ;
 
-:div0
-	1200 var2 / 'var1 ! ;
-
-:rstack
-	var2 * ;
-	
-:callwithjump
-	31 'var1 !
+:point | xin --	e	
+	d 9 3 */
+	'd ! 
+	10 4 gcd
+	10 4 gcd
 	;
-
-:tcall
-	3 
-	drop
-	"hola" .println
-	var1 var2
-	*
-	callwithjump 
-;
-
-	
 : 
-.cls 
-tcall
-"test runtime error" .println
-.cr
-( 
-	"f keys.." .print
-	getch [esc] <>? 
-	[F2] =? ( meminv ) 
-	[F3] =? ( stakover )
-	[F4] =? ( stackunder )
-	[F5] =? ( div0 )	
-	" %h" .println
-	) drop
-"finish" .println
-.free
+	point
+	8 'd !
+	0 2 gcd "%d" .println
+	waitesc
 ;
-

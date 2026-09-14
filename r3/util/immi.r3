@@ -3,6 +3,7 @@
 | PHREDA 2025
 |
 ^r3/lib/sdl2gfx.r3
+^r3/lib/color.r3
 ^r3/util/txfont.r3
 
 |--- Layout
@@ -103,6 +104,7 @@
 
 #uistate
 ##keymd		| key modify <<<
+##btnMouse
 
 :flagEx!	uistate $100 or 'uistate ! ;
 ::uiEx?		uistate $100 and ;
@@ -197,7 +199,8 @@
 	1 'id +! 
 	ida -1 =? ( drop 			| no active
 		uIn? 0? ( ; ) drop		| out->0
-		sdlb 0? ( drop 1 ; ) drop	| over->1
+		sdlb 0? ( drop 1 ; ) |drop	| over->1
+		'BtnMouse !
 |		id dup 'idh ! 'idfh ! -1 'idfx ! 1 ; )	| in->2(prev)
 		id dup 'idh ! 'idfh ! 2 ; )	| in->2(prev)
 	id <>? ( drop 0 ; ) 	|	 active no this->0
@@ -270,13 +273,13 @@
 :cl2recbox
 	chx cw cy cx 'recbox d!+ d!+ d!+ d! ;
 	
-::uiFill	cx cy cw ch SDLFRect ;
-::uiRect	cx cy cw ch SDLRect ;
-::uiRFill	cx cy cw ch SDLFRound ; | round --
-::uiRRect	cx cy cw ch SDLRound ; | round --
-::uiCRect	cw ch min 2/ cx cy cw ch SDLRound ;
-::uiCFill	cw ch min 2/ cx cy cw ch SDLFRound ;
-::uiTex		c2recbox 'recbox swap SDLImageb ; | texture --
+::uiFill	cx cy cw ch frect ;
+::uiRect	cx cy cw ch rect ;
+::uiRFill	cx cy cw ch fround ; | round --
+::uiRRect	cx cy cw ch round ; | round --
+::uiCRect	cw ch min 2/ cx cy cw ch round ;
+::uiCFill	cw ch min 2/ cx cy cw ch fround ;
+::uiTex		c2recbox 'recbox swap imageb ; | texture --
 
 ::uiWinBox fx fy fw fh ; | -- x y w h 
 
@@ -284,13 +287,13 @@
 ::uiLineGridV
 	fx flcolm +
 	flcols 1- ( 1? 1-
-		over fy fh over + sdlLineV
+		over fy fh over + lineV
 		swap flcolm + swap ) 2drop ;
 		
 ::uiLineGridH
 	fy flrowm +
 	flrows 1- ( 1? 1-
-		fx pick2 fw pick2 + sdlLineH
+		fx pick2 fw pick2 + lineH
 		swap flrowm + swap ) 2drop ;
 	
 ::uiLineGrid
@@ -313,27 +316,32 @@
 ::stDark $ff393F4Cff14161A 'colfil ! ;	| dark
 ::stLigt $ffaaaaaaff888888 'colfil ! ;	| white
 
+::stColor | rgb --
+	dup $ffffff $7f colmix  
+	32 << or $ff000000ff000000 or
+	'colfil ! ;
+	
 |--- fill widget
 ::uilFill
-|	colBac sdlcolor 
-	cx cy cw chx SDLFRect ;
+|	colBac color 
+	cx cy cw chx frect ;
 ::uilRFill	
-|	colBac sdlcolor 
-	cx cy cw chx SDLFRound ; | round --
+|	colBac color 
+	cx cy cw chx fround ; | round --
 ::uilCFill	
-|	colBac sdlcolor 
-	cw chx min 2/ cx cy cw chx SDLFRound ;
+|	colBac color 
+	cw chx min 2/ cx cy cw chx fround ;
 ::uilTex	
-	cl2recbox 'recbox swap SDLImageb ; | texture --
+	cl2recbox 'recbox swap imageb ; | texture --
 
 |--- focus
-::uilRect	cx 1- cy 1- cw 2 + chx 2 + SDLRect ;
-::uilRRect	cx 1- cy 1- cw 2 + chx 2 + SDLRound ; | round --
-::uilCRect	cw 2 + chx 2 + min 2/ cx 1- cy 1- cw 2 + chx 2 + SDLRound ;
+::uilRect	cx 1- cy 1- cw 2 + chx 2 + rect ;
+::uilRRect	cx 1- cy 1- cw 2 + chx 2 + round ; | round --
+::uilCRect	cw 2 + chx 2 + min 2/ cx 1- cy 1- cw 2 + chx 2 + round ;
 
-:colBack	colBac sdlcolor ;
-:colFill	colFil sdlcolor ;
-:colFocus	colFoc sdlcolor ;
+:colBack	colBac color ;
+:colFill	colFil color ;
+:colFocus	colFoc color ;
 :colText	colTxt txrgb ;
 
 |---- text cursor
@@ -344,7 +352,7 @@
 	
 ::ui--
 	colFill
-	cx cy 1+ cw 2 SDLRect
+	cx cy 1+ cw 2 rect
 	flpady 7 + 'cy +! ;
 
 |---- helptext
@@ -468,7 +476,7 @@
 	cw 8 - pick4 pick4 swap - */ cx 1+ +
 	cy 2 + 
 	6 txh 4 - 
-	SDLFRect ;
+	frect ;
 	
 ::uiSliderf | 0.0 1.0 'value --
 	uiZone
@@ -491,7 +499,7 @@
 	dup @ pick3 - cw pick4 pick4 swap - */
 	txh
 	cx cy 2swap
-	SDLFRect ;
+	frect ;
 
 ::uiProgressf | 0.0 1.0 'value --
 	uiZone
@@ -523,7 +531,7 @@
 	ch 8 - pick4 pick4 swap - */ cy 1+ +
 	cx 2 + swap
 	cw 4 - 6 
-	SDLFRect ;
+	frect ;
 
 ::uiVSliderf | 0.0 1.0 'value --
 	uiZone
@@ -559,23 +567,21 @@
 	3 << indlist + @ ;
 
 #lvl	|  $1f:level $20:have_more $80:is_open	
-:getval	| adr c@ ; a
-	$1f and 
-	lvl <=? ( 'lvl ! ; ) 
+:getval	| adr lvl -- adr nlvl	
+	lvl <=? ( ; ) 
 	a> 8 - @ dup 				
 	c@ $20 or over c!
-	c@ $80 and? ( drop 'lvl ! ; ) | draw
+	c@ $80 and? ( drop ; ) | draw
 	2drop
 	( >>0 dup c@ 1? 
-		$1f and lvl >? drop )
-	drop ;
+		$1f and lvl >? drop ) ;
 	
 :maketree |
 	0 'lvl !
 	here dup 'indlist ! >a
 	( dup a!+ >>0
 		dup c@ 1? 
-		getval
+		$1f and getval 'lvl ! 
 		) 2drop
 	a> dup here - 3 >> 'cntlist !
 	'here ! ;
@@ -641,7 +647,7 @@
 	swap ! ;
 	
 :backline 
-	lx ly cw txh sdlFRect ;
+	lx ly cw txh frect ;
 	
 :slidev | 'var max -- 'var max
 	cntlist over - 1+	| maxi
@@ -650,14 +656,14 @@
 
 :cscroll | 'var max -- 'var max
 	cntlist >=? ( ; ) 
-	$ffffff sdlcolor 
+	$ffffff color 
 	cntlist over - 1+	| maxi
 	cx cw + 10 -		| 'var max maxi x 
 	pick3 8 + @ 		| 'var max maxi x ini
 	chx pick3 / 	| 'var max maxi x ini hp
 	swap over *	cy +	| 'var max maxi x hp ini*hp
 	8 rot
-	>r >r 4 -rot r> r> sdlfRound	
+	>r >r 4 -rot r> r> fround	
 	drop ;
 	
 :kbList
@@ -805,7 +811,7 @@
 
 :cursor | 'var max
 	msec $100 and? ( drop ; ) drop
-	$a0a0a0 SDLColor
+	$a0a0a0 color
 	cx cy txat 
 	padi> pad> 
 	modo 'lins =? ( drop txcur ; ) drop
@@ -825,8 +831,8 @@
 	drop 'lins 'modo ! ;
 
 :proinputa | --
-	colFocus cx 1- cy 1- cw 2 + txh 2 + SDLRect 
-	$ffffff SDLColor |	uiRect
+	colFocus cx 1- cy 1- cw 2 + txh 2 + rect 
+	$ffffff color |	uiRect
 	cursor 
 	SDLchar 1? ( modo ex ; ) drop
 	SDLkey 0? ( drop ; )

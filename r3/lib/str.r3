@@ -190,6 +190,11 @@
 		drop swap )
 	2drop ;
 
+::rfindstri | end "texto" adr -- adr'/0 ; reverse
+	( 2dup =pi 0? drop
+		1- pick2 <=? ( 3drop 0 ; ) 
+		) drop nip nip ;
+
 |---- convert to number
 #mbuff * 64
 
@@ -245,6 +250,17 @@
 	swap ( over >?
 		1- $20 over c!
 		) drop ;
+		
+:.f!
+	( 10/mod $30 + pick2 c! swap 1- swap 1? ) drop
+	1+ $2e over c! 1-
+	swap 32 >>> 
+	( 10/mod $30 + pick2 c! swap 1- swap 1? ) drop
+	swap sign ;
+	
+::.fd | fix -- str
+	dup abs 21 + mbuffi | 0.000000005
+	over $ffffffff and 100000000 32 *>> 100000000 + .f! ;		
 
 |----------------------------------
 ::trim | adr -- adr'
@@ -270,6 +286,14 @@
 	
 ::n>>0 | adr n -- adr' 
 	( 1? swap >>0 swap 1- ) drop ;
+
+::only10 | adr -- 'adr ; remove 13..reeplace with 10
+	dup
+	( c@+ 1?
+		10 =? ( over c@	13 =? ( rot 1+ -rot ) drop )
+		13 =? ( drop c@+ 10 <>? ( drop 1- 10 ) )
+		rot c!+ swap ) nip
+	swap c!+ ;
 
 ::only13 | adr -- 'adr ; remove 10..reeplace with 13
 	dup

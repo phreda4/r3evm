@@ -10,7 +10,7 @@
 #te 0 0 
 
 ::msec | -- msec
-	6 'te libc-clock_gettime drop | CLOCK_MONOTONIC=6 on macOS
+	4 'te libc-clock_gettime drop |4 constant CLOCK_MONOTONIC_RAW
 	'te @+ 1000* swap @ 1000000/ + ;
 
 |struct tm {

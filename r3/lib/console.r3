@@ -50,6 +50,22 @@
 	outbuf> endbuf =? ( .flush outbuf nip ) c!+ 'outbuf> ! ;
 :.wemit | char2char1 --
 	outbuf> endbuf =? ( .flush outbuf nip ) w!+ 'outbuf> ! ;
+	
+::.uemit | cp -- ; UNICODE emit
+	$10FFFF >? ( drop ; )
+	$D800 >=? ( $DFFF <=? ( drop ; ) ) | fuera de rango
+	$7f <=? ( .emit ; )
+    $7FF <=? ( 
+		dup 6 >> $c0 or .emit 
+		$3f and $80 or .emit ; )
+	$ffff <=? ( 
+		dup 12 >> $e0 or .emit 
+		dup 6 >> $3f and $80 or .emit 
+		$3f and $80 or .emit ; )
+	dup 18 >> $f0 or .emit
+	dup 12 >> $3f and $80 or .emit
+	dup 6 >> $3f and $80 or .emit
+	$3f and $80 or .emit ;	
 
 ::.cr $d0a .wemit ; |10 .emit 13 .emit ;
 ::.sp 32 .emit ;
@@ -89,7 +105,7 @@
 ::.ealine "2K" .[w ; | borrar linea actual
 ::.escreen "J" .[w ; | erase from cursor to end of screen
 ::.escreenup "1J" .[w ; | erase from cursor to beginning
-::.nsp "%dX" .[p ; | n --
+::.nsp "%dX" .[p ; | n -- | not adv cursor
 
 ::.showc "?25h" .[w ;
 ::.hidec "?25l" .[w ;
@@ -159,11 +175,21 @@
 
 |------- Text Attributes -------
 ::.Bold "1m" .[w ;
+::.NBold "22m" .[w ;
+
 ::.Dim "2m" .[w ;
-::.Italic "3m" .[w ;
+
+::.Ital "3m" .[w ;
+::.NItal "23m" .[w ;
+
 ::.Under "4m" .[w ;
+::.NUnder "24m" .[w ;
+
 ::.Blink "5m" .[w ;
+
 ::.Rever "7m" .[w ;
+::.NRever "27m" .[w ;
+
 ::.Hidden "8m" .[w ;
 ::.Strike "9m" .[w ;
 ::.Reset "0m" .[w ;
@@ -193,7 +219,7 @@
 	.showc .ovec
 	'pad 
 	( getch $a <>? [enter] <>? [esc] <>? .char ) drop
-	0 swap c! .cr .flush ;
+	0 swap c! .cr .flush ;	
 	
 :emite | char --
 	$5e =? ( drop 27 .emit ; ) | ^=escape
@@ -205,6 +231,16 @@
 	
 ::strcpybuf | 'mem --
 	0 .emit outbuf swap strcpy .cl ;
+	
+|------------------------------
+::r3run | "" --
+	here
+|WIN|	"r3 "
+|LIN|	"./r3lin "
+|MAC|	"./r3mac "	
+|RPI|	"./r3rpi "	
+	,s swap 34 ,c ,s 34 ,c 0 ,c sys ;
+	
 	
 : |||||||||||||||||||||||||||||
 	here 

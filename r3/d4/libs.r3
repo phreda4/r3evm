@@ -5,8 +5,6 @@
 ^r3/util/sort.r3
 ^r3/d4/meta/mlibs.r3
 
-#pad * 256
-
 |-----------------------------------
 :char>6 | char -- 6bitchar
 	$20 - dup $40 and 1 >> or $3f and ;
@@ -17,6 +15,7 @@
 		char>6 rot 6 << or
 		$fc0000000000000 and? ( nip ; )
 		swap ) 2drop 
+	0? ( ; )		
 	( $fc0000000000000 nand? 	| fill with 0
 		6 << ) ;				| without this order is len, not alpha
 	
@@ -132,12 +131,25 @@
 		8 a+
 		) 3drop 
 	-1 ;
+
+:wordfind | "" -- nro/-1
+	str>6 
+	namwlist ( @+ 1?
+		pick2 >=? ( drop 8 - namwlist - 4 >> nip ; ) 
+		drop 8 + ) 3drop
+	-1 ;
+
+:nwordname | nro -- name
+	4 << namwlist + 8 + @
+	dup 48 >> $ffff and 3 << 'liblist + @ 8 + @ | lib
+	swap 32 >> $ffff and +  | word
+	;
 	
 |...repetidas
 :listrepe 
 	namwlist >a
 	( a@ 1?
-		a> 16 + @ =? ( a> namwlist - 4 >> "%d " .print 
+		a> 16 + @ =? ( a> namwlist - 4 >> "%d " .print )
 		drop 16 a+
 		) 2drop ;
 	
@@ -149,29 +161,33 @@
 	dup 48 >> $ffff and .lib | lib
 	" -> " .print
 	swap 32 >> $ffff and + .write | name
-	;
+	;		
 	
-:wordfind | "" -- nro
-	dup str>6 
-	namwlist >a
-	( a@ 1?
-		over =? ( 3drop
-			a> namwlist - 4 >> 
-			; ) drop
-		16 a+
-		) 3drop 
-	-1 ;
+|----------------	
+:.writewords | adr nro --
+	( 1? 1- swap
+		@+ 6>str .write
+		@+ .wordinfo
+		.cr
+		swap ) 2drop ;
+
+:wordshow | n --
+	dup nwordname 
+	'pad = 1? ( over "(%d)" .print )  drop
+	4 << namwlist +
+	5 .writewords 
+	;
 	
 |---------------------------------	
 :find
+	'pad isNro
+	1? ( "is a number" .println ; ) drop
 	'pad basefind 
-	+? ( "palabra base %d" .println ; ) drop
-	'pad wordfind 
-	-? ( drop "Not found" .println ; ) 
-	4 << namwlist +
-	@+ 6>str .write
-	@ .wordinfo
-	.cr
+	+? ( "base word %d" .println ; ) drop
+	'pad wordfind
+	+? ( wordshow ; ) drop
+	drop "Not found" .println ;
+|	@+ 6>str .write @ .wordinfo .cr
 	;
 
 :ask
@@ -180,7 +196,6 @@
 	'pad c@ 0? ( drop ; ) drop
 	find
 	ask ;
-
 
 :main
 	makelist

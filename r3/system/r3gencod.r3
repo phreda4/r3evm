@@ -13,37 +13,35 @@
 | http://www.flounder.com/multiplicative_inverse.htm
 
 #ad		| d absoluto
-#t #anc #p
-#q1 #r1
-#q2 #r2
+#anc 
 
 #divm	| magic mult
 #divs   | shift mult
 
-:calcstep
-	1 'p +!
-	q1 1 << 'q1 ! r1 1 << 'r1 !
-	r1 anc >=? ( 1 'q1 +! anc neg 'r1 +! ) drop
-	q2 1 << 'q2 ! r2 1 << 'r2 !
-	r2 ad >=? ( 1 'q2 +! ad neg 'r2 +! ) drop
-	;
-
 :calcmagic | d --
 	dup abs 'ad !
-    $80000000 over 31 >>> + 't !
-    t dup 1 - swap ad mod - 'anc !
-    31 'p !
-    $80000000 anc / abs 'q1 !
-    $80000000 q1 anc * - abs 'r1 !
-	$80000000 ad / abs 'q2 !
-	$80000000 q2 ad * - abs 'r2 !
-	( calcstep
-		ad r2 -	| delta
-		q1 =? ( r1 0? ( swap 1 + swap ) drop )
-		q1 >? drop ) drop
-	q2 1 +
-	swap -? ( drop neg 'divm ! p 'divs ! ; ) drop
-	'divm ! p 'divs ! ;
+    $4000000000000000 over 62 >>> +
+    dup 1- swap ad mod - 'anc !
+    $4000000000000000 anc / abs
+    $4000000000000000 over anc * - abs
+	$4000000000000000 ad / abs
+	$4000000000000000 over ad * - abs
+	62 | cnt bits
+	( 1+ >r | q1 r1 q2 r2
+		2swap |  q2 r2 q1 r1
+		2* swap 2* swap
+		anc >=? ( swap 1+ swap anc - ) 
+		2swap |  q1 r1 q2 r2 
+		2* swap 2* swap
+		ad >=? ( swap 1+ swap ad - ) 
+		ad over -
+		pick4 =? ( pick3 0? ( swap 1+ swap ) drop ) 
+		pick4 >? drop 
+		r>
+		) drop
+	drop 1+ nip nip | d q2
+	swap -? ( drop neg 'divm ! r> 'divs ! ; ) drop
+	'divm ! r> 'divs ! ;
 
 |--------------------------
 #TKdup $23
@@ -228,14 +226,14 @@
 | 8 * --> 3 <<
 :*pot
 	code<<
-	63 swap clz - cte!+
+	msb cte!+
 	TK<< code!+ ;
 
 | 7 * --> dup 3 << swap -
 :*pot-1
 	code<<
 	TKdup code!+	| dup
-	64 swap clz - cte!+
+	msb cte!+
 	TK<<	code!+	| <<
 	TKswap	code!+	| swap
 	TK- code!+ | -
@@ -285,7 +283,7 @@
 	TK>>> code!+ | >>>
 
 	TK+	code!+	| +
-	63 swap clz - cte!+ | 2
+	msb cte!+ | 2
 	TK>> code!+ | >>
 	;
 

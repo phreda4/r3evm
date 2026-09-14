@@ -14,7 +14,7 @@
 
 |----------------------------------------
 :dataw | n -- n
-	dup datause? 0? ( drop ; ) drop
+	dup datause? 0? ( drop ; ) drop | <<< var inline
 	
 	| info in plain--
 	dup 4 << dic + @ dic>name "| #%w " ,print ,cr
@@ -22,7 +22,7 @@
 	
 	dup "#w%h" ,print
 	dup 4 << dic + toklend		| dc tok len
-	( 1? 1 - swap ,sp 
+	( 1? 1- swap ,sp 
 		@+ ,tokenstrd
 		swap ) 2drop 
 	,cr ;
@@ -42,15 +42,16 @@
 :withanon | nro --
 	0 'cnta !
 	4 << dic + toklen 
-	( 1? 1 - swap @+ $ff and
+	( 1? 1- swap @+ $ff and
 		11 =? ( over 8 - cnta 3 << 'anon + ! 1 'cnta +! ) | ]
 		drop swap ) 2drop 
 	0 ( cnta <? 
 		'anon over 3 << + @ ,anonw
-		1 + ) drop ;
+		1+ ) drop ;
 	
 :codew
 |dup 4 << dic + @ dic>name "%w" .println | debug
+
 	dup worduse? 0? ( drop ; ) drop
 	dup withanon
 	
@@ -59,12 +60,20 @@
 	dup 4 << dic + 8 + @ ,mov ,cr
 	| info in plain--
 	
-|	dup 4 << dic + @ dic>name "| :%w | " .println
+	|dup 4 << dic + @ dic>name "%.| :%w | %." filelog
 	
 	dup ":w%h" ,print 
+	
+	|"r3/d4/gen/plain.r3" savemem
+	
 	dup wordanalysis
+	
+	|"|" ,print ,cr "r3/d4/gen/plain.r3" savemem
+	
 	'tokana ( tokana> <? ,sp
 		@+ ,tokenstrw 
+		
+		|"r3/d4/gen/plain.r3" savemem
 		) drop ,cr ;
 	
 :,everyword | n -- n
@@ -74,9 +83,12 @@
 	drop codew ;
 	
 :generate
-	0 ( cntdef 1 - <?
+	0 ( cntdef 1- <?
 		,everyword 
-		1 + )
+
+|	"r3/d4/gen/plain.r3" savemem
+		
+		1+ )
 	dup withanon 
 	"|-----BOOT-----" ,s ,cr
 	":" ,print 
@@ -101,10 +113,14 @@
 :saveopt | --
 	error 1? ( drop ; ) drop
 	mark
+	switchmem "|MEM %d" ,print ,cr
 	"| " ,s 'filename ,s ,cr
 	"| r3 optimizer" ,s ,cr
+	
 	generate
-	"r3/d4/gen/plain.r3" savemem
+	"r3/d4/gen/plain.r3" 
+	|"r3/plain.r3" 
+	savemem
 	empty			| free buffer
 	;
 
@@ -113,13 +129,13 @@
 	r3load
 	error 1? ( dup .println ; ) drop
 	".pass1" .println
-	deferwi | for opt	
+	deferwi | for opt and inline
 	
 	".pass2" .println
-	|showvar 
+	showvar 
 	".pass3" .println	
 |	resetvm
-	".pass4" .println	
+|	".pass4" .println	
 	saveopt
 	".genplain" .println
 	;
@@ -127,12 +143,12 @@
 |--------------------- BOOT
 : 	
 	'filename "mem/menu.mem" load drop
-|	"r3/test/testasm.r3" 'filename strcpy
+	
 	.cr
-	.reset "[07Make plain.r3" .awrite .cr .cr .cr .cr 
+	.reset 
+	"Make plain.r3" .println
 	mark
 	'filename r3plain
 	cols .hline
-	.cr "press any key to continue..." .print	
-	waitkey	
+	|.cr "press any key to continue..." .print waitkey	
 	;

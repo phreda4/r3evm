@@ -7,6 +7,10 @@
 
 ::cell+	8 + ;
 ::ncell+ 3 << + ;
+
+::ndword+ 2 << + ;
+::nword+ 1 << + ;
+
 ::1+ 1 + ;
 ::1- 1 - ;
 ::2/ 1 >> ;
@@ -36,13 +40,13 @@
 
 ::sign | v -- v s
 	dup 63 >> 1 or ;
-
+	
 :sinp
 	$7fff and $4000 -
 	dup dup *.
-	dup 4846800 *.
-	2688000 - *.
-	404000 + *. ;
+	dup 4872679 *.        | c3 minimax
+	2698638 - *.           | c2 minimax
+	411775 + *. ;          | c1 = 2pi * 65536
 	
 ::cos | bangle -- r
 	$8000 + $8000 nand? ( sinp ; ) sinp neg ;
@@ -53,10 +57,10 @@
 	$4000 +
 	$7fff and $4000 -
 	dup dup *.
-	dup 129890000 *.
-	5078000 + *.
-	395600 + *. ;
-
+	dup 134156714 *.      | c5 minimax
+	5104633 + *.           | c3 minimax
+	411775 + *. ;          | c1 = 2pi * 65536
+	
 ::sincos | bangle -- sin cos
 	dup sin swap cos ;
 
@@ -74,20 +78,58 @@
 
 ::polar2 | largo bangle  -- dx dy
 	sincos pick2 *. -rot *. swap ;
+	
+::dir2vec | dx dy -- vx vy
+	over dup * over dup * + 
+	0? ( nip nip dup ; ) | 0 0
+	sqrt rot over 16 <</ -rot 16 <</ ;
 
-:iatan2 | |x| y -- bangle
-	swap
-	+? ( 2dup + 0? ( nip nip ; )
-		-rot swap - 0.125 rot */ 0.125 swap - ; )
-	2dup - 0? ( nip nip ; )
-	-rot + 0.125 rot */ 0.375 swap - ;
-::atan2 | x y -- bangle
-    swap -? ( neg iatan2 neg ; ) iatan2 ;
+::sdir2vec | scale dx dy -- vx vy
+	over dup * over dup * + 
+	0? ( nip nip nip dup ; ) | 0 0
+	sqrt >r rot r> 16 <</
+	rot over *. -rot *. ;	
 
+|--- atan2
+:atanf
+	|swap pick2 xor 1? ( swap neg swap ) drop
+	swap pick2 xor			| sx angle m
+	dup -rot xor swap -		| sx angle
+	swap $8000 and + $ffff and ;
+
+:atanb | sx sy |x| |y| -- sx sy angle
+	over >? ( 16 <</ $21F3 *. $4000 swap - atanf ; )
+	swap 16 <</ $21F3 *. atanf ; 
+	
+::atan2 | y x -- bangle
+	over 63 >> over 63 >>	| x y sx sy
+	2swap					| sx sy x y 
+	pick2 xor pick2 - swap
+	pick3 xor pick3 - swap	| sx sy |x| |y|
+	0? ( swap 0? ( 4drop 0 ; ) swap ) 
+	atanb ;
+
+| atan2 extender precition
+:atanc
+	16 <</ dup dup *. over *.	| r r3
+	-$07D2 *. swap $279E *. + ;
+	
+:atanb
+	over >? ( atanc $4000 swap - atanf ; )
+	swap atanc atanf ; 
+
+::atan2x | y x -- bangle
+	over 63 >> over 63 >>	| x y sx sy
+	2swap					| sx sy x y 
+	pick2 xor pick2 - swap
+	pick3 xor pick3 - swap	| sx sy |x| |y|
+	0? ( swap 0? ( 4drop 0 ; ) swap ) 
+	atanb ;
+
+| max*31/32 + min/4 + min/8 = min*3/8
 ::distfast | dx dy -- dis
     abs swap abs over <? ( swap ) | min max
-    dup 3 >> -		| max*7/8 (max - max/8)
-    swap 1 >> + ;	| Calcular: max*7/8 + min/2
+	dup 5 >> - swap dup 2 >> swap 3 >> + + ; 
 
 ::average | x y -- v
 	2dup xor 1 >> -rot and + ;
@@ -117,9 +159,20 @@
 ::between | v min max -- -(out)/+(in)
 	pick2 - -rot - or ;
 
-::msb
-	63 swap clz - ;
-
+::msb | x -- n
+	clz 63 xor ;
+	
+::ctz | x -- n
+	0? ( 64 + ; ) 
+	dup neg and 0 swap
+    $00000000FFFFFFFF nand? ( swap 32 + swap ) 
+    $0000FFFF0000FFFF nand? ( swap 16 + swap )
+    $00FF00FF00FF00FF nand? ( swap 8 + swap )
+    $0F0F0F0F0F0F0F0F nand? ( swap 4 + swap )
+    $3333333333333333 nand? ( swap 2 + swap )
+    $5555555555555555 nand? ( swap 1 + swap )
+	drop ;
+	
 :step | op res one r+o -- op res one
 	pick3 >? ( drop swap 2/ swap ; )
 	rot 2/ pick2 + | op one r+o nres
@@ -129,35 +182,41 @@
 ::sqrt. | x -- r
 	0 <=? ( drop 0 ; ) |1.0 =? ( ; )
 	0 
-	1 63 pick3 clz - 1 nand <<
+	1 pick2 msb 1 nand <<
 	( 1? | op res one
 		2dup + | op res one r+o
 		step 2 >> )
 	drop nip 8 << ;
 
-:mcalc | x bitpos -- m
-	+? ( >> ; ) neg << ;
+|- shift with sign
+:shift
+	-? ( neg >> ; ) << ;
 	
 ::log2. | y -- r
 	0 <=? ( 0 nip ; ) 
-	63 over clz - 
-	16 - dup 16 << | x bitpos integer
+	dup msb 16 - 
+	dup 16 << | x bitpos integer
 	-rot | integer x bitpos
-	mcalc 1.0 - | int xnorm
-	19697
-	over * 16 >> 51259 -
-	over * 16 >> 97098 +
-	* 16 >> + ;
+	neg shift 1.0 - | int xnorm	
+    | Polinomio grado 6 Minimax, err max ~1.5e-5 (piso Q48.16)
+	-2319                    | c6
+	over 16 *>> 9726 +      | c5
+	over 16 *>> -19997 +    | c4
+	over 16 *>> 30797 +     | c3
+	over 16 *>> -47220 +    | c2
+	over 16 *>> 94548 +     | c1
+	16 *>> + ;
 	
 ::pow2. | y -- r
 	dup $ffff and
-	5089
-	over * 16 >> 14850 +
-	over * 16 >> 45600 +
-	* 16 >> 1.0 +
-	swap 16 >>
-	+? ( << ; ) neg >> ;
-
+    | Polinomio grado 4 Minimax, err max ~1.5e-5 (piso Q48.16)
+	838                      | c4
+	over 16 *>> 3500 +      | c3
+	over 16 *>> 15772 +     | c2
+	over 16 *>> 45425 +     | c1
+	16 *>> 1.0 +
+	swap 16 >> shift ;
+	
 ::pow. | x y -- r
 	|0? ( 2drop 1.0 ; ) 
 	swap 0? ( nip ; ) | y x
@@ -299,9 +358,6 @@
 ::1000000/
 	18446744073710 64 *>> ;
 
-|- shift with sign
-:shift
-	-? ( neg >> ; ) << ;
 
 :clzd
 	clz 32 - ; |0 max ;

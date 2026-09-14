@@ -3,15 +3,15 @@
 |
 | vaini		| max --
 
-| +vanim | 'var ini fin ease dur. start --
+| +vanim    | 'var fin ini ease dur. start --
 | +vboxanim | 'var fin ini ease dur. start --
-| +vxyanim | 'var ini fin ease dur. start --
-| +vcolanim | 'var ini fin ease dur. start --
+| +vxyanim  | 'var fin ini ease dur. start --
+| +vcolanim | 'var fin ini ease dur. start --
 
-| +vanimg | 'var ini fin ease dur. start group --
+| +vanimg    | 'var fin ini ease dur. start group --
 | +vboxanimg | 'var fin ini ease dur. start group --
-| +vxyanimg | 'var ini fin ease dur. start group --
-| +vcolanimg | 'var ini fin ease dur. start group --
+| +vxyanimg  | 'var fin ini ease dur. start group --
+| +vcolanimg | 'var fin ini ease dur. start group --
 
 | ---exe in 3.0 seconds 
 | +vexe		| 'exe 3.0 --
@@ -24,9 +24,9 @@
 | ---update 
 | vupdate	| --
 
-| vareset	| -- 			kill all events
-| vkillgroup| group --		kill for group
-| vkillvar  | 'var --		kill for 'var
+| vareset    | -- 			kill all events
+| vkillgroup | group --		kill for group
+| vkillvar   | 'var --		kill for 'var
 | vaempty    | -- n			cnt now
 |
 | vvexe: get param >>	dup @ -> v1
@@ -45,6 +45,12 @@
 | ini | fin | ease ms | 'VAR
 ##exevar
 #maxcnt
+
+::timer< msec 'prevt ! 0 'deltatime ! ; 			| reset timer
+::timer. msec dup prevt - 'deltatime ! 'prevt ! ;	| adv timer
+::timer+ deltatime + ; 								| add timer
+| $ffffffff7fffffff and  ; 	| for ring counter
+::timer- deltatime - ; 								| sub timer
 
 | -------------------------------------------------------
 | RESET
@@ -295,3 +301,33 @@
 | -------------------------------------------------------
 ::vaempty
     timeline> timeline - 3 >> ;
+
+|------------ FRAME ANIMATION
+|init(12) cnt-1(8) now(8) ms(12) acc(24)  = 64 bits
+|63..52   51..44   43..36  35..24  23..0
+::aniInit | ini cnt fps -- V
+	0? ( 2drop 0 1.0 )				| 0fps is still
+	1000.0 swap / $fff and 24 <<	| ms x frame
+	swap $ff and 44 << or	| cnt 0-> not 1-
+	swap $fff and 52 << or ;		| init
+
+::ani+! | dt 'v --
+	swap over +! 
+	dup @ dup $ffffff and	| 'v val acc
+	over 24 >> $fff and -	| 'v val acc-ms ( acc-ms)
+	-? ( 3drop ; ) 
+	over 36 >> $ff and 1+	| 'v val nacc nnow
+	pick2 44 >> $ff and		| 'v val nacc nnow cnt
+	>=? ( 0 nip )			| 'v val nacc now
+	36 << or				| 'v val nn
+	swap $ff000ffffff nand or
+	swap ! ;
+
+::aniFrame | V -- f
+	dup 36 >> $ff and swap 52 >> $fff and + ;
+
+::aniCnt | V -- c
+	36 >> $ff and ;
+
+::ani+timer! | 'V --
+	deltatime swap ani+! ;

@@ -25,6 +25,9 @@
 
 #undobuffer |'undobuffer
 #undobuffer>
+#undobuffer<	| tope valido de redo
+
+#findpad * 64	|----- find text
 
 :inselect | adr -- adr
 	inisel finsel in? ( 18 .bc ) ;
@@ -55,9 +58,13 @@
 
 #modo 'lins
 
+:pushu | data marca -- ; graba registro fijo [marca][data] e invalida redo
+	undobuffer> c!+ c!+ 'undobuffer> !
+	undobuffer> 'undobuffer< ! ;
+
 :back
 	fuente> fuente <=? ( drop ; )
-	dup 1- c@ undobuffer> c!+ 'undobuffer> !
+	dup 1- c@ 0 pushu
 	dup 1- swap $fuente over - 1+ cmove
 	-1 '$fuente +!
 	-1 'fuente> +! ;
@@ -65,7 +72,7 @@
 :del
 	fuente>	$fuente >=? ( drop ; )
 	1+ fuente <=? ( drop ; )
-	9 over 1- c@ undobuffer> c!+ c!+ 'undobuffer> !
+	dup 1- c@ 9 pushu
 	dup 1- swap $fuente over - 1+ cmove
 	-1 '$fuente +! ;
 
@@ -406,6 +413,47 @@
 	here count nip 'fuente> +!
 	;
 	
+|-------------
+| undobuffer formato: registro fijo de 2 bytes [marca][data] (un solo buffer)
+|   back      guarda: [0][char]      -> redo = reinsertar (redoback)
+|   del       guarda: [9][char]      -> redo = borrar de nuevo (redodel)
+|   lins      guarda: [1][0]         -> undo escribe el char real en [data] antes de borrar
+|   overwrite guarda: [2][charviejo] -> undo/redo van pisando [data] con el valor opuesto en cada pasada
+:redodel	| repite un del
+	fuente>	$fuente >=? ( drop ; )
+	1+ fuente <=? ( drop ; )
+	dup 1- swap $fuente over - 1+ cmove
+	-1 '$fuente +! ;
+
+:redoback	| repite un back
+	fuente> fuente <=? ( drop ; )
+	dup 1- swap $fuente over - 1+ cmove
+	-1 '$fuente +!
+	-1 'fuente> +! ;
+
+:swapchar | charnuevo adr -- charviejo ; escribe charnuevo en adr, devuelve lo que habia
+	dup c@ -rot c! ;
+
+:controlz | undo
+	undobuffer>
+	undobuffer =? ( drop ; )		| ptr
+	2 - dup c@				| (ptr-2) marca
+	9 =? ( drop dup 1+ c@ lins -1 'fuente> +! 'undobuffer> ! ; )	| DEL: reinserta charreal, del NO mueve cursor -> compensa el avance de lins
+	1 =? ( drop fuente> 1- c@ over 1+ c! redoback 'undobuffer> ! ; )	| INSERT: guarda char antes de borrarlo
+	2 =? ( drop dup 1+ c@ -1 'fuente> +! fuente> swapchar over 1+ c! 'undobuffer> ! ; )	| OVERWRITE: retrocede cursor, restaura charviejo, guarda charactual p/redo
+						| BACK: reinserta charval guardado
+	drop dup 1+ c@ lins 'undobuffer> ! ;
+
+:controly | redo
+	undobuffer> undobuffer< =? ( drop ; )	| nada para rehacer
+	dup c@					| ptr marca
+	9 =? ( redodel )			| rehace un DEL (no necesita char)
+	1 =? ( over 1+ c@ lins )		| rehace un INSERT con el char guardado
+	2 =? ( over 1+ dup c@ fuente> swapchar swap c! 1 'fuente> +! )	| rehace OVERWRITE, avanza cursor, guarda charviejo p/undo
+	0 =? ( redoback )			| rehace un BACK (no necesita char)
+	drop 2 + 'undobuffer> ! ;
+
+
 :kdel
 	inisel 0? ( drop del ; )
 	drop remsel ;
@@ -418,6 +466,24 @@
 	modo 'lins =? ( drop 'lover 'modo ! .ovec ; )
 	drop 'lins 'modo ! .insc ;
 
+|-------------
+:findnext | -- ; busca proxima ocurrencia de findpad, desde despues del cursor
+	'findpad c@ 0? ( drop ; ) drop
+	fuente> 1+ 'findpad findstri 0? ( drop ; )
+	'fuente> ! ;
+	
+:findprev | -- ; busca ultima ocurrencia de findpad antes del cursor
+	'findpad c@ 0? ( drop ; ) drop
+	fuente 'findpad fuente> 1- rfindstri 0? ( drop ; )
+	'fuente> ! ;
+
+:enterfind | -- ; pide texto a buscar (como filesearch en main.r3) y busca
+	fx fy .at 7 .fc 4 .bc fw .nsp
+	" find: " .write
+	.input
+	'pad 'findpad strcpy
+	findnext ;
+
 ::tueKeyMove
 	[UP] =? ( karriba sele ) 
 	[DN] =? ( kabajo sele )
@@ -429,6 +495,22 @@
 	[PGDN] =? ( kpgdn sele )
 	;
 	
+:simpleins | c -- ; graba [1][0] (INSERT) e inserta/appendea
+	dup 0 1 pushu			| graba registro; deja c
+	modo ex ;
+
+:ovwchar | c -- ; graba [2][charviejo] (OVERWRITE), y sobreescribe
+	fuente> c@			| c charviejo
+	2 pushu				| graba registro; deja c
+	lover ;
+
+:insertchar | c -- ; inserta o sobreescribe c, grabando undo/redo
+	modo 'lover =? (
+		drop				| c
+		fuente> $fuente <? ( drop ovwchar ; )	| hay char real debajo -> overwrite
+		drop simpleins ; )		| cursor al final -> se comporta como insert
+	drop simpleins ;
+
 :EditFoco
 	tuif 0? ( 'focoe ! ; )
 	|1 =? ( startfocus ) 
@@ -436,9 +518,9 @@
 	tuC!	| activate cursor
 	evtmw 1? ( evwmouse cursorpos ) drop
 	uikey 0? ( drop ; )	
-	32 126 in? ( modo ex fixcur cursorpos ; ) 
-	[tab] =? ( modo ex fixcur cursorpos ; ) 
-	[enter] =? ( modo ex fixcur cursorpos ; ) 
+	32 126 in? ( insertchar fixcur cursorpos ; ) 
+	[tab] =? ( insertchar fixcur cursorpos ; ) 
+	[enter] =? ( insertchar fixcur cursorpos ; ) 
 	
 	[BACK] =? ( kback )
 	[DEL] =? ( kdel )
@@ -458,6 +540,11 @@
 	$18 =? ( txtcut ) | ctrl-x
 	$3 =? ( txtcopy ) | ctrl-c
 	$16 =? ( txtpaste ) | ctrl-v
+	$1a =? ( controlz ) | ctrl-z undo
+	$19 =? ( controly ) | ctrl-y redo
+	$6 =? ( enterfind )	| ctrl-f find
+	$e =? ( findnext )	| ctrl-n find next
+	$10 =? ( findprev )	| ctrl-p find prev
 
 	drop 
 	fixcur 
@@ -500,24 +587,32 @@
 ::tuecursor.
 	ycursor 1+ xcursor 1+ "%d:%d " sprint ;
 	
+:clearundo
+	undobuffer 'undobuffer> !
+	undobuffer 'undobuffer< ! ;
+
 ::TuLoadMem | "" --
 	fuente strcpy
 	fuente only13 1- '$fuente ! |-- queda solo cr al fin de linea
-	fuente dup 'scrini> ! 'fuente> ! ;
+	fuente dup 'scrini> ! 'fuente> !
+	clearundo ;
 
 ::TuLoadMemC | "" -- | already sane
 	fuente strcpyl 1- '$fuente !
-	fuente dup 'scrini> ! 'fuente> ! ;
+	fuente dup 'scrini> ! 'fuente> !
+	clearundo ;
 	
 ::TuLoadCode | "" --
 	'filename strcpy
-	loadtxt ;
+	loadtxt
+	clearundo ;
 
 ::TuNewCode
 	"r3/new.r3" 'filename strcpy
 	fuente dup '$fuente ! dup 'scrini> ! 'fuente> !
 	0 fuente !
 	0 'hashfile !
+	clearundo
 	;
 
 ::TuSaveCode 
@@ -537,14 +632,15 @@
 
 |---------------	
 :
-	here
+	here 8 +
 	dup 'fuente !
 	dup 'fuente> !
 	dup '$fuente !
 	$3ffff +			| 256kb texto
 	dup 'undobuffer !
 	dup 'undobuffer> !
-	$fff +				| 4kb
+	dup 'undobuffer< !
+	$1fff +				| 8kb undo/redo (buffer unico)
 	'here ! | -- FREE
 	mark 
 ;
