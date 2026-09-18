@@ -928,7 +928,7 @@ FILE *f=fopen(filename,"rb");
 if (!f) { 
 	*nextcr(from)=0;
 	FILE *errf = fopen("error.log", "w");	
-	fprintf(errf,"FILE:%s LINE:%ld CHAR:%ld\r\n\r\n%s not found\r\n",from,(long int)cerror,(long int)cerror,filename);
+	fprintf(errf,"FILE:%s\r\n\r\n%s not found\r\n",from,filename);
 	fclose(errf);
 	cerror=(char*)1;
 	return 0;
