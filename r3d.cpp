@@ -37,7 +37,7 @@ typedef uint16_t __uint16;
 
 int hm1,hm2,hm3,hm4;
 
-void *iniMshare(char *fn, int size, int *h) {
+void *iniMshare(const char *fn, int size, int *h) {
 *h = shm_open(fn, O_CREAT | O_RDWR, 0666);
 if (*h == -1) { return MAP_FAILED;  }
 if (ftruncate(*h, size) == -1) { close(*h);return MAP_FAILED;  }
@@ -60,7 +60,7 @@ typedef unsigned __int16 __uint16;
 
 HANDLE hm1,hm2,hm3,hm4;
 
-void *iniMshare(char *fn,int size,HANDLE *h) {
+void *iniMshare(const char *fn,int size,HANDLE *h) {
 *h=OpenFileMappingA(FILE_MAP_ALL_ACCESS,NULL,fn);
 if (*h==0) { *h=CreateFileMappingA(INVALID_HANDLE_VALUE,NULL,PAGE_READWRITE,0,size,fn); }
 return MapViewOfFile(*h,FILE_MAP_ALL_ACCESS,0,0,size);	
@@ -910,7 +910,7 @@ while (*lc>31||*lc==9) {
 *le=0;
 *nextcr(name)=0;
 FILE *errf = fopen("error.log", "w");
-fprintf(errf,"FILE:%s LINE:%d CHAR:%d\n\n",name,line,cerror-lca);	
+fprintf(errf,"FILE:%s LINE:%d CHAR:%ld\n\n",name,line,cerror-lca);	
 fprintf(errf,"%4d|%s\n     ",line,linee);
 for(char *p=lca;p<cerror;p++) if (*p==9) fprintf(errf,"\t"); else fprintf(errf," ");
 fprintf(errf,"^- %s\n",werror);	
@@ -1009,7 +1009,7 @@ FILE *f=fopen(filename,"rb");
 if (!f) { 
 	*nextcr(from)=0;
 	FILE *errf = fopen("error.log", "w");
-	fprintf(errf,"FILE:%s LINE:%d CHAR:%d\n\n%s not found\n",from,cerror,cerror,filename);
+	fprintf(errf,"FILE:%s LINE:%ld CHAR:%ld\n\n%s not found\n",from,(long int)cerror,(long int)cerror,filename);
 	fclose(errf);
 	cerror=(char*)1;
 	return 0;
@@ -1017,7 +1017,7 @@ if (!f) {
 fseek(f,0,SEEK_END);len=ftell(f);fseek(f,0,SEEK_SET);
 buff=(char*)malloc(len+1);
 if (!buff) return 0;
-fread(buff,1,len,f); 
+if (fread(buff, 1, len, f) != (size_t)len) {}
 fclose(f);
 buff[len]=0;
 return buff;
@@ -1187,6 +1187,8 @@ NOS=&datastack[0];
 RTOS=&retstack[252 - 1];
 REGA=0;REGB=0;
 }
+
+#pragma GCC diagnostic ignored "-Wregister"
 
 void stepr3() {
 register __int64 op=memcode[ip++]; 
@@ -1556,7 +1558,7 @@ while (*s>32) fputc(*s++,f);
 }
 
 // save info image
-void saveimagen(char *fn) {
+void saveimagen(const char *fn) {
 __int64 value;	
 FILE *file=fopen(fn,"wb");if (file==NULL) return;
 fwrite(&cntdicc,sizeof(short),1,file);
@@ -1583,7 +1585,7 @@ fclose(file);
 }
 
 
-void savedicc(char *fn) {
+void savedicc(const char *fn) {
 FILE *file=fopen(fn,"wb");if (file==NULL) return;
 __int64 v;
 int pos=0;

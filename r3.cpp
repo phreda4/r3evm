@@ -828,7 +828,7 @@ while (*lc>31||*lc==9) { *le++=*lc++; };
 *nextcr(name)=0;
 
 FILE *errf = fopen("error.log", "w");
-fprintf(errf,"FILE:%s LINE:%d CHAR:%d\r\r\n\n",name,line,cerror-lca);	
+fprintf(errf,"FILE:%s LINE:%d CHAR:%ld\r\r\n\n",name,line,cerror-lca);	
 fprintf(errf,"%4d|%s\r\n     ",line,linee);
 for(char *p=lca;p<cerror;p++) if (*p==9) fprintf(errf,"\t"); else fprintf(errf," ");
 fprintf(errf,"^- %s\r\n",werror);	
@@ -928,15 +928,14 @@ FILE *f=fopen(filename,"rb");
 if (!f) { 
 	*nextcr(from)=0;
 	FILE *errf = fopen("error.log", "w");	
-	fprintf(errf,"FILE:%s LINE:%d CHAR:%d\r\n\r\n%s not found\r\n",from,cerror,cerror,filename);
+	fprintf(errf,"FILE:%s LINE:%ld CHAR:%ld\r\n\r\n%s not found\r\n",from,(long int)cerror,(long int)cerror,filename);
 	fclose(errf);
 	cerror=(char*)1;
 	return 0;
 	}
 fseek(f,0,SEEK_END);len=ftell(f);fseek(f,0,SEEK_SET);
 buff=(char*)malloc(len+1);
-if (!buff) return 0;
-fread(buff,1,len,f); 
+if (fread(buff, 1, len, f) != (size_t)len) { }
 fclose(f);
 buff[len]=0;
 return buff;
@@ -1268,6 +1267,8 @@ static void* dispatch_table[] = {
 };
 
 #define NEXT op=memcode[ip++]; goto *dispatch_table[op&0xff]
+	
+#pragma GCC diagnostic ignored "-Wregister"
 	
 stack[STACKSIZE-1]=0;	
 register __int64 TOS=0;
