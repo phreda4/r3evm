@@ -1246,15 +1246,14 @@ switch(op&0xff){
 	case SHR0:TOS=((__uint64)*NOS)>>TOS;NOS--;return;//SHR
 	case MOD:TOS=*NOS%TOS;NOS--;return;				//MOD
 	case DIVMOD:op=*NOS;*NOS=op/TOS;TOS=op%TOS;return;//DIVMOD
-	case MULDIV:TOS=((__int128)(*(NOS-1))*(*NOS)/TOS);NOS-=2;return;//MULDIV
-	case MULSHR:TOS=((__int128)(*(NOS-1)*(*NOS))>>TOS);NOS-=2;return;//MULSHR
-	case CDIVSH:TOS=((__int128)(*(NOS-1)<<TOS)/(*NOS));NOS-=2;return;//CDIVSH
+	case MULDIV:TOS=((__int128)(*(NOS-1))*(*NOS)/TOS);NOS-=2;return;	//MULDIV
+	case MULSHR:TOS=(__int64)(((__int128)(*(NOS-1))*(*NOS))>>TOS);NOS-=2;return;//MULSHR
+	case CDIVSH:TOS=(__int64)(((__int128)(*(NOS-1))<<TOS)/(*NOS));NOS-=2;return;//CDIVSH
 	case NOT:TOS=~TOS;return;						//NOT
 	case NEG:TOS=-TOS;return;				//NEG
 	case ABS:if(TOS<0)TOS=-TOS;return;		//ABS
 	case CSQRT:TOS=isqrt(TOS);return;		//CSQRT
 	case CLZ:TOS=iclz(TOS);return;			//CLZ
-	
 	case FECH:TOS=*(__int64*)TOS;return;	//@
 	case CFECH:TOS=*(char*)TOS;return;	//C@
 	case WFECH:TOS=*(__int16*)TOS;return;//W@

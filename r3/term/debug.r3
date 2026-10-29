@@ -11,6 +11,12 @@
 
 :main
 	.reset 
+
+
+	1 6 66 <</ "%d" .println
+	1 65 << 10 / "%d" .println
+	1 64 << 11 / "%d" .println
+	1 63 << 12 / "%d" .println
 	"demo debug" .println .flush
 	1 2 3
 	<<trace | view stack here
