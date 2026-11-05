@@ -1,0 +1,39 @@
+name: CI r3evm
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (Unix / macOS)
+        if: runner.os != 'Windows'
+        run: |
+          # Ajusta esto según el comando de compilación que uses (ej. make, gcc, clang)
+          make
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          # Si compilas con MSYS2, MinGW o MSVC, ajústalo aquí. 
+          # Por ejemplo, si usas make con una toolchain de Windows:
+          make
+
+      - name: Run Tests
+        run: |
+          # Ejecuta tu suite de pruebas o binario resultante para verificar que todo funcione
+          # Ejemplo: ./r3evm test (o el comando que corresponda en tu proyecto)
+          make test
