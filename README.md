@@ -1,6 +1,6 @@
-![Windows](https://github.com/phreda4/r3evm/actions/workflows/ci.yml/badge.svg?job=build-windows)
-![Linux](https://github.com/phreda4/r3evm/actions/workflows/ci.yml/badge.svg?job=build-linux)
-![macOS](https://github.com/phreda4/r3evm/actions/workflows/ci.yml/badge.svg?job=build-macos)
+![Linux](https://img.shields.io/github/actions/workflow/status/phreda4/r3evm/ci.yml?job=build-linux&label=Linux)
+![macOS](https://img.shields.io/github/actions/workflow/status/phreda4/r3evm/ci.yml?job=build-macos&label=macOS)
+![Windows](https://img.shields.io/github/actions/workflow/status/phreda4/r3evm/ci.yml?job=build-windows&label=Windows)
 
 # r3 VM
 
