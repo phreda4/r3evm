@@ -1,3 +1,4 @@
+![CI r3evm](https://github.com/phreda4/r3evm/actions/workflows/ci.yml/badge.svg)
 
 # r3 VM
 
