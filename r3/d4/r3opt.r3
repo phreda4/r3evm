@@ -22,10 +22,26 @@
 
 |^r3/lib/trace.r3
 
-##biglit * 320 | 40 bigliteral !!!!!!!
+##biglit * 2048 | 256 big literals (not fit in 56 bits) by word
 ##biglit>
-##tokana * $ffff | 8192 tokens !!!!!!!
+##tokana * $3ffff | 32767 tokens by word (after inline)
 ##tokana>
+##optovf 0	| 1 if tokana or biglit overflow: the output is not valid
+
+##inlinelenmax 7	| words with more tokens than this are not inlined (0 = no inline)
+
+##curword -1	| word in analysis (an anon that calls it can not be moved before it)
+#anw
+
+| the anon ended by the ] token at 'to' has in its body a call to word nro?
+::anoninline? | nro to -- 0/1
+	swap 'anw !
+	dup @ 8 >> $ffffffff and 3 << tok +		| to from
+	( over <? @+ 
+		dup $ff and 2 3 in? ( 					| .word .wadr
+			over 8 >> $ffffffff and anw =? ( 4drop drop 1 ; ) drop ) 
+		2drop ) 
+	2drop 0 ;
 
 |-------------------------------- PRINT
 |  0     1    2     3     4    5     6
@@ -56,7 +72,7 @@
 #bmacro .lits .lit .word .wadr .var .vadr .str 
 
 :base
-	11 =? ( drop 8 >> $ffffffff and tok - 3 >> "'a%h" sprint ; )
+	11 =? ( drop 8 >> $ffffffff and 0? ( drop "]" ; ) "'a%h" sprint ; )
 	7 - basename nip ;
 	
 ::tokenstrw | tok -- str
@@ -79,7 +95,7 @@
 
 ::,tokenstrw | tok --
 	dup $ff and 
-	11 =? ( drop 8 >> $ffffffff and tok - 3 >> "'a%h" ,print ; )	
+	11 =? ( drop 8 >> $ffffffff and 0? ( drop "]" ,s ; ) "'a%h" ,print ; )	
 	6 >? ( 7 - basename ,s drop ; )
 	3 << 'bmacro + @ ex ;
 	
@@ -105,6 +121,7 @@
 	-8 'tokana> +! ;
 	
 :,t	| tok --
+	tokana> 'tokana $3fff8 + >=? ( 2drop 1 'optovf ! ; ) drop
 	tokana> !+ 'tokana> !  ;
 	
 :,tlit | lit --
@@ -112,6 +129,7 @@
 	
 :,nlit | nro --
 	dup 8 << 8 >> =? ( ,tlit ; ) | fit in 56bits
+	biglit> 'biglit $7f8 + >=? ( 2drop 1 'optovf ! ; ) drop
 	biglit> !+ 'biglit> !
 	biglit> 'biglit - 8 - 8 << ,t | big nro  0 in token
 	;
@@ -216,12 +234,198 @@
 | $..............10	0 un ; 1 varios ;
 | $..............20	1 si es recursiva	
 
+|--- strlen of a string literal: the count loop is evaluated at compile time
+|--- the string is found in the virtual stack (tokana) even if there is code
+|--- between the string and the count that does not touch its slot
+
+#slpat ( 1 28 8 71 14 27 32 2 32 9 37 7 )	| 0 OVER ( C@+ 1? DROP SWAP 1+ SWAP ) 2DROP ;
+#sa
+
+:strlen? | tok -- 0/1 ; the word is the byte count loop (any name)
+	dup dic@len 12 <>? ( 2drop 0 ; ) drop
+	8 >> $ffffffff and nro>dic toklen drop 'sa !
+	0 ( 12 <?
+		dup 3 << sa + @ $ff and
+		over 'slpat + c@ $ff and <>? ( 2drop 0 ; ) drop
+		1+ ) drop
+	sa @ 40 >> src + str>anro nip 1? ( drop 0 ; ) drop	| first literal is 0
+	sa 56 + @ 8 >> $ffffffff and nro>dic @ dic>name "1+" =s ;
+
+#fsS #ft #fq #fu #fsn #fsp
+
+:tokuq | tok -- u q ; items used and produced in the data stack (u=-1 unknown)
+	dup $ff and
+	7 12 in? ( 2drop -1 0 ; )			| ; ( ) [ ] EX : not straight code
+	2 =? ( drop dup dic@use swap dic@loa ; )
+	6 <=? ( 2drop 0 1 ; )				| literals, addresses, vars, strings
+	nip r3ainfo dup c@ $ff and swap 1+ c@ 56 << 56 >> over + ;
+
+:findstrtos | -- stok/0 ; .str token that pushed the TOS, if untouched since
+	0 'fsS ! 48 'fsn !
+	tokana> 8 -
+	( 'tokana >=?
+		-1 'fsn +! fsn -? ( 2drop 0 ; ) drop
+		dup @ 'ft !
+		ft tokuq 'fq ! 'fu !
+		fu -? ( 2drop 0 ; ) drop
+		fsS fq <? ( over 'fsp ! 2drop ft $ff and 6 <>? ( drop 0 ; ) drop ft ; )
+		drop fsS fq - fu + 'fsS !
+		8 - )
+	drop 0 ;
+
+:,strlen | tok -- tok 0/1 ; count of a string literal -> literal
+	dup strlen? 0? ( ; ) drop
+	findstrtos 0? ( ; )
+	8 >> $ffffffff and strm + count nip ,nlit 1 ;
+
+|--- format strings: a call to ,print with a known format is unrolled
+|--- "%d;%dH" ,print  ->  ,d $3B ,c ,d $48 ,c   (%d %h %b %k %% %. only)
+|--- the wrappers (.print sprint ...) are inlined when they reach ,print with a known format
+
+#prpat ( 8 71 14 2 9 37 7 )		| ( C@+ 1? ,emit ) 2DROP ;
+#tkd #tkh #tkb #tkc #tks #fmtbad 1
+#xcode								| address of ,code (defined later)
+##fmtunroll 0						| 0 = do not unroll formats
+
+:wtok | "name" -- tok/0 ; last definition with this name
+	cntdef ( 1? 1-
+		over over nro>dic @ dic>name =s 1? ( drop nip 8 << 2 or ; ) drop
+		) 2drop 0 ;
+
+:fmtinit
+	",d" wtok 'tkd ! ",h" wtok 'tkh ! ",b" wtok 'tkb ! ",c" wtok 'tkc ! ",s" wtok 'tks !
+	0 'fmtbad !
+	tkd 0? ( 1 'fmtbad ! ) drop tkh 0? ( 1 'fmtbad ! ) drop tkb 0? ( 1 'fmtbad ! ) drop
+	tkc 0? ( 1 'fmtbad ! ) drop tks 0? ( 1 'fmtbad ! ) drop
+	fmtunroll 0? ( 1 'fmtbad ! ) drop ;
+
+:isprint? | tok -- 0/1 ; the word is the ,print loop (any name)
+	dup dic@len 7 <>? ( 2drop 0 ; ) drop
+	8 >> $ffffffff and nro>dic toklen drop 'sa !
+	0 ( 7 <?
+		dup 3 << sa + @ $ff and
+		over 'prpat + c@ $ff and <>? ( 2drop 0 ; ) drop
+		1+ ) drop
+	sa 24 + @ 8 >> $ffffffff and nro>dic @ dic>name ",emit" =s ;
+
+#axt #axt2
+
+:chk | t -- flag
+	dup $ff and 2 <>? ( 2drop 0 ; ) drop axt ex ;
+:chk2 | t -- flag
+	dup $ff and 2 <>? ( 2drop 0 ; ) drop axt2 ex ;
+
+:anycall | tok xt -- flag ; some call in the body satisfies xt
+	'axt ! 8 >> $ffffffff and nro>dic toklen
+	( 1? 1- swap @+ chk 1? ( drop 2drop 1 ; ) drop swap ) 2drop 0 ;
+:anycall2 | tok xt -- flag
+	'axt2 ! 8 >> $ffffffff and nro>dic toklen
+	( 1? 1- swap @+ chk2 1? ( drop 2drop 1 ; ) drop swap ) 2drop 0 ;
+
+:callsp1? | tok -- flag
+	'isprint? anycall ;
+
+#fe #fspec #fchunk #fok
+
+:femit | tok --
+	fe 0? ( 2drop ; ) drop xcode ex ;
+:fnlit | n --
+	fe 0? ( 2drop ; ) drop ,nlit ;
+:fs | tok --
+	1 'fspec +! femit ;
+:fchar | c --
+	1 'fchunk +! fchunk 8 >? ( 0 'fok ! ) drop
+	$ff and fnlit tkc femit ;
+:fspec1 | c --
+	0 'fchunk !
+	$64 =? ( drop tkd fs ; )
+	$68 =? ( drop tkh fs ; )
+	$62 =? ( drop tkb fs ; )
+	$6B =? ( drop tkc fs ; )
+	$25 =? ( drop $25 fnlit tkc femit ; )
+	$2E =? ( drop 13 fnlit tkc femit ; )
+	drop 0 'fok ! ;
+:fone | ptr c -- ptr'
+	$25 <>? ( fchar ; ) drop
+	c@+ 0? ( 0 'fok ! swap 1- swap ) fspec1 ;
+:fmtwalk | str -- ok
+	0 'fspec ! 0 'fchunk ! 1 'fok !
+	( c@+ 1? fone ) 2drop fok ;
+
+:haspct? | str -- 0/1
+	( c@+ 1? $25 =? ( 2drop 1 ; ) drop ) 2drop 0 ;
+
+:fmtinfo | -- str/0 ; known format in the TOS that can be unrolled
+	findstrtos 0? ( ; )
+	8 >> $ffffffff and strm +
+	dup haspct? 0? ( 2drop 0 ; ) drop
+	0 'fe ! dup fmtwalk 0? ( 2drop 0 ; ) drop
+	fspec 6 >? ( 2drop 0 ; ) drop ;
+
+:fmtwrap? | tok -- 0/1 ; call to a word that reaches ,print and the TOS is a known format
+	fmtbad 1? ( 2drop 0 ; ) drop
+	dup dic@len 20 >? ( 2drop 0 ; ) drop
+	dup isprint? 1? ( 2drop 0 ; ) drop
+	dup 'isprint? anycall 0? ( drop dup 'callsp1? anycall2 ) 0? ( 2drop 0 ; ) drop
+	drop fmtinfo 1? ( drop 1 ; ) ;
+
+:deltok | ptr --
+	( dup 8 + tokana> <? @ over ! 8 + ) 2drop -8 'tokana> +! ;
+
+:,fmt | tok -- tok 0/1
+	fmtbad 1? ( drop 0 ; ) drop
+	dup isprint? 0? ( ; ) drop
+	findstrtos 0? ( ; )
+	8 >> $ffffffff and strm +				| tok str
+	dup haspct? 0? ( drop tks xcode ex 1 ; ) drop
+	0 'fe ! dup fmtwalk 0? ( 2drop 0 ; ) drop
+	fspec 6 >? ( 2drop 0 ; ) drop
+	fsp deltok
+	1 'fe ! fmtwalk drop 1 ;
+
+|--- inline policy: inlinelenmax is the limit, but a word that grows the code
+|--- is only inlined in a loop (hot) or if the growth is under the budget
+|--- growth = (calls-1)*(len-1), budget = inlinebudget * inlinelenmax
+##inlinebudget 2
+
+:dic@calls | tok -- n
+	8 >> $ffffffff and 4 << dic + 8 + @ 16 >> $ffff and ;
+
+#lb #lp #lt
+
+:isloop | -- 0/1 ; the block ( is a loop when it does not follow a condition
+	lp 13 <? ( drop 1 ; ) 25 >? ( drop 1 ; ) drop 0 ;
+
+:inloop? | -- 0/1 ; the end of tokana is inside a loop block
+	0 'lb ! 0 'lp !
+	'tokana ( tokana> <?
+		@+ $ff and 'lt !
+		lt 8 =? ( lb 1 << isloop or 'lb ! ) drop
+		lt 10 =? ( lb 1 << 'lb ! ) drop
+		lt 9 =? ( lb 1 >> 'lb ! ) drop
+		lt 11 =? ( lb 1 >> 'lb ! ) drop
+		lt 'lp ! ) drop
+	lb 1? ( drop 1 ; ) drop 0 ;
+
+:inlinecost? | tok -- 0/1 ; inline this call here?
+	dup dic@len 1-					| tok n  (tokens without ;)
+	2 <=? ( 2drop 1 ; )				| tiny: never bigger than the call
+	over dic@calls
+	1 <=? ( 3drop 1 ; )				| only one call: the word disappears
+	1- over 1- *					| tok n growth
+	inlinebudget inlinelenmax * <=? ( 3drop 1 ; ) drop
+	2drop inloop? ;
+
 :,inlinecode | ; inline code ?
-	dup dic@ $38 and 1? ( drop ,t ; ) drop	| not inline
-	dup dic@len 7 >? ( drop ,t ; ) drop		| min len inline
+	dup dic@ $78 and 1? ( drop ,t ; ) drop	| not inline (r desbalanceada, varios ;, recursiva, anonimas)
+	dup fmtwrap? 1? ( drop deferinline ex ; ) drop	| format known: inline to unroll ,print
+	dup dic@len inlinelenmax >? ( drop ,t ; ) drop	| max len inline
+	dup inlinecost? 0? ( drop ,t ; ) drop
 	deferinline ex ;
 	
 :,code | tok --
+	,fmt 1? ( 2drop ; ) drop
+	,strlen 1? ( 2drop ; ) drop
 	dup dic@ $3f00 and? ( drop ,inlinecode ; ) drop	| no pure code -> normal tokenizer
 	dup dic@use										| tok stack use
 	nlit? 0? ( 	2drop ,inlinecode ; ) drop			| all are literal?
@@ -237,7 +441,7 @@
 :,data | tok --
 	dup dic@ 
 	$14 and? ( drop ,t ; ) 			| real var
-	$2000 and? ( dic>tok @ ,t ; )	| detect cte var (address)
+	$2000 and? ( dic>tok @ ,t drop ; )	| cte var with address: copy its address token (and drop tok)
 	drop	
 	|--- var is cte but is and address (***)
 	|dup dic@ dic>tok @ $ff and		| tipo del token guardado en el cuerpo de la var
@@ -573,8 +777,14 @@
 	,t ;
 	
 :,[ | adr tok -- adr'
-	24 << 32 >> + ;
-:,]
+	over over 24 << 32 >> +			| adr tok to ( the ] token )
+	dup curword swap anoninline? 
+	1? ( 2drop ,t ; ) drop			| the anon calls this word, keep [ ... ] inline
+	nip nip ;						| skip the body, it is a word apart (:aN)
+
+:,] | adr tok -- adr'
+	over 8 - curword swap anoninline? 
+	1? ( drop drop 11 ,t ; ) drop	| inline anon: ] without index
 	,t ;
 	
 #optw
@@ -639,16 +849,19 @@
 
 |<<<< need the call once before all
 ::deferwi
-	'inlineword 'deferinline ! ;
+	'inlineword 'deferinline !
+	',code 'xcode !
+	fmtinit ;
 	
 ::wordanalysis | nro --
 	reseta
+	dup 'curword !
 	4 << dic + 
 	dup @ 1 and? ( drop dataw "DATA" .println ; ) drop |******** !!! no analizar
 	codew ;
 	
 ::wordanon | tok> tok --
-	reseta
+	reseta -1 'curword !
 	( over <? @+ ,ana ) 2drop ;
 
 | $..............04	1 es usado con direccion
@@ -659,8 +872,8 @@
 ::worduse? | nro -- 0/1
 	4 << dic + dup 8 + @  | dicc dicinfo2
 	dup 16 >> $ffff and 0? ( nip nip ; ) drop	| no calls-> NOT need code
-	32 >>> 7 >? ( 2drop 1 ; ) drop				| larger for inline -> need code
-	@ $3c and 1? ( drop 1 ; ) drop				| not inline-> need code
+	32 >>> inlinelenmax >? ( 2drop 1 ; ) drop		| larger for inline -> need code
+	@ $7c and 1? ( drop 1 ; ) drop				| not inline-> need code (misma mascara + 'adr)
 	0 ;
 
 ::datause? | nro -- 0/1

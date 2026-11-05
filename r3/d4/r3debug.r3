@@ -1,165 +1,174 @@
-| r3debug
-| PHREDA 2025
+| DEBUGER
+| PHREDA 2026
 
-^r3/lib/memshare.r3
 ^r3/util/tui.r3
 ^r3/util/tuiedit.r3
+
+^r3/lib/memshare.r3
 ^./infodebug.r3
 
-|^r3/lib/trace.r3
-
 #filename * 1024
+
+#topline * 512
+#statusline * 512
+
+#errorst 0
 
 |--- for show in code
 #codenow -1
 
-#showpanel 0 | panel
+:helpdlg
+	"r3DBG Help" 50 12 tuDlg
+	fcr
+	"R run   runto C ursor" .cw
+	"S step  N over  O out" .cw
+	"B break point / Watch" .cw
+	"M viewmem" .cw
+	fcr
+	"ctrl+K Help   ctrl+Q Quit   " .cw
+	fcr
+	fcr
+	
+	tuDlgEnd
+	uikey
+	[esc] =? ( tuiexit )
+	drop ;
+
 |-------------------------------------
-#topline * 256
-#statusline * 256
-#errorst 0
+:showcode | n --
+	codenow =? ( drop ; ) dup 'codenow !
+	inc2src TuLoadMemC
 
-#vincs 0 0
-#vwords 0 0
-#vwatch 0 0
-
-#lincs
-#lwords
-#lwatch
-
-
-|------------------------
-:typedef $10 and? ( "#" .write ; ) ":" .write ;
-	
-:.fcr .cr fx .col ;
-	
-:.printword | nro -- nro
-	cntdicc <? ( ; )
-	dup ndicc@ |typedef 40 >> realdicc + 
-	|cntdicc 3 << + 
-	dicc>name "%w" .print 
-	|.write 
-	.fcr ;
-|localdicc fw 4 - ( 1? 1- swap .printword 1+ swap ) 2drop	
-|-----------------------------
-	
-:wcolor
-	$10 nand? ( 201 .fc ":" ,s ; ) 196 .fc "#" ,s ;
-
-:xwriten.word | n --
-	1- $ffff and 
-	|cntdicc >=? ( drop "" lwrite ; ) 
-	mark
-	ndicc@ 
-	|dup 58 >>> "%d " ,print | nro include
-	wcolor dicc>name ,s ,eol 
-	empty
-	here lwrite ;
-
-:makelistwords
-	here dup 'lwords !
-	localdicc |0 
-	( cntdicc <? 1+
-		dup rot w!+ swap
+	.cl fMu
+	codenow cntinc <? (
+		strinc over n>>0 .write
+		"  >  " .write
 		) drop
-	0 swap w!+ 'here ! ;
+	fTx 'filename .write
+	'topline strcpybuf ;
 
+| ftoken=(inc<<48)|(cnt<<40)|(pos<<24)|(xc<<12)|yc
+:showbreakpoint
+	1 .bc 7 .fc
+	bplist ( d@+ 1? token>ftoken @
+		dup 48 >>> codenow =? ( over tokenCursor ) 2drop
+		) 2drop ;
 
-:panelWatch
-	cols 2/ flxE
-	.reset tuWina $1 "Watch" .wtitle 1 1 flpad 
-	'xwriten.word xwriten!
-	'vwords lwords tuListn | 'var list --
-	xwriten.reset
-|	flxRest
-|	.reset tuWina $1 "Mem" .wtitle 1 1 flpad 
+|-------------------------------------
+#lastIP -1
+
+:ftokenIP
+	vmIP 0? ( ; ) | check limits CODE
+	1- 3 << codesrc + @ ;
+
+:remakecursor
+	vmIP 0? ( drop ; ) | check limits CODE
+	lastIP =? ( drop ; )
+	dup 'lastIP !
+	1- 3 << codesrc + @
+	dup 48 >> $ff and showcode
+	dup 24 >> $ffff and fuente + tuipos!
+	tokenCursor
 	;
 
-|------------------------
-:panelInclude
-	25 flxO
-	.reset tuWina $1 "Includes" .wtitle 1 1 flpad 
-	'vincs strinc tuList | 'var list --
-	;
+|------------------------ memory panel
+#lmem
+#panelMemSize 0
+#panelMemBytes 32
+
+:memdn		panelMemBytes 'lmem +! ;
+:memup		panelMemBytes neg 'lmem +! ;
+:mempgdn	panelMemBytes fh * 'lmem +! ;
+:mempgup	panelMemBytes fh * neg 'lmem +! ;
+
+:altcolor | n -- n ; alternate columns
+	1 nand? ( fTx ; ) fMu ;
+
+:linebytes
+	panelMemBytes ( 1? altcolor 1- swap
+		c@+ $ff and .h 2 .r. .write
+		swap ) 2drop ;
+
+:lineword
+	panelMemBytes 1 >> ( 1? altcolor 1- swap
+		w@+ $ffff and .h 4 .r. .write
+		swap ) 2drop ;
+
+:linedword
+	panelMemBytes 2 >> ( 1? altcolor 1- swap
+		d@+ $ffffffff and .h 8 .r. .write
+		swap ) 2drop ;
+
+:lineqword
+	panelMemBytes 3 >> ( 1? altcolor 1- swap
+		@+ .h 16 .r. .write
+		swap ) 2drop ;
+
+#linesn	'lineqword
+#linesnstr "qwords" ( 0 )
+
+:chm! | "" 'dir --
+	'linesn ! 'linesnstr strcpy ;
+	
+:changemem
+	linesn
+	'lineqword =? ( drop "bytes" 'linebytes chm! ; )
+	'linedword =? ( drop "qwords" 'lineqword chm! ; )
+	'lineword  =? ( drop "dwords" 'linedword chm! ; )
+	drop "words" 'lineword chm! ; 
+
+:asciich | c --
+	32 127 in? ( .emit ; ) 
+	drop $2e .emit ; 
+
+:linemem
+	.sp fBl dup $ffff and .h 4 .r. .write
+	fDi 2 .nsp
+	dup linesn ex
+	2 .nsp fMu 
+	panelMemBytes ( 1? 1- swap
+		c@+ $ff and asciich
+		swap ) drop ;
+
+:panelMem
+	bg1 .wfill 
+	fhome fw .ndel
+	fPr " Memory " .write fTx
+	fx 10 + .col fBl lmem dup $ffff and swap 16 >> " %h:%h" .print
+	fDi " [" .write 'linesnstr .write "] " .write fcr
+	fw 10 - 3 / 'panelMemBytes !
+	lmem
+	fh 1- clamp0 ( 1? 1- swap
+		linemem fcr
+		swap ) 2drop ;
 
 |-------------------------------------
 | ftoken=(inc<<48)|(cnt<<40)|(pos<<24)|(xc<<12)|yc
 
 :findtoken | pos -- codesrc
-	codesrc> ( 8 - dup @ 48 >> $ff and 
-		codenow >? drop ) drop 
-	( dup @ 24 >> $ffff and 
-		pick2 >? drop 8 - ) drop ;	
-		
+	codesrc> ( 8 - dup @ 48 >> $ff and
+		codenow >? drop ) drop
+	( dup @ 24 >> $ffff and
+		pick2 >? drop 8 - ) drop ;
+
 :breakpoint
 	fuente> fuente - | pos in src
 	findtoken
-	ftoken>token 
-	inbp? 0? ( drop addBP ; ) 
+	ftoken>token
+	inbp? 0? ( drop addBP ; )
 	nip delBP ;
 
-:viewmemhere
-	;
-	
-	
-|-------------------------
-:.datastack
-	mdatastack dup
-	( 8 + vmNOS <? 
-		dup dstackoff + @ " %h" .print 
-		) drop
-	vmNOS <? ( vmTOS " %h" .print ) 
-	drop ;
-
-:.retstack
-	mretstack 
-	( 8 - vmRTOS >? 
-		dup rstackoff + |@ 
-		" %h" .print
-		) drop ;
-
-:scrMsg
-	.reset |fx fy 1+ .at fw .hline .cr
-	vmIP "IP:%h " .print 
-	vmREGA	"A:%h " .print vmREGB	"B:%h | " .print 
-
-	codenow "include:%d" .print
-	|vmIP memtok .write vmIP memtokn " %h" .print
-	" | " .write  codesrc "cs:%h " .print vmIP "ip:%h " .print 
-	codesrc vmIP 1- 3 << + @ ":%h:" .print
-	.cr	
-
-	"D|" .write .datastack .cr
-	"R|" .write .retstack .cr
-	
-	|*** debug ***
-	bplist ( d@+ 1? "%h " .print ) 2drop .cr
-	;
-	
-|---- view tokens	
-:scrTokens
-	.reset fx fy .at fw .hline 
-	.fcr
-
-|-------- print dicc
-|	localdicc ( cntdicc <? 
-|		dup ndicc@ stypedef 40 >> realdicc + cntdicc 3 << + .write .fcr
-|		1+ ) drop
-	
-||	tuWina $1 "Includes" .wtitle 1 1 flpad 
-	|'vincs lincs tuList	
-|-------- print includes
-|	strinc cntinc ( 1? 1- swap
-|		dup .write .fcr
-|		>>0 swap ) 2drop
-	;
-	
-
+|---------
 :slnormal
-	.cl	7 .fc cols .nsp
-	" ^[7mF3^[27m BreakP ^[7mF5^[27mRun ^[7mF7^[27mInto ^[7mF8^[27mOver ^[7mF9^[27mOut " .printe
+	.cl fMu
+	fPr " ^B" .write fTx "reakPoint" .write 
+	fPr " ^R" .write fTx "un" .write 
+	fPr " ^C" .write fTx "ursor run" .write 	
+	fPr " ^S" .write fTx "tep" .write 
+	fPr " ^N" .write fTx "ext step" .write 
+	fPr " ^O" .write fTx "ut step" .write 
 	'statusline strcpybuf ;
-	
+
 :.strerr
 	errorst
 |WIN|	$05 =? ( "Invalid memory (access violation)" .write )
@@ -172,19 +181,24 @@
 |LIN|	$8 =? ( "Divide by 0 / FP error" .write )
 |LIN|	$b =? ( "Invalid memory (segfault)" .write )
 |LIN|	$d =? ( "Broken pipe" .write )
+|MAC|	$4 =? ( "Illegal instruction" .write )
+|MAC|	$6 =? ( "Abort" .write )
+|MAC|	$a =? ( "Bus error (invalid memory)" .write )
+|MAC|	$8 =? ( "Divide by 0 / FP error" .write )
+|MAC|	$b =? ( "Invalid memory (segfault)" .write )
+|MAC|	$d =? ( "Broken pipe" .write )
 	$100 =? ( "Stack underflow" .write )
 	$200 =? ( "Stack overflow" .write )
 	drop ;
-	
+
 :runtimerror
 	stoponerror 'errorst !
-	.cl 15 .fc 1 .bc cols .nsp 
-	errorst " * RUNTIME ERROR:%h * " .print .strerr
+	.cl fRd "x " .write fTx
+	errorst "runtime error %h  " .print fMu .strerr
 	'statusline strcpybuf ;
 
 :runtimeend
-	.cl 15 .fc 1 .bc cols .nsp 
-	" * END * " .print 
+	.cl fGr "+ " .write fMu "program ended" .write
 	'statusline strcpybuf ;
 
 :checkerror
@@ -192,211 +206,282 @@
 	$fe <? ( drop ; ) 
 	|$fe =? ( drop exit ; ) 
 	drop
-	runtimerror
-	;
+	runtimerror	;
 	
-|-------------------------------------
-:showcode | n --
-	codenow =? ( drop ; ) dup 'codenow !
-	inc2src TuLoadMemC 
-	
-	.cl 7 .fc cols .nsp
-	" r3debug | " .write
-	codenow cntinc <? ( 
-		strinc over n>>0 .write
-		" > " .write
-		) drop
-	'filename .write
-	'topline strcpybuf ;
-
-| ftoken=(inc<<48)|(cnt<<40)|(pos<<24)|(xc<<12)|yc	
-:showbreakpoint
-	1 .bc 7 .fc 
-	bplist ( d@+ 1? token>ftoken @ 
-		dup 48 >>> codenow =? ( over tokenCursor ) 2drop
-		) 2drop ;
-
-|-------------------------------------
-| ftoken=(inc<<48)|(cnt<<40)|(pos<<24)|(xc<<12)|yc
-|-------------------------------------
-#lastIP -1 
-
-:ftokenIP
-	vmIP 0? ( ; ) | check limits CODE
-	1- 3 << codesrc + @ ;
-
-:remakecursor
-	vmIP 0? ( drop ; ) | check limits CODE
-	lastIP =? ( drop ; ) 
-	dup 'lastIP !
-	1- 3 << codesrc + @ 
-	dup 48 >> $ff and showcode
-	dup 24 >> $ffff and fuente + tuipos!
-	tokenCursor
-	;
-	
-:playshow
-	ftokenIP 
-	dup 48 >> $ff and codenow <>? ( 2drop ; ) drop
-	|dup 
-	24 >> $ffff and fuente + tuiposq!
-	
-	.cl .hidec tui
-	.reset .cls
-	1 flxN
-	fx fy .at 5 .bc 'topline .write
-	
-	8 flxS
-	fx fy .at 'statusline .write 
-	.cr scrMsg
-	
-|	30 flxE |tuWina $1 "Imm" .wtitle |242 .bc
-|	scrTokens
-
-	showpanel
-	1 and? ( panelwatch )
-	2 and? ( panelinclude )
+:stepout
+	vmIP memtokn
+	$ff and
+	$86 =? ( drop *>stepu ; ) | word; ->jmp
+	$23 =? ( drop *>step ; )
 	drop
-	
-	
-	flxRest 
-	tuReadCode 
-
-	|tokenCursor	| ftokenIP
-	.showc
-	.flush
+	*>stepo
 	;
 
-| play only in the source 
+|-------- sidebar (registers, stacks, breakpoints, watch)
+#fmt '.h
+
+:chgfmt
+	fmt
+	'.h =? ( drop '.d 'fmt ! ; )
+	'.d =? ( drop '.f 'fmt ! ; )
+	'.f =? ( drop '.b 'fmt ! ; )
+	drop
+	'.h 'fmt ! ;
+
+:fmtname | -- "str"
+	fmt
+	'.h =? ( drop "hex" ; )
+	'.d =? ( drop "dec" ; )
+	'.f =? ( drop "fix" ; )
+	drop "bin" ;
+
+|------------- DATA STACK
+:stk. | val --
+	fmt ex .write fcr ;
+
+:dtackcnt | -- cnt
+	vmNOS mdatastack - 3 >> ;
+
+:.datastack
+	dtackcnt 0? ( drop fDi "(empty)" .lw ; ) drop
+	fTx vmTOS stk. 
+	fMu
+	dtackcnt 10 min 1- clamp0 | hasta 8 
+	vmNOS dstackoff +
+	( swap 1? 1- swap
+		8 - dup @ stk. 
+		) 2drop ;
+		
+|------------- RETURN STACK
+:rstackcnt | -- cnt
+	mretstack vmRTOS - 3 >> 1- ;
+
+| ret>ftoken: valor de la pila R -> ftoken del CALL/EX que lo apilo (0 si no es direccion)
+| vmIP es indice de token (1..n); la direccion de retorno apunta al token siguiente al CALL
+:ret>ftoken | v -- ftoken|0
+	2 <? ( drop 0 ; )
+	codesrc> codesrc - 3 >> >? ( drop 0 ; )
+	dup 1- memtokn $ff and
+	3 =? ( drop 2 - 3 << codesrc + @ ; )	| CALL
+	5 =? ( drop 2 - 3 << codesrc + @ ; )	| EX
+	2drop 0 ;
+
+| ftoken=(inc<<48)|(cnt<<40)|(pos<<24)|(xc<<12)|yc
+:.rtok | ftoken -- ; escribe el texto del token (como tokenCursor)
+	dup 24 >> $ffff and
+	over 48 >> $ff and inc2src +
+	swap 40 >> $ff and fw min .type ;
+
+:rstk. | val --
+	dup ret>ftoken 1? ( nip fTx .rtok fcr fMu ; ) 
+	drop stk. ;
+
+:.retstack
+	rstackcnt 0? ( drop fDi "(empty)" .lw ; ) drop
+	fMu
+	vmRTOS ( mretstack 8 - vmRTOS 64 + min <?
+		dup rstackoff + 8 - @
+		rstk.
+		8 + ) drop ;
+
+:sec | "" -- ; titulo de seccion (sigue en la linea)
+	fPr .Bold .write .NBold ;
+
+:datasec
+	fPr " A:" .write fTx vmREGA .h .write fcr
+	fPr .sp dtackcnt .d .write ") Data " .write
+	fDi fmtname "[%s]" sprint .write fcr
+	.datastack
+	fcr ;
+
+:retsec
+	fPr " B:" .write fTx vmREGB .h .write fcr
+	fPr .sp rstackcnt .d .write ")Return " .write fcr
+	.retstack	
+	fcr ;
+
+:bpsec
+	" Breakpoints" sec fcr
+	fMu bplist ( d@+ 1?
+		"$%h" sprint .lw
+		) 2drop
+	fcr ;
+
+:watchsec
+	" Watch" sec fcr
+	fDi "(none)" .lw ;
+
+:drawside
+	bg0
+	36 flxE
+	flxPush
+	 16 flxN
+	 flxPush
+	  18 flxO
+	   fhome datasec
+	  flxRest
+	   fhome retsec
+	 flxPop
+	flxRest
+	 fhome 
+	 bpsec
+	 watchsec 
+	flxPop
+	;
+
+|------ header / footer
+:drawhead
+	bg3 fhome fw .ndel
+	fTx .rev " DEBUG " .write .nrev .sp 'topline .write 
+	cols 35 - .col fMu "IP:" .write fTx 8 vmIP .nh
+	;
+
+:drawfoot
+	bg3 fhome fw .ndel
+	'statusline .write ;
+
+:cls0 .reset bg0 fTx .cls ;
+
+:memoryPanel
+	panelMemSize 0? ( drop ; ) flxS
+	panelMem ;
+
+:drawscreen
+	1 flxN
+	drawhead
+
+	1 flxS
+	drawfoot
+
+	memoryPanel
+	drawside
+	
+	flxRest
+	tuReadCode 
+	;
+
+:playshow
+	ftokenIP
+	dup 48 >> $ff and codenow <>? ( 2drop ; ) drop
+	24 >> $ffff and fuente + tuiposq!
+	.cl 
+|	.hidec 
+	cls0 tui
+	drawscreen
+|	.showc
+	.flush ;
+
+| play only in the source
 :playmode
+	0 'statusline c!
 	ftokenIP 48 >> $ff and 'codenow !
-	*>play 
+	*>play
 | wait for play
-	( vmState 0? drop ) drop 
+	( vmState 0? drop ) drop
+	
 | until stop or error
 	( vmState 1 =? drop
-		inkey 
-		[esc] =? ( *>stop drop ; ) 
-		[f5] =? ( *>stop ) 
-		[f7] =? ( *>stop ) 
-		[f8] =? ( *>stop ) 
-		[f9] =? ( *>stop ) 
-		drop 
+		inkey
+		1 127 in? ( *>stop ) | any key
+		drop
 		playshow
-		) 
-	$ff >? ( 
-		ftokenIP 
+		checkerror
+		)
+	$ff >? (
+		ftokenIP
 		dup 48 >> $ff and showcode
-		24 >> $ffff and fuente + tuipos!	
-		runtimerror ) 
-	drop 
-|	*>stop
-| land in src
+		24 >> $ffff and fuente + tuipos!
+		runtimerror )
+	drop
+|	*>stop ; land in src
 	( ftokenIP 1? | 0=break
-		48 >> $ff and codenow <>? 
-		*>stepo drop ) drop 
+		48 >> $ff and codenow <>?
+		*>stepo drop ) drop
 	tuR! | redraw
 	;
 
 :runtocursor
 	fuente> fuente - | pos in src
 	findtoken
-	ftoken>token 
+	ftoken>token
 	dup addBP
-	playmode		
+	playmode
 	delBP
 	;
 	
+|------- keys
+:keyext
+	[SHIFT+DN] =? ( memdn )
+	[SHIFT+UP] =? ( memup )
+	[SHIFT+PGDN] =? ( mempgdn )
+	[SHIFT+PGUP] =? ( mempgup )
+	|[SHIFT+TAB] =? ( changemem )
+	drop ;
 
-	
-:stepout
-	vmIP memtokn
-	$ff and 
-	$86 =? ( drop *>stepu ; ) | word; ->jmp
-	$23 =? ( drop *>step ; )
-	drop
-	*>stepo
-	;
-	
-|---- main	
-:maindb
-	.reset .cls .ovec 
-	
-	1 flxN
-	fx fy .at 4 .bc 'topline .write
-	
-	8 flxS
-	fx fy .at 'statusline .write
-	vmSTATE " state:%h" .print 
-	|vmIP memtokn " iptoken:%h" .print
-	
-	.cr scrMsg
-	
-	showpanel
-	1 and? ( panelwatch )
-	2 and? ( panelinclude )
-	drop
-	
-	flxRest 
-	tuReadCode 
-	tuC! | show user cursor
-	
-	remakecursor
-	showbreakpoint	
-	
+:keyctrl
+	[esc] =? ( tuiexit ) 
+	3 =? ( tuiexit )	| CTRL+C
+	4 =? ( tuiexit )	| CTRL+D
+	6 =? ( chgfmt )	| CTRL+F
+	$b =? ( 'helpdlg onTui )	|c+K 
+	$d =? ( changemem ) 		| c+M
+	drop ;
+
+:teclado
 	uiKey
-	[f3] =? ( breakpoint )
-	[f4] =? ( viewmemhere ) 
-	[f5] =? ( playmode )
-	
-	[f7] =? ( *>step )
-	[f8] =? ( stepout )
-	
-	[f9] =? ( *>stepu )
-		
-	showpanel 0? ( swap tueKeyMove swap ) drop
+	tueKeyMove
+	$7f >? ( keyext ; )
+	32 <? ( keyctrl ; )
 	
 	toUpp
-|	$20 =? ( repeatlast ) 	| <esp>
 	$42 =? ( breakpoint )	| B breakpoint
-	$43 =? ( playmode )		| C continue
-	$4E =? ( stepout )		| N step over (next)
+	$43 =? ( runtocursor )	| C to cursor
+
+	$4C =? ( 'helpdlg onTui ) 
+	$4D =? ( panelMemSize 7 xor 'panelMemSize ! )  | M memory panel
+	$4E =? ( stepout )		| N step over (next)`
 	$4F =? ( *>stepu )		| O step out
-	$51 =? ( exit ) 		| Q uit
-	$52 =? ( runtocursor )	| R un to cursor
+	$51 =? ( tuiexit ) 		| Q uit
+	$52 =? ( playmode )		| R un
 	$53 =? ( *>step )		| S
-	
-	$49 =? ( showpanel 2 xor 'showpanel ! ) |iI
-	$57 =? ( showpanel 1 xor 'showpanel ! ) |wW
-	drop 
+	drop
+	;
+
+|-----------------
+:maindb
+	teclado
+	cls0
+	drawscreen
+	remakecursor
+	tuC! | show user cursor
+	showbreakpoint
+	| 'IP tokenCursor
 	checkerror
 	;
 
 :main
+	'filename "mem/menu.mem" load drop
+	|"r3/d4/test2.r3" 'filename strcpy
+
 	'filename run&loadinfo
 	'filename makemapdebug
-|---- build code links
-
-	makelistwords
-	|makelistinc
 	
-	clearbp
+	|dataini
+	localdicc ndicc@ 8 >> $ffffff and dataini + | primer dato?
+	'lmem !	| panelmem
 	
-|	cntinc 2 - 'lastinclude !
-|	0 'lastinclude !
+	clearbp			| breakpoints
 	cntinc showcode
 	slnormal
-|---- run debug	
-
-	'maindb onTuia
-	
+	.blockc .flush
+	5 tuEditLN!
+	'maindb onTuia | << a
 	debugend
+	
 	;
 
-: 
-	.alsb 
-	'filename "mem/menu.mem" load
-|	"r3/d4/testerror.r3" 'filename strcpy
-	
-	main
-	.masb .free ;
+: |------------------------
+.alsb
+main
+.masb .free
+;

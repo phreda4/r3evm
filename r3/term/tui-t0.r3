@@ -55,7 +55,7 @@
 
 :tuTable | 'var --
 	drop
-	fx fy .at
+	fhome
 	fx .col 'ttable1 table.head .cr 
 	'dtable1 
 	( dup c@ 1? drop
@@ -90,14 +90,14 @@
 	tuwin $1 " Options " .wtitle
 	1 1 flpad 
 	5 'fh ! 
-	'exit "Salir" tuBtn | 'ev "" --
+	'tuiexit "Salir" tuBtn | 'ev "" --
 	|1 'fy +! 
 	[ 1 'v3 +! ; ] "Coso" tuBtn | 'ev "" --
-	flcr
+	.cr
 	'v1 "op1" tuCheck
 	0 'v2 "opr1" tuRadio
 	1 'v2 "opr2" tuRadio
-	flcr
+	.cr
 	'v3 0 100 tuSlider
 	v3 tuProgress
 	
@@ -121,6 +121,9 @@ y con varias lineas
 para ver como se comporta
 cuando cambia de tamanio"
 	$11 tuText
+	uiKey
+	[esc] =? ( tuiexit ) 
+	drop
 	;
 	
 |-----------------------------------

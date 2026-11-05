@@ -11,7 +11,7 @@
 
 
 #mrever
-:rever mrever 1 xor 1 and? ( .rever 'mrever ! ; ) .nrever 'mrever ! ; 
+:rever mrever 1 xor 1 and? ( .rev 'mrever ! ; ) .nrev 'mrever ! ; 
 
 
 | * *	negrita
@@ -43,53 +43,55 @@
 	;
 	
 
+:att0 | -- ; atributos limpios al inicio de cada linea (no toca el fondo)
+	.NBold .NUnder fTx ;
+
 :nor
-	.reset emitline ;
+	emitline ;
 
 :tit1 :tit2
-	fw over 24 >> $ff and - 2/ 32 swap .nch | center
+	fw over 24 >> $ff and - 2/ .nsp | center
 	|dup 24 >> $ff and "%d:" .print
-	.Bold 14 .fc .Under emitline ;
+	.Bold fPr .Under emitline ;
 
 :tit3
-	.sp .Bold 14 .fc emitline ;
+	.sp .Bold fPr emitline ;
 
 :tit4
-	14 .fc emitline ;
+	fPr emitline ;
 	
 :lin
-	drop .reset .sp fw 2 - .hline ;
+	drop fDi .sp fw 2 - .hline ;
 	
 :bul
-	9 .fc " * " .write emitline ;
+	fRd " * " .write emitline ;
 	
 :bla	
-	5 .fc " │ " .write emitline ;
+	fPu " │ " .write emitline ;
 	
 :codi
 	"  " .write 
-	12 .fc
+	fBl
 	.savec fw 5 - "─" .rep "┐" .write .restorec
 	"┌" .write emitline ;
 
 :codf	
 	"  " .write 
-	12 .fc
+	fBl
 	.savec fw 5 - "─" .rep "┘" .write .restorec
 	"└" .write emitline ;
 	
 :codl 
 	.sp .sp
-	12 .fc "│" .write
-	.savec 32 fw 6 - .nch "│" .write .restorec
+	fBl "│" .write
+	.savec fw 6 - .nsp "│" .write .restorec
 	emitline ;
 	
 :tab
 	dup 24 >> $ff and 1 max
 	fw over / | cnt len
-	32 over 2/ .nch | espacio
-	|4 .bc 7 .fc
-	11 .fc
+	dup 2/ .nsp
+	fYe
 	swap 1- ( 1? 	| v len cnt
 		mark
 		rot 				| len cnt v
@@ -98,32 +100,32 @@
 		over r> cwrite | len str
 		empty
 		1- 1? ( "│" .write )
-		) 3drop 
-	.reset ;
+		) 3drop ;
 	
 	
 :tabl	
 	24 >> $ff and 1 max
 	fw over / | cnt len
-	32 over 2/ .nch | espacio
-	|4 .bc 7 .fc
-	11 .fc
+	dup 2/ .nsp
+	fYe
 	swap 1- ( 1? 
 		over "─" .rep 
 		1- 1? ( "┼" .write )
-		) 2drop .reset ;
+		) 2drop ;
 		
 #typeline 'nor 'tit1 'tit2 'tit3 'tit4 'lin 'bul 'bla 'codi 'codf 'codl 'tab 'tabl
 
 :viewline | n --
 	cmanual >=? ( drop ; ) 
 	2 << imanual + d@ |dup "%h :" .print
+	att0
 	dup 17 >> $78 and 'typeline + @ ex ;
 	
 ::viewmanual
+	fhome
 	0 ( fh <?
-		fx fy pick2 + .at	
-		dup nman + viewline 
+		1? ( fcr )
+		dup nman + viewline
 		1+ ) drop
 		
 	uiKey

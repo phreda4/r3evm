@@ -4,6 +4,7 @@
 ^r3/util/tui.r3
 ^r3/util/tuiedit.r3
 ^r3/util/filedirs.r3
+^r3/lib/sdl2image.r3
 
 |^r3/lib/trace.r3
 
@@ -35,11 +36,30 @@
 	'basepath flScanFullDir ;
 
 |---------------------------
+:helpdlg
+	"Help" 50 13 tuDlg
+	fcr
+	"ctrl+R Run    ctrl+E Edit " .cw
+	"ctrl+I Imm    ctrl+D Debug" .cw
+	"ctrl+P Prof   ctrl+N New  " .cw
+	"ctrl+O Clon " .cw
+	fcr
+	"ctrl+H Help   ctrl+S Search" .cw
+	"ctrl+Q Quit   ctrl+X Delete" .cw
+	fcr
+	fcr
+	
+	fMu "PHREDA - R3Forth" .cw
+	tuDlgEnd
+	uikey
+	[esc] =? ( tuiexit )
+	drop ;
+	
 :banner
-	.cls "[01R[023[03f[04o[05r[06t[07h" .awrite .cr .cr .cr .cr .flush ;
+	"[01R[023[03f[04o[05r[06t[07h" .awrite .cr .cr .cr .cr ;
 	
 :runcheck
-	banner
+	.cls banner .flush
 	here dup "error.log" load
 	over =? ( 2drop ; ) 
 	0 swap c!
@@ -53,7 +73,7 @@
 
 :filerun
 	fuente c@ 0? ( drop ; ) drop
-	banner
+	.cls banner .flush
 	savem
 	'fullpath r3run
 	.reterm .alsb .flush
@@ -62,9 +82,33 @@
 	
 :fileedit	
 	fuente c@ 0? ( drop ; ) drop
-	.masb .flush
 	savem
+	.masb .flush
 	"r3/d4/r3ide.r3" r3run
+	.reterm .alsb .flush tuR! ;
+
+:filedebug
+	fuente c@ 0? ( drop ; ) drop
+	savem
+	.masb .flush
+	|checkcode error 1? ( drop moderror ; ) drop
+	"r3/d4/r3debug.r3" r3run
+	.reterm .alsb .flush tuR! ;
+
+:fileprof
+	fuente c@ 0? ( drop ; ) drop
+	savem
+	.masb .flush
+	"r3/d4/r3prof.r3" r3run
+	.reterm .alsb .flush
+	runcheck
+	tuR! ;
+
+:r3repl
+|	fuente c@ 0? ( drop ; ) drop
+	savem
+	.masb .flush
+	"repl/repl.r3" r3run
 	.reterm .alsb .flush tuR! ;
 
 :remfilename | str --
@@ -81,7 +125,7 @@
 	;
 
 |===================================
-#newsdl "| r3 sdl program
+#newsdl "| r3 sdl code
 ^r3/lib/sdl2gfx.r3
 	
 :main
@@ -100,11 +144,23 @@
 	SDLquit 
 ;"
 |===================================
+#newconsole "| r3 console code
+^r3/lib/console.r3
 	
+:main
+	.cls
+	.cr
+	""Hello Word !"" .println
+	anykey 
+	;
+
+: main ;"
+|===================================
+		
 :filenew
-	0 rows .at 7 .fc 4 .bc cols .nsp
-	0 rows .at 
-	" Name: " .write .input
+	8 .bc 15 .fc 
+	0 rows 1- .at 
+	" Name: " .write .eline .input
 	'pad trim c@ 0? ( drop ; ) drop
 	'fullpath remfilename
 	'pad addext
@@ -124,10 +180,20 @@
 	loadm
 	tuR! ;
 	
+	
+:filebuild
+	fuente c@ 0? ( drop ; ) drop
+	savem
+	.masb .flush
+	"r3/d4/r3build.r3" r3run
+	.reterm .alsb .flush tuR! ;
+	
+	
 :filesearch
-	0 rows .at 7 .fc 4 .bc cols .nsp
-	0 rows .at 
-	" ? " .write .input
+	|8 .bc 15 .fc 
+	4 .bc 7 .fc
+	0 rows 1- .at 
+	" ? " .write .eline .input 
 	'pad trim
 	dup c@ 0? ( 2drop ; ) drop
 	flCloseAll
@@ -138,8 +204,8 @@
 
 :filedelete
 	fuente c@ 0? ( drop ; ) drop	
-	0 rows .at 15 .fc 1 .bc cols .nsp
-	0 rows .at 
+	15 .fc 1 .bc
+	0 rows 1- .at 
 	" !! " .write 'filename .write	
 	" !! DELETE ? (Y/N) " .write .eline
 	getch tolow
@@ -151,24 +217,87 @@
 	reloadir
 	loadm
 	tuR! ;
-	
-|------------
+
+#tpanel	0
+
+|------------ code r3
 :paneleditor
 	fuente c@ 0? ( drop ; ) drop
-	tuwin $1 'fullpath .wtitle
+	.wbordec
+	$1 'fullpath .wtitle
 	1 1 flpad 
-|	tuEditCode
 	tuReadCode
 	;
 	
+|------------ image
+#imgsurf 0
+#spitch
+#wsurf #hsurf
+
+:Surf>wh | surface -- surface w h ; also leave the width and the height
+	dup 16 + d@+ swap d@ ;
+
+:Surf>pixpi | surface -- pixels pitch 
+	dup 32 + @ swap 24 + d@ ;
+
+#lfg #lbg
+
+:setfg | c --
+	lfg =? ( drop ; ) dup 'lfg ! .fg32 ;
+:setbg | c --
+	lbg =? ( drop ; ) dup 'lbg ! .bg32 ;
+:cell | y x -- y x 
+	dup 2 << a> +
+	dup d@ setfg 
+	spitch + d@ setbg 
+	lfg lbg =? ( drop .sp ; ) drop "▀" .write ;
+	
+:panelimage
+	imgsurf 0? ( drop ; ) 
+	|$1 'fullpath .wtitle 1 1 flpad 	
+	fhome
+	Surf>wh 'hsurf ! 'wsurf  !
+	ab[
+	Surf>pixpi 'spitch ! >a
+	-1 'lfg ! -1 'lbg !
+	0 ( fh 2* <? hsurf <?
+		0 ( fw <? wsurf <?
+			cell
+			1+ ) drop
+		fcr spitch 2* a+
+		2 + ) drop 
+	]ba ;
+	
+:loadtimg | "" --
+	imgsurf 1? ( dup SDL_FreeSurface ) drop
+	IMG_Load 
+	dup $16562004 0 SDL_ConvertSurfaceFormat 'imgsurf ! | conver to RGB32
+	SDL_FreeSurface
+	1 'tpanel ! ;
+
+:paneltxt
+	fuente c@ 0? ( drop ; ) drop
+	.wbordec
+	$1 'fullpath .wtitle
+	1 1 flpad 
+	tuReadCodeMono
+	;
+	
+#lpanel 'paneleditor 'panelimage 'paneltxt
+
 |------------
 :changefiles
 	vfolder flTreePath
 	'basepath 'fullpath strcpyl 1- strcpy
-	'fullpath c@ 0? ( drop tuNewCode ; ) drop |
+	'fullpath c@ 0? ( fuente c! tuNewCode ; ) drop |
+	0 'tpanel !
 	'fullpath 
-	".r3" =pos 1? ( drop TuLoadCode ; ) 
-	2drop
+	".r3" =pos 1? ( drop TuLoadCode ; ) drop
+	".png" =pos 1? ( drop loadtimg ; ) drop
+	".jpg" =pos 1? ( drop loadtimg ; ) drop
+	".jpeg" =pos 1? ( drop loadtimg ; ) drop	
+	".txt" =pos 1? ( drop TuLoadCode 2 'tpanel ! ; ) drop
+	drop
 	tuNewCode ;
 	
 :setcolor | str -- str
@@ -180,54 +309,72 @@
 	setcolor lwrite ;
 	
 :dirpanel
-	.reset
+	.reset 
+	1 0 flpad 
 	'filecolor xwrite!
-	tuwin $1 "" .wtitle
-	1 1 flpad 
 	'vfolder uiDirs tuTree
 	xwrite.reset
 	tuX? 1? ( changefiles ) drop
 	;
 
-#tk
 |------------	
 :scrmain
-	.bblack .cls
+	.reset .hidec .bblack .cls
 	
-	|___________
-	4 flxN
-	fx fy .at "[01R[023[03f[04o[05r[06t[07h" .awrite 
-	|.tdebug |2dup " %d %d " .print
-	|tk "%h" .print 'fullpath .write
-	4 .bc 7 .fc	
-	1 flxS
-	fx fy .at fw .nsp
-	" ^[7m H ^[27melp ^[7m R ^[27mun ^[7m E ^[27mdit ^[7m N ^[27mew ^[7m / ^[27mSearch "
-	.printe
-
-	|___________
-	38 flxO
+	4 flxN |___________
+	fhome banner 
+	
+	1 flxS |___________
+	bg3 fhome
+	fPr " ^R" .write fTx "un" .write 
+	fPr " ^E" .write fTx "dit" .write 
+	fPr " ^D" .write fTx "ebug " .write 	
+	fPr " ^P" .write fTx "rof" .write 
+	fPr " ^B" .write fTx "uild" .write 	
+	fPr " ^N" .write fTx "ew |" .write 
+	fPr " ^I" .write fTx "mm" .write 	
+	fPr " ^H" .write fTx "elp" .write 
+	.eline
+	
+	38 flxO |___________
 	dirpanel
-	|___________
-	flxRest	
-	paneleditor
+	
+	flxRest	 |___________
+	'lpanel tpanel 3 << + @ ex 
+	|paneleditor
 
 	uikey
-|	[f2] =? ( help )		| H
-
 	[f5] =? ( filerun )
-	[ENTER] =? ( filerun )
-	
 	[f6] =? ( fileedit )
-	$20 =? ( fileedit )
-	$2f =? ( filesearch )
+	[ENTER] =? ( filerun )
+| ctrl
+	$2 =? ( filebuild )	| ctrl+d Debug
+	$4 =? ( filedebug )	| ctrl+d Debug
+	$5 =? ( fileedit )	| ctrl+e Edit
+	$9 =? ( r3repl )	| ctrl+i Imm | tab
+	$10 =? ( fileprof )	| ctrl+p Prof
+	$8 =? ( 'helpdlg onTui ) | ctrl+h Help | back
+	$e =? ( filenew )	| ctrl+n New
+	$11 =? ( tuiexit )		| ctrl+q quit
+	$12 =? ( filerun )	| ctrl+r run
+	$13 =? ( filesearch )	| ctrl+s search
+	$18 =? ( filedelete ) | ctrl+x delete
+	$20 =? ( fileedit )		| spc
+	$2f =? ( filesearch )	| /
+	
+	$3 =? ( tuiexit ) 		| ctrl+c exit
+	[esc] =? ( tuiexit ) 
+
 	toUpp
-|	$43 =? ( fileclon )	| Clon	
-	$44 =? ( filedelete ) | Delete
+	$44 =? ( filedebug ) | Debug
 	$45	=? ( fileedit )	| Edit
+	$49	=? ( r3repl )	| Interactive
+	$50 =? ( fileprof )	| P Profiler
+	$48 =? ( 'helpdlg onTui ) | H Help	
 	$4e =? ( filenew )	| New
 	$52 =? ( filerun )	| Run
-	$51 =? ( exit )
+	$53 =? ( filesearch )	| S search
+	$58 =? ( filedelete ) | X Delete	
 	drop
 	;
 
@@ -242,4 +389,7 @@
 	savem
 	;
 
-: .alsb main .masb .free ;
+: 
+	3 IMG_Init | load image<<
+	.alsb main .masb .free 
+	;

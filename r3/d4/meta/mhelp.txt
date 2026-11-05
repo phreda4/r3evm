@@ -1,0 +1,2477 @@
+; | -- ; end of the word, return to the caller
+( | -- ; begin a block: the body of a conditional or a loop
+) | -- ; end of the block
+[ | -- a ; begin an anonymous word; ] leaves its address
+] | -- a ; end of the anonymous word, push its address
+ex | a -- ; execute the word whose address is a (0 does nothing)
+0? | a -- a ; run the block if a = 0
+1? | a -- a ; run the block if a <> 0
++? | a -- a ; run the block if a >= 0
+-? | a -- a ; run the block if a < 0
+<? | a b -- a ; run the block if a < b
+>? | a b -- a ; run the block if a > b
+=? | a b -- a ; run the block if a = b
+>=? | a b -- a ; run the block if a >= b
+<=? | a b -- a ; run the block if a <= b
+<>? | a b -- a ; run the block if a <> b
+and? | a b -- a ; run the block if a AND b <> 0
+nand? | a b -- a ; run the block if a AND b = 0
+in? | a b c -- a ; run the block if b <= a <= c
+dup | a -- a a ; duplicate TOS
+drop | a -- ; remove TOS
+over | a b -- a b a ; copy NOS to top
+pick2 | a b c -- a b c a ; copy 3rd element to top
+pick3 | a b c d -- a b c d a ; copy 4th element to top
+pick4 | a b c d e -- a b c d e a ; copy 5th element to top
+swap | a b -- b a ; exchange TOS and NOS
+nip | a b -- b ; remove NOS
+rot | a b c -- b c a ; rotate 3 elements left
+-rot | a b c -- c a b ; rotate 3 elements right
+2dup | a b -- a b a b ; duplicate top two
+2drop | a b -- ; remove top two
+3drop | a b c -- ; remove top three
+4drop | a b c d -- ; remove top four
+2over | a b c d -- a b c d a b ; copy 3rd and 4th to top
+2swap | a b c d -- c d a b ; exchange two pairs
+>r | a -- (r: -- a) ; push to return stack
+r> | -- a (r: a --) ; pop from return stack
+r@ | -- a (r: a -- a) ; copy top of return stack (non-destructive)
+and | a b -- c ; c = a AND b (bitwise)
+or | a b -- c ; c = a OR b
+xor | a b -- c ; c = a XOR b
+nand | a b -- c ; c = AND (a NOT b)
++ | a b -- c ; c = a + b
+- | a b -- c ; c = a - b
+* | a b -- c ; c = a * b
+/ | a b -- c ; c = a / b (integer)
+<< | a b -- c ; c = a << b (left shift)
+>> | a b -- c ; c = a >> b (signed right shift)
+>>> | a b -- c ; c = a >>> b (unsigned right shift)
+mod | a b -- c ; c = a mod b
+/mod | a b -- c d ; c = a/b, d = a mod b
+*/ | a b c -- d ; d = a*b/c (no intermediate overflow)
+*>> | a b c -- d ; d = (a*b)>>c (no overflow)
+<</ | a b c -- d ; d = (a<<c)/b (no overflow)
+not | a -- b ; b = NOT a (all bits flipped)
+neg | a -- b ; b = -a
+abs | a -- b ; b = absolute value of a
+sqrt | a -- b ; b = integer square root of a
+clz | a -- b ; b = count leading zeros of a
+@ | a -- [a] ; fetch qword
+c@ | a -- byte[a] ; fetch byte
+w@ | a -- word[a] ; fetch word
+d@ | a -- dword[a] ; fetch dword
+@+ | a -- b [a] ; fetch qword and increment
+c@+ | a -- b byte[a] ; fetch byte and increment
+w@+ | a -- b word[a] ; fetch word and increment
+d@+ | a -- b dword[a] ; fetch dword and increment
+! | a b -- ; store A at address B
+c! | a b -- ; store byte A at address B
+w! | a b -- ; store word A at address B
+d! | a b -- ; store dword A at address B
+!+ | a b -- c ; store A at B and increment
+c!+ | a b -- c ; store byte A at B and increment
+w!+ | a b -- c ; store word A at B and increment
+d!+ | a b -- c ; store dword A at B and increment
++! | a b -- ; add A to value at address B
+c+! | a b -- ; add A to byte at address B
+w+! | a b -- ; add A to word at address B
+d+! | a b -- ; add A to dword at address B
+>a | a -- ; load register A
+a> | -- a ; push register A
+a+ | a -- ; add to register A
+a@ | -- a ; fetch qword from A
+a! | a -- ; store qword at A
+a@+ | -- a ; fetch qword from A and increment
+a!+ | a -- ; store qword at A and increment
+ca@ | -- a ; fetch byte from A
+ca! | a -- ; store byte at A
+ca@+ | -- a ; fetch byte from A and increment
+ca!+ | a -- ; store byte at A and increment
+da@ | -- a ; fetch dword from A
+da! | a -- ; store dword at A
+da@+ | -- a ; fetch dword from A and increment
+da!+ | a -- ; store dword at A and increment
+>b | a -- ; load register B
+b> | -- a ; push register B
+b+ | a -- ; add to register B
+b@ | -- a ; fetch qword from B
+b! | a -- ; store qword at B
+b@+ | -- a ; fetch qword from B and increment
+b!+ | a -- ; store qword at B and increment
+cb@ | -- a ; fetch byte from B
+cb! | a -- ; store byte at B
+cb@+ | -- a ; fetch byte from B and increment
+cb!+ | a -- ; store byte at B and increment
+db@ | -- a ; fetch dword from B
+db! | a -- ; store dword at B
+db@+ | -- a ; fetch dword from B and increment
+db!+ | a -- ; store dword at B and increment
+ab[ | -- ; save A and B to return stack
+]ba | -- ; restore B and A from return stack
+move | d s c -- ; copy c qwords from s to d
+move> | d s c -- ; copy c qwords, reverse direction
+fill | d v c -- ; fill d with c qwords of value v
+cmove | d s c -- ; copy c bytes from s to d
+cmove> | d s c -- ; copy c bytes, reverse direction
+cfill | d v c -- ; fill d with c bytes of value v
+dmove | d s c -- ; copy c dwords from s to d
+dmove> | d s c -- ; copy c dwords, reverse direction
+dfill | d v c -- ; fill d with c dwords of value v
+mem | -- a ; start of free memory
+loadlib | "name" -- liba ; load dynamic library
+getproc | liba "name" -- aa ; get function address
+sys0 | aa -- r ; call with 0 parameters
+sys1 | a aa -- r ; call with 1 parameter
+sys2 | a b aa -- r ; call with 2 parameters
+sys3 | a b c aa -- r ; call with 3 parameters
+sys4 | a b c d aa -- r ; call with 4 parameters
+sys5 | a b c d e aa -- r ; call with 5 parameters
+sys6 | a b c d e f aa -- r ; call with 6 parameters
+sys7 | a b c d e f g aa -- r ; call with 7 parameters
+sys8 | a b c d e f g h aa -- r ; call with 8 parameters
+sys9 | a b c d e f g h i aa -- r ; call with 9 parameters
+sys10 | a b c d e f g h i j aa -- r ; call with 10 parameters
+xf | horizontal scale (focal length in pixels) used by the projections
+yf | vertical scale (focal length in pixels) used by the projections
+ox | x of the screen origin (center) in pixels, added by the projections
+oy | y of the screen origin (center) in pixels, added by the projections
+2dmode | -- ; 2d mode: put the origin ox oy at the center of the screen
+3dmode | fov -- ; perspective mode: xf = yf = fov * screen height (fixed point), origin at the screen center, matrix reset (matini)
+Omode | -- ; orthogonal mode: 1.0 unit = the smaller side of the screen (xf = yf = min(sw, sh)), origin at the center, matrix reset
+whmode | w h -- ; like Omode for an area of w x h pixels: origin at its center, xf = yf = min(w, h), matrix reset
+o3dmode | w h -- ; same as whmode
+p3d | x y z -- x y ; perspective projection: x*xf/z + ox, y*yf/z + oy (z = 0 crashes)
+p3dz | x y z -- x y z ; like p3d, keeping z
+p3di | x y z -- z y x ; like p3d but returns z y' x' (x' on top)
+project3d | x y z -- u v ; transform the point with the current matrix and project it (the center ox oy if the transformed z is 0)
+project3dz | x y z -- z x y ; like project3d, also returns the transformed z (y' on top)
+invproject3d | x y z -- x y ; screen point x y at depth z back to the 3d plane: (x-ox)*z/xf, (y-oy)*z/yf
+projectdim | x y z -- u v ; project a size (no ox oy): transform with the current matrix, then x*xf/z', y*yf/z'; 0 0 if z' = 0
+project | x y z -- u v ; project an already transformed point (no matrix): x*xf/z + ox, y*yf/z + oy; the center if z = 0
+projectv | x y z -- u v ; like project without the z = 0 check
+inscreen | -- x y ; screen position of the origin of the current matrix (the center if its z is 0)
+proyect2d | x y z -- x y ; no projection: x+ox, y+oy (z is dropped)
+aspect | -- a ; screen aspect ratio sw/sh (fixed point)
+mtrans | x y z -- ; translate the current matrix by x y z along the parent (world) axes: adds to its translation
+mtransi | x y z -- ; translate the current matrix by x y z along its own (local) axes
+mrotxi | x -- ; rotate the current matrix around X by x (1.0 = full turn), translation unchanged; at 0.25 (0,1,0) goes to (0,0,-1)
+mrotyi | y -- ; rotate the current matrix around Y by y (1.0 = full turn), translation unchanged; at 0.25 (1,0,0) goes to (0,0,1)
+mrotzi | z -- ; rotate the current matrix around Z by z (1.0 = full turn), translation unchanged; at 0.25 (1,0,0) goes to (0,-1,0)
+mat> | address of the current matrix (16 cells of 8 bytes) in the matrix stack
+matini | -- ; reset the matrix stack: one identity matrix as the current one
+matinim | 'mat -- ; reset the matrix stack: a copy of 'mat (16 cells) as the only matrix
+mpush | -- ; push a copy of the current matrix on the matrix stack (20 levels)
+mpushi | -- ; push a new identity matrix on the matrix stack
+mpop | -- ; pop the current matrix (there is no check for the bottom of the stack)
+nmpop | n -- ; pop n matrices (there is no check for the bottom of the stack)
+getfmat | -- fmat ; convert the current matrix to 16 float32 values written just after it in the stack; returns their address
+gettfmat | -- ; like getfmat but transposed; the values are at mat> 128 + (the address is not returned)
+midf | fmat -- ; write the identity matrix as 16 float32 values at fmat
+mcpyf | fmat -- ; write the current matrix as 16 float32 values at fmat
+mcpyft | fmat -- ; like mcpyf but transposed
+mperspective | near far cot aspect -- ; make the current matrix an OpenGL perspective projection: m0 = cot*aspect, m5 = cot (cot = cotangent of half the field of view; aspect acts as height/width)
+mortho | r l t b f n -- ; make the current matrix an OpenGL orthographic projection (right left top bottom far near)
+mlookat | eye to up -- ; make the current matrix an OpenGL view matrix looking from eye toward to; eye, to and up are addresses of vec3
+mtran | x y z -- ; translate the current OpenGL matrix by x y z along its local axes (changes m12 to m15)
+mtranx | x -- ; like mtran along the local x axis only
+mtrany | y -- ; like mtran along the local y axis only
+mtranz | z -- ; like mtran along the local z axis only
+mrotx | rx -- ; rotate the current OpenGL matrix around its local X axis (1.0 = full turn)
+mroty | ry -- ; rotate the current OpenGL matrix around its local Y axis (1.0 = full turn)
+mrotz | rz -- ; rotate the current OpenGL matrix around its local Z axis (1.0 = full turn)
+mscale | x y z -- ; multiply the four values of row 0 by x, of row 1 by y and of row 2 by z (translation included)
+mscalei | x y z -- ; scale the local axes: multiply the columns of the 3x3 part by x y z (translation unchanged)
+muscalei | s -- ; uniform scale of the 3x3 part of the matrix by s (translation unchanged)
+transform | x y z -- x y z ; transform a point by the current matrix: x' = x*m0 + y*m1 + z*m2 + m3, y' = x*m4 + y*m5 + z*m6 + m7, z' = x*m8 + y*m9 + z*m10 + m11
+transformr | x y z -- x y z ; like transform without the translation (for directions)
+ztransform | x y z -- z ; only the z of transform
+oztransform | -- z ; z of the transformed origin (m11)
+oxyztransform | -- x y z ; the transformed origin (m3 m7 m11)
+matinv | -- ; push the inverse of the current 4x4 matrix as a new matrix; nothing is pushed if it has no inverse
+mcpy | 'mat -- ; copy the current matrix (16 cells) to 'mat
+m* | -- ; multiply the two top matrices (previous * current) and push the result as a new matrix
+mm* | 'mat -- ; push current * 'mat as a new matrix
+mmi* | 'mat -- ; push 'mat * current as a new matrix
+mview | eye to up -- ; mpush, mlookat and m*: pushes the view matrix and the product previous * view (arguments of mlookat)
+mproj | near far cot aspect -- ; mpush, mperspective and m*: pushes the projection and the product previous * projection (the arguments are the ones of mperspective, not fov asp zn zf)
+mtra | x y z -- ; set the current matrix to an identity with the translation x y z (m12 m13 m14)
+mrot | rx ry rz -- ; set the current matrix to the rotation of three angles (1.0 = full turn), no translation
+mpos | x y z -- ; set the translation m12 m13 m14 of the current matrix, the rest is unchanged
+mrpos | r16 x y z -- ; set the current matrix to a rotation and the position x y z; r16 packs the angles as $xxxxyyyyzzzz (16 bits each, $10000 = full turn)
+packrota | rx ry rz -- rp ; pack three angles of 16 bits: rx<<32 | ry<<16 | rz (for mrpos)
++rota | ra rb -- rr ; add two packed rotations (the lowest bit of each 16 bit field is lost)
+pack21 | vx vy vz -- vp ; pack three 21-bit values: vx<<42 | vy<<21 | vz
++p21 | va vb -- vr ; add two pack21 values (the lowest bit of each 21 bit field is lost)
+base64decode | src dest -- 'dest
+base64encode | len src dest -- 'dest
+copyclipboard | 'mem cnt --
+pasteclipboard | 'mem --
+swapcolor | color -- swapcolor ; swap the red and blue channels of a 32-bit color ($AARRGGBB to $AABBGGRR)
+colavg | a b -- c ; per-byte average of two 32-bit colors, rounded up
+col50% | c1 c2 -- c ; 50% mix of two 24-bit colors
+col25% | c1 c2 -- c ; 75% of c1 plus 25% of c2 (24-bit colors)
+col33% | c1 c2 -- c ; roughly 67% of c1 plus 33% of c2 (24-bit colors), made with bit masks
+colmix | c1 c2 a -- c ; mix 24-bit colors: c1 + (c2-c1)*a/256, a = 0..255; the result is in the low 24 bits (upper bits have garbage)
+colmul | c1 a -- c ; 24-bit color scaled by a/256, a = 0..255; the result is in the low 24 bits (upper bits have garbage)
+colmix4 | c1 c2 a -- c ; like colmix for 12-bit colors $RGB: a = 0..255 (only its high 4 bits count); the result is in the low 12 bits
+colmul4 | c1 a -- c ; like colmul for 12-bit colors $RGB: a = 0..15; the result is in the low 12 bits
+diffrgb2 | a b -- v ; sum of the absolute differences of the red, green and blue channels of two 24-bit colors
+yuv2rgb | y u v -- r g b ; video YUV (y 16..235, u v around 128) to RGB 0..255
+yuv32 | y u v -- col ; like yuv2rgb but returns the packed color $RRGGBB
+hsv2rgb | h s v -- rgb ; h s v in fixed point 0..1.0 (h: 1.0 is a full circle) to a packed color $RRGGBB
+rgb2hsv | argb -- h s v ; packed color to h 0..1.0, s 0..1.0 and v = largest channel << 8 (0..$ff00); alpha is ignored
+rgb2ycocg | r g b -- y co cg ; reversible YCoCg-R transform of 0..255 values (co and cg can be negative)
+ycocg2rgb | y co cg -- r g b ; inverse of rgb2ycocg
+rgb2ycc | RGB -- y co cg ; like rgb2ycocg from a packed color $RRGGBB
+rgb2yuv2 | g b r -- y u v ; y = g + (b+r-2g)/4, u = b-g, v = r-g (note the order of the arguments)
+yuv2rgb2 | y u v -- g b r ; inverse of rgb2yuv2
+RGB>Gbr | R G B -- G b r ; G, B-G and R-G (the differences wrap to 0..255)
+Gbr>RGB | G b r -- R G B ; inverse of RGB>Gbr
+shadow8 | color shadow -- color ; 24-bit color scaled by shadow/256 per channel (shadow 0..255)
+light8 | color light -- color ; add light to each channel of a 24-bit color, saturating at 255
+blend2 | c1 c2 i -- c ; per channel, high nibble only: (c1 >> i) + (c2 >> 1); i = 1 gives the 50% average
+b2color | col -- color ; 12-bit color $RGB to 24-bit $RRGGBB (each nibble repeated)
+bgr2rgb | BGR -- RGB ; swap the red and blue channels of a 24-bit color (the alpha byte is dropped)
+4bcol | col -- color ; 16-bit color $ARGB (4 bits per channel) to 32-bit $AARRGGBB (each nibble repeated)
+4bicol | col -- color ; like 4bcol but the three color nibbles are read in reverse order (red and blue swapped)
+[ESC] | -- key ; key code of Escape (as returned by getch)
+[ENTER] | -- key ; key code of Enter (as returned by getch)
+[BACK] | -- key ; key code of Backspace (as returned by getch)
+[TAB] | -- key ; key code of Tab (as returned by getch)
+[DEL] | -- key ; key code of Delete (as returned by getch)
+[INS] | -- key ; key code of Insert (as returned by getch)
+[UP] | -- key ; key code of Up arrow (as returned by getch)
+[DN] | -- key ; key code of Down arrow (as returned by getch)
+[RI] | -- key ; key code of Right arrow (as returned by getch)
+[LE] | -- key ; key code of Left arrow (as returned by getch)
+[PGUP] | -- key ; key code of Page Up (as returned by getch)
+[PGDN] | -- key ; key code of Page Down (as returned by getch)
+[HOME] | -- key ; key code of Home (as returned by getch)
+[END] | -- key ; key code of End (as returned by getch)
+[SHIFT+TAB] | -- key ; key code of Shift+Tab (as returned by getch)
+[SHIFT+DEL] | -- key ; key code of Shift+Delete (as returned by getch)
+[SHIFT+INS] | -- key ; key code of Shift+Insert (as returned by getch)
+[SHIFT+UP] | -- key ; key code of Shift+Up arrow (as returned by getch)
+[SHIFT+DN] | -- key ; key code of Shift+Down arrow (as returned by getch)
+[SHIFT+RI] | -- key ; key code of Shift+Right arrow (as returned by getch)
+[SHIFT+LE] | -- key ; key code of Shift+Left arrow (as returned by getch)
+[SHIFT+PGUP] | -- key ; key code of Shift+Page Up (as returned by getch)
+[SHIFT+PGDN] | -- key ; key code of Shift+Page Down (as returned by getch)
+[SHIFT+HOME] | -- key ; key code of Shift+Home (as returned by getch)
+[SHIFT+END] | -- key ; key code of Shift+End (as returned by getch)
+[F1] | -- key ; key code of F1 (as returned by getch)
+[F2] | -- key ; key code of F2 (as returned by getch)
+[F3] | -- key ; key code of F3 (as returned by getch)
+[F4] | -- key ; key code of F4 (as returned by getch)
+[F5] | -- key ; key code of F5 (as returned by getch)
+[F6] | -- key ; key code of F6 (as returned by getch)
+[F7] | -- key ; key code of F7 (as returned by getch)
+[F8] | -- key ; key code of F8 (as returned by getch)
+[F9] | -- key ; key code of F9 (as returned by getch)
+[F10] | -- key ; key code of F10 (as returned by getch)
+[F11] | -- key ; key code of F11 (as returned by getch)
+[F12] | -- key ; key code of F12 (as returned by getch)
+.flush | -- ; write the output buffer to the terminal and empty it
+.cl | -- ; empty the output buffer without writing it
+.type | str cnt -- ; add cnt bytes of str to the output buffer (it is flushed first if they do not fit)
+.emit | char -- ; add a byte to the output buffer (flushes when full)
+.uemit | cp -- ; add the Unicode code point cp, encoded as UTF-8, to the output buffer (invalid ones are ignored)
+.cr | -- ; add a new line (emits LF then CR)
+.sp | -- ; add a space
+.write | str -- ; add the string str to the output buffer
+.print | p p .. "" -- ; add formatted text to the output buffer (same format codes as ,print; no flush)
+.println | p p .. "" -- ; like .print, then a new line and a flush
+.^[ | -- ; add ESC [ (start of a terminal control sequence)
+.[w | str -- ; add ESC [ and the string str (control sequence)
+.[p | p p .. "" -- ; add ESC [ and formatted text (control sequence)
+.nsp | n -- ; add n spaces (n >= 2: it uses the repeat sequence)
+.nch | n char -- ; add char repeated n times, with the terminal repeat sequence (n >= 2, one-byte chars only)
+.ndel | n -- ; erase n characters from the cursor, the cursor does not move
+.rep | cnt "car" -- ; add the string car cnt times (multibyte safe)
+.fwrite | str -- ; like .write and flush
+.fprint | p p .. "" -- ; like .print and flush
+.home | -- ; move the cursor to the top left corner
+.cls | -- ; clear the screen and move the cursor to the top left corner
+.at | x y -- ; move the cursor to column x, row y (1 is the first)
+.col | x -- ; move the cursor to column x (1 is the first)
+.eline | -- ; erase from the cursor to the end of the line
+.escreen | -- ; erase from the cursor to the end of the screen
+.escreenup | -- ; erase from the cursor to the beginning of the screen
+.showc | -- ; show the cursor
+.hidec | -- ; hide the cursor
+.blc | -- ; enable cursor blinking
+.unblc | -- ; disable cursor blinking
+.savec | -- ; save the cursor position
+.restorec | -- ; restore the saved cursor position
+.ovec | -- ; default cursor shape (blinking block)
+.insc | -- ; cursor shape: blinking underscore
+.blockc | -- ; cursor shape: steady block
+.underc | -- ; cursor shape: steady underscore
+.alsb | -- ; switch to the alternate screen buffer and flush
+.masb | -- ; go back to the main screen buffer and flush
+.scrolloff | rows -- ; limit the scrolling region to lines 1..rows
+.scrollon | -- ; scrolling region back to the whole screen
+.Black | -- ; set the foreground color to black
+.Red | -- ; set the foreground color to red
+.Green | -- ; set the foreground color to green
+.Yellow | -- ; set the foreground color to yellow
+.Blue | -- ; set the foreground color to blue
+.Magenta | -- ; set the foreground color to magenta
+.Cyan | -- ; set the foreground color to cyan
+.White | -- ; set the foreground color to white
+.Blackl | -- ; set the bright foreground color black
+.Redl | -- ; set the bright foreground color red
+.Greenl | -- ; set the bright foreground color green
+.Yellowl | -- ; set the bright foreground color yellow
+.Bluel | -- ; set the bright foreground color blue
+.Magental | -- ; set the bright foreground color magenta
+.Cyanl | -- ; set the bright foreground color cyan
+.Whitel | -- ; set the bright foreground color white
+.fc | n -- ; set the foreground color n of the 256 color palette
+.BBlack | -- ; set the background color to black
+.BRed | -- ; set the background color to red
+.BGreen | -- ; set the background color to green
+.BYellow | -- ; set the background color to yellow
+.BBlue | -- ; set the background color to blue
+.BMagenta | -- ; set the background color to magenta
+.BCyan | -- ; set the background color to cyan
+.BWhite | -- ; set the background color to white
+.BBlackl | -- ; set the bright background color black
+.BRedl | -- ; set the bright background color red
+.BGreenl | -- ; set the bright background color green
+.BYellowl | -- ; set the bright background color yellow
+.BBluel | -- ; set the bright background color blue
+.BMagental | -- ; set the bright background color magenta
+.BCyanl | -- ; set the bright background color cyan
+.BWhitel | -- ; set the bright background color white
+.bc | n -- ; set the background color n of the 256 color palette
+.fgrgb | r g b -- ; set the foreground true color (each 0..255)
+.bgrgb | r g b -- ; set the background true color (each 0..255)
+.fg32 | rgb -- ; set the foreground true color rrggbb
+.bg32 | rgb -- ; set the background true color rrggbb
+.Bold | -- ; text attribute: bold
+.NBold | -- ; text attribute: bold off
+.Dim | -- ; text attribute: dim
+.Ital | -- ; text attribute: italic
+.NItal | -- ; text attribute: italic off
+.Under | -- ; text attribute: underline
+.NUnder | -- ; text attribute: underline off
+.Blink | -- ; text attribute: blink
+.Rev | -- ; text attribute: reverse video
+.NRev | -- ; text attribute: reverse video off
+.Hidden | -- ; text attribute: hidden
+.Strike | -- ; text attribute: strikethrough
+.Reset | -- ; reset all colors and text attributes
+getch | -- key ; flush the output and wait for a key, returns its code (see [ESC], [UP] ...)
+waitesc | -- ; wait until the ESC key is pressed
+waitkey | -- ; wait until any key is pressed
+pad | input buffer (128 bytes) with the text read by .input
+.ukey | key -- key n ; n = bytes (1-4) of the UTF-8 character coded in key, 0 if it is not valid text
+.input | -- ; read a line of text into pad (echo, UTF-8, up to 120 bytes); Enter accepts, ESC cancels leaving pad empty
+.printe | p p .. "" -- ; like .print but each ^ is sent as ESC (to write control sequences)
+strcpybuf | 'mem -- ; copy the output buffer (with a final 0) to 'mem and empty it
+r3run | "" -- ; run the program "" with the r3 executable of the system and wait for it to end
+ms | ms -- ; sleep for ms milliseconds
+msec | -- msec ; milliseconds counter (monotonic clock; Windows: since the system start)
+load | 'from "filename" -- 'to ; read the whole file into memory at 'from; 'to = address after the last byte read ('from if it can't be opened), no 0 added
+save | 'from cnt "filename" -- ; write cnt bytes from 'from to a file (created or truncated)
+append | 'from cnt "filename" -- ; append cnt bytes from 'from to a file (created if missing)
+delete | "filename" -- ; delete the file
+filexist | "file" -- 0=no ; not 0 if the file exists, 0 if it does not
+fileisize | -- size ; size in bytes of the file of the last fileinfo
+fileijul | -- jul ; julian day number of the last write date (UTC) of the file of the last fileinfo
+fileinfo | "file" -- 0=not exist ; load the information of a file (for fileisize, fileijul, file*time); 0 if it does not exist
+filecreatetime | -- 'time ; address of the creation time of the last fileinfo (status change time on Linux); use filetimeD
+filelastactime | -- 'time ; address of the last access time of the last fileinfo; use filetimeD
+filelastwrtime | -- 'time ; address of the last write time of the last fileinfo; use filetimeD
+filetimeD | 'time -- 'timedate ; convert a time address (file*time) to local date and time, read it with date.* and time.* (shared buffer)
+FNAME | adr -- adrname ; address of the name of a directory entry (from ffirst/fnext)
+FDIR | adr -- 1/0 ; 1 if the directory entry is a directory
+FSIZEF | adr -- sizebytes ; size in bytes of a directory entry (Linux/Mac: only of the current entry, until the next fnext)
+FCREADT | adr -- 'timedate ; creation date of a directory entry (Linux: status change date; only the current entry)
+FLASTDT | adr -- 'timedate ; last access date of a directory entry (Linux/Mac: only the current entry)
+FWRITEDT | adr -- 'timedate ; last write date of a directory entry (Linux/Mac: only the current entry)
+findata | -- adr ; address of the data of the directory search
+ffirst | "path" -- entry/0 ; start a directory listing, returns the first entry or 0 if none; Windows needs "path//*", the other systems the plain path
+fnext | -- entry/0 ; next entry of the directory listing, 0 at the end
+date.d | adr -- day ; day of the month (1..31) of a timedate (from filetimeD, sysdate, FWRITEDT ...)
+time.ms | adr -- ms ; milliseconds of a timedate (always 0 on Linux/Mac)
+date.dw | adr -- dw ; day of the week of a timedate (0 = Sunday)
+time.s | adr -- sec ; seconds of a timedate
+date.m | adr -- month ; month (1..12) of a timedate
+time.m | adr -- min ; minutes of a timedate
+date.y | adr -- year ; year (4 digits) of a timedate
+time.h | adr -- hour ; hours of a timedate
+time | -- hms ; current local time as hour<<16 | minute<<8 | second
+date | -- ymd ; current local date as year<<16 | month<<8 | day
+sysdate | -- 'timedate ; current local date and time (read it with date.* and time.*; shared buffer)
+sinfo | Windows STARTUPINFO structure used by sys, sysnew and sysdebug
+pinfo | Windows PROCESS_INFORMATION structure used by sys, sysnew and sysdebug
+sys | "" -- ; run a command line and wait for it to end
+sysnew | "" -- ; run a command line (Windows: in a new console)
+sysdebug | "" -- ; run a program as a debugged process (Windows only)
+crc32 | a n - u
+crc32n | a n p - u
+adler32 | a n - u
+*.d | a b -- c ; 32.32 fixed point multiply (rounds toward minus infinity)
+*.df | a b -- c ; like *.d but rounds toward zero
+/.d | a b -- c ; 32.32 fixed point divide
+ceil.d | a -- int ; round up to an integer (the result is an integer, not 32.32)
+.d>i | a -- int ; integer part (shift right 32, rounds toward minus infinity)
+i>.d | int -- a ; integer to 32.32 fixed point
+f>.d | fix -- a ; 48.16 fixed point (math.r3) to 32.32
+.d>f | a -- fix ; 32.32 fixed point to 48.16 (math.r3)
+cos.d | bangle -- r ; cosine of a binary angle in 32.32 (1.0 = full turn); approximation with an error of about 1e-4
+sin.d | bangle -- r ; sine of a binary angle in 32.32 (1.0 = full turn); approximation with an error of about 1e-4
+tan.d | bangle -- r ; tangent, rough approximation
+tan.dc | bangle -- r ; tangent as sin/cos
+sqrt.d | x -- r ; square root in 32.32 with 16 bits of precision (0 if x <= 0)
+log2.d | x -- r ; base 2 logarithm in 32.32 (0 if x <= 0)
+pow2.d | y -- r ; 2 to the power y in 32.32
+pow.d | x y -- r ; x to the power y (0 if x = 0)
+root.d | x n -- r ; nth root of x (n in 32.32, 3.0 for the cube root); 0 if x <= 0
+ln.d | x -- r ; natural logarithm in 32.32
+exp.d | x -- r ; e to the power x in 32.32
+tanh.d | x -- r ; hyperbolic tangent in 32.32
+gamma.d | x -- r ; gamma function (BUG: the Stirling step adds x instead of subtracting it and the x <= 0 branch lacks exp.d; gamma 5 gives 3.73 instead of 24)
+beta.d | x y -- r ; beta function (BUG: same Stirling problem as gamma.d; beta 2 3 gives 0.0129 instead of 0.0833)
+str>f.d | adr -- adr' fix ; skip blanks and read a decimal number with sign and fraction (-43.04) as 32.32; 0 if there is no number
+f32! | "str" 'var -- ; read the decimal number of the text and store it (32.32) at 'var
+loadShaderv | "shader" -- idprogram
+loadShader | "shader" -- idprogram
+shadera!i | int shader "name"  --
+shader!i | int shader "name"  --
+shader!v3 | 'v3 shader "name" --
+shader!v4 | 'v4 shader "name" --
+shader!m4 | 'm4 shader "name" --
+shader!f1
+glimgw
+glimgh
+glImgFnt | "" -- t
+glImgTex | "" -- texid
+glColorTex | col -- texid
+initcube
+rendercube
+xr1 | left of the region of the current widget
+yr1 | top of the region of the current widget
+xr2 | right of the region of the current widget
+yr2 | bottom of the region of the current widget
+foco | number of the focusable widget that has the keyboard focus (1 = the first, 0 = none)
+clkbtn | mouse button of the last press over a widget (see onClick)
+idf | id of the last focusable widget registered in this frame (focus counter)
+idl | number of focusable widgets of the previous frame
+guin? | -1 if the mouse is inside the region of the current widget and it is the topmost one, else 0
+gui | -- ; start of a gui frame: call it once per frame before the widgets (resets the widget ids)
+guiBox | x1 y1 w h -- ; start a widget with the rectangle x1 y1 w h: takes the next id and tests the mouse (sets guin?)
+guiPrev | -- ; the next guiBox or guiRect reuses the id of the last widget (several regions with the same id)
+guiRect | x1 y1 x2 y2 -- ; like guiBox but with the two corners of the rectangle
+onClick | 'click -- ; execute 'click when the mouse button is released over the widget that was pressed (clkbtn = the button)
+onClickFoco | 'click -- ; like onClick and also gives the keyboard focus to the widget
+onMoveA | 'move -- ; execute 'move while the button is held after pressing over the widget, even if the mouse leaves it
+onMove | 'move -- ; execute 'move while the button is pressed and the mouse is over the widget
+onDnMove | 'dn 'move -- ; execute 'dn when the button is pressed over the widget and 'move while it is held there
+onDnMoveA | 'dn 'move -- ; like onDnMove but it keeps calling 'move after the mouse leaves the widget
+onMap | 'dn 'move 'up -- ; 'dn when pressed over the widget, 'move while held, 'up when released
+onMapA | 'dn 'move 'up -- ; like onMap but it keeps tracking after the mouse leaves the widget
+guiI | 'vector -- ; execute 'vector if the mouse is inside the widget
+guiO | 'vector -- ; execute 'vector if the mouse is outside the widget
+guiIO | 'vi 'vo -- ; execute 'vi if the mouse is inside the widget, else 'vo
+nextfoco | -- ; move the keyboard focus to the next focusable widget (wraps to the first) and clear sdlkey
+prevfoco | -- ; move the keyboard focus to the previous focusable widget (wraps to the last) and clear sdlkey
+setfoco | nro -- ; give the keyboard focus to the focusable widget number nro (1 = the first)
+clickfoco | -- ; give the keyboard focus to the last registered focusable widget (call it after its w/foco, for example when it is clicked)
+clickfoco1 | -- ; give the keyboard focus to the next focusable widget to be registered
+refreshfoco | -- ; clear the keyboard focus: the first focusable widget takes it in the next frame
+w/foco | 'in 'start -- ; focusable widget: with the keyboard focus it executes 'start the first frame and 'in in the next ones; without focus it only registers itself
+focovoid | -- ; register a focusable widget without code (it takes a place in the focus order)
+esfoco? | -- n ; -1 if the next focusable widget to be registered has the keyboard focus, another nonzero value if not (compare with -1)
+in/foco | 'in -- ; focusable widget that executes 'in while it has the keyboard focus
+lostfoco | 'acc -- ; focusable widget: when it has the focus it executes 'acc and moves the focus to the next widget
+input | 'var max --
+inputex | 'vector 'var max  --
+inputdump
+inputint | 'var --
+tbtn | 'ev "text" --
+date2jul | d m y -- jul
+jul2date | jul -- d m y
+date2day | d m y -- num
+jul2day | jul -- num
+date2daystr
+jul2daystr
+cell | size of a cell in bytes (8)
+cell+ | n -- n' ; add the cell size (8)
+ncell+ | adr n -- adr' ; adr + n * 8 (address of cell n of a table)
+ndword+ | adr n -- adr' ; adr + n * 4 (address of dword n of a table)
+nword+ | adr n -- adr' ; adr + n * 2 (address of word n of a table)
+1+ | n -- n+1 ; increment
+1- | n -- n-1 ; decrement
+2/ | n -- n/2 ; arithmetic shift right by 1 (rounds toward minus infinity)
+2* | n -- n*2 ; shift left by 1
+*.s | a b -- c ; fixed point multiply (a*b >> 16), only for small numbers: the product must fit in 64 bits
+*. | a b -- c ; fixed point multiply (a*b >> 16 with a 128-bit product), rounds toward minus infinity
+*.f | a b -- c ; like *. but rounds toward zero
+/. | a b -- c ; fixed point divide ((a << 16) / b with a 128-bit intermediate)
+2/. | a -- a/2 ; divide by 2 rounding toward zero
+ceil | fix -- int ; round up to an integer
+int. | fix -- int ; integer part (shift right 16, rounds toward minus infinity)
+fix. | int -- fix ; integer to 48.16 fixed point (shift left 16)
+sign | v -- v s ; s = 1 if v >= 0, -1 if v < 0
+cos | bangle -- r ; cosine of a binary angle (1.0 = full turn); r is fixed point -1.0..1.0
+sin | bangle -- r ; sine of a binary angle (1.0 = full turn); r is fixed point -1.0..1.0
+tan | bangle -- r ; tangent of a binary angle (fixed point)
+sincos | bangle -- sin cos ; sine and cosine (cos on top)
+xy+polar | x y bangle r -- x' y' ; move the point by r in the direction bangle: x += sin*r, y += cos*r
+xy+polar2 | x y r bangle -- x' y' ; like xy+polar with r and bangle swapped
+ar>xy | xc yc bangle r -- xc yc x y ; point at distance r and direction bangle from the center xc yc (the center is kept)
+polar | bangle len -- dx dy ; dx = sin*len, dy = cos*len
+polar2 | len bangle -- dx dy ; like polar with len and bangle swapped
+dir2vec | dx dy -- vx vy ; unit vector (length 1.0, fixed point) of the direction dx dy; 0 0 gives 0 0
+sdir2vec | scale dx dy -- vx vy ; like dir2vec multiplied by scale (fixed point)
+atan2 | x y -- bangle ; angle of the vector (x,y) as binary angle: 0 for +x, 0.25 for +y; fast, low precision
+atan2x | x y -- bangle ; like atan2 but more precise
+distfast | dx dy -- dist ; approximate distance: max*31/32 + min*3/8 (rough for small integers)
+average | x y -- v ; (x+y)/2 rounded down, without overflow
+min | a b -- m ; the smaller one
+max | a b -- m ; the larger one
+clampmax | v max -- v ; v limited to at most max
+clampmin | v min -- v ; v limited to at least min
+clamp0 | v -- v ; v limited to at least 0
+clamp0max | v max -- v ; v limited to 0..max
+clamps16 | v -- v ; v limited to -32768..32767
+between | v min max -- n ; n < 0 if v is outside min..max, n >= 0 if inside
+msb | x -- n ; index (0-63) of the most significant bit; undefined for 0
+ctz | x -- n ; number of trailing zero bits (64 if x = 0)
+sqrt. | x -- r ; square root of a fixed point number (0 if x <= 0)
+log2. | y -- r ; base 2 logarithm of a fixed point number (0 if y <= 0)
+pow2. | y -- r ; 2 to the power y (fixed point)
+pow. | x y -- r ; x to the power y (fixed point; 0 if x = 0)
+root. | x n -- r ; nth root of x (fixed point); n is fixed point too: 3.0 for the cube root
+ln. | x -- r ; natural logarithm (fixed point)
+exp. | x -- r ; e to the power x (fixed point)
+tanh. | x -- r ; hyperbolic tangent (fixed point)
+fastanh. | x -- r ; fast approximation of tanh (piecewise polynomial)
+gamma. | x -- r ; gamma function, approximation (fixed point)
+beta. | x y -- r ; beta function, approximation (fixed point; 0 if x or y < 0)
+cubicpulse | c w x -- v ; smooth bump (Inigo Quilez): 1.0 at x = c, 0 when |x-c| >= w (fixed point)
+pow | base exp -- r ; integer power (exp >= 0)
+bswap32 | v -- vs ; swap the 4 low bytes; the upper bits of the result are garbage (mask with $ffffffff)
+bswap64 | v -- vs ; swap the 8 bytes
+nextpow2 | v -- p2 ; smallest power of 2 that is >= v (0 for 0)
+6* | n -- n*6 ; multiply by 6
+6/ | n -- n/6 ; divide by 6 (multiplies by the reciprocal)
+6mod | n -- n%6 ; remainder of n/6
+10* | n -- n*10 ; multiply by 10
+10/ | n -- n/10 ; divide by 10 (multiplies by the reciprocal, rounds toward minus infinity)
+10/mod | n -- q r ; quotient and remainder of n/10
+1000000/ | n -- n/1000000 ; divide by one million (multiplies by the reciprocal)
+i2fp | i -- fp ; integer to float32 bits (in the low 32 bits)
+f2fp | fix -- fp ; 48.16 fixed point to float32 bits (in the low 32 bits)
+memfloat | cnt adr -- ; convert in place cnt 32-bit fixed point values at adr to float32
+mem2float | cnt src dst -- ; convert cnt 64-bit fixed point values at src to float32 (4 bytes each) at dst
+memd2float | cnt src dst -- ; convert cnt 32-bit fixed point values at src to float32 (4 bytes each) at dst
+fp2f | fp -- fix ; float32 bits to 48.16 fixed point; negative values need fp sign-extended to 64 bits (as d@ reads it)
+fp2i | fp -- int ; float32 bits to integer, truncated; negative values need fp sign-extended like in fp2f
+fp16f | fp16 -- fix ; half float (16 bits) to 48.16 fixed point; negative values need the 16 bits sign-extended (as w@ reads it)
+f2fp24 | f -- fp ; 40.24 fixed point to float32 bits
+fp2f24 | fp -- f ; float32 bits to 40.24 fixed point; negative values need fp sign-extended like in fp2f
+byte>float32N | byte -- float ; byte 0..255 to float32 normalized 0..1
+float32N>byte | f32 -- byte ; float32 normalized 0..1 to byte 0..255, rounded (negative gives 0, >= 1.0 gives 255)
+here | address of the next free byte of memory; the , words write here and advance it
+, | d -- ; write a 32-bit value at here, advance here by 4
+,c | c -- ; write a byte at here, advance here by 1
+,q | q -- ; write a 64-bit value at here, advance here by 8
+,w | w -- ; write a 16-bit value at here, advance here by 2
+,s | str -- ; write the string str at here, without its final 0
+,word | str -- ; write the first word of str (up to a char <= 32) at here, no 0
+,line | str -- ; write the first line of str (up to CR or LF, not included) at here, no 0
+,2d | n -- ; write n as decimal text; if n < 10 a 0 is written first (use for 2-digit fields)
+,d | n -- ; write n as decimal text (see .d)
+,h | n -- ; write n as hexadecimal text, uppercase (see .h)
+,b | n -- ; write n as binary text (see .b)
+,f | fix -- ; write the 48.16 fixed point as decimal text with 4 decimals (see .f)
+,ifp | i -- ; write the integer i as a float32 (4 bytes)
+,ffp | fix -- ; write the 48.16 fixed point as a float32 (4 bytes)
+,cr | -- ; write a CR (13)
+,eol | -- ; write a 0 byte (end of string)
+,sp | -- ; write a space
+,nl | -- ; write CR LF
+,nsp | n -- ; write n spaces
+align32 | mem -- mem' ; round mem up to a multiple of 32
+align16 | mem -- mem' ; round mem up to a multiple of 16
+align8 | mem -- mem' ; round mem up to a multiple of 8
+mark | -- ; save here on the memory stack (64 levels at most); undo it with empty
+empty | -- ; restore here to the last mark and drop it (to the start of free memory if none)
+savemem | "file" -- ; save to file the memory written since the last mark
+sizemem | -- size ; bytes written since the last mark
+memsize | -- mem size ; address of the last mark and bytes written since it
+savememinc | "file" -- ; append to file what was written since the previous call (the first time, since the last mark)
+cpymem | 'dst -- ; copy to 'dst the memory written since the last mark
+appendmem | "file" -- ; append to file the memory written since the last mark
+,print | p p .. "" -- ; write formatted text at here (no 0); the first % takes the last value pushed. %d %h %b %o number, %s str, %w word, %l line, %k char, %f %m %a fixed point 4/2/1 decimals, %p 32.32 8 decimals, %i %j fixed int/frac part, %% percent, %. CR
+sprint | p p .. "" -- adr ; like ,print into a shared 4 KB buffer, with a final 0; valid until the next sprint/sprintln
+sprintln | p p .. "" -- adr ; like sprint, ending with CR LF
+memcpy_rgb3f
+memcpy_bgr3f
+memcpy_rgbf
+memcpy_f32p16
+memcpy_p16f32
+memcpy_avx
+inisharev | 'varshare --
+endSharev | 'varshare --
+socket-ini | Windows: inicializar Winsock2
+socket-end | Windows: limpiar Winsock2
+socket-create | ( family type protocol -- sock )
+socket-set-nonblock | ( sock -- result )
+socket-set-reuseaddr | ( sock -- result )
+socket-bind | ( sock addr port -- result )
+socket-listen | ( sock backlog -- result )
+socket-accept | ( sock addr addrlen -- newsock )
+socket-connect | ( sock addr addrlen -- result )
+socket-send | ( sock data len flags -- bytes_sent )
+socket-recv | ( sock buf len flags -- bytes_recv )
+socket-close | ( sock -- result )
+net-addr-to-int | ( "ip-string" -- addr )
+net-htons | ( port -- network_port )
+net-get-last-error | ( -- error_code )
+server-socket | ( port -- sock )
+client-socket | ( -- sock )
+socket-final | ( sock -- )
+str$>nro | adr -- adr' nro ; hexadecimal digits at adr (no $ prefix), stops at the first other char; adr' = that char
+str%>nro | adr -- adr' nro ; binary digits at adr (no % prefix; also . counts as 0 and / as 1), stops at the first other char
+str>nro | adr -- adr' nro ; number at adr: 1234 $12f %101 -12 (no leading blanks); adr' = first char after it, nro = 0 if there is none
+?sint | adr -- adr' nro ; signed decimal integer at adr (+ or - optional); adr' = first char after the digits
+?numero | str -- str' nro flag ; like str>nro, flag = 1 if the number ends at a blank or the end of the string, else 0
+getnro | adr -- adr' nro ; skip blanks, then a decimal integer (+ or - optional); no $ or % forms
+str>fnro | adr -- adr' fix ; skip blanks, then a decimal number with optional fraction (-43.04) as 48.16 fixed point
+str>fix | adr -- adr' fix ; same as str>fnro: 48.16 fixed point (-43.04 gives $ffffffffffd4f5c3)
+str>anro | adr -- adr' n ; any number: an integer (decimal, $hex, %bin) if it ends at a blank, else a decimal with fraction as 48.16 fixed point
+getfenro | adr -- adr' fix ; skip blanks, decimal with fraction and optional exponent (1.5e3, the . is required before the e) as 48.16 fixed point
+isHex | adr -- 3/0 ; 3 if the chars at adr (just after the $) are hex digits up to a blank or the end, else 0
+isBin | adr -- 2/0 ; 2 if the chars at adr (just after the %) are binary digits up to a blank or the end, else 0
+isNro | adr -- type/0 ; type of the number at adr (up to a blank or the end): 1 decimal, 2 binary, 3 hexadecimal, 4 fixed point, 0 not a number
+scanp | adr "str" -- adr'/0 ; adr' = address after "str" if the text at adr starts with it, 0 if not
+scanstr | adr 'str -- adr' ; copy the chars at adr to 'str up to a control char (<= 31), no 0 added; adr' = that char; 0 if adr is 0
+scannro | adr 'nro -- adr' ; skip blanks, read a number (see ?numero) and store it at 'nro; adr' = address after it, adr itself if there is no number
+scanc | c adr -- adr'/0 ; address of the first char c found at adr, 0 if not found (or adr is 0)
+scann | adr "str" -- adr'/0 ; address after "str" found at adr; only the first occurrence of the first char of str is tried; 0 if not found
+seed8 | seed of rand8 (8-bit generator)
+rand8 | -- r8 ; fast 8-bit random number 0..255 (shift register on seed8)
+seed | seed of rand, rnd and their max/minmax words
+rerand | s1 s2 -- ; set the seed of rand, rnd and rndmax from two values
+rand | -- rand ; 64-bit random number (multiply-add generator on seed), can be negative
+randmax | max -- rand ; random number 0..max-1 (max itself is never returned)
+randminmax | min max -- rand ; random number min..max-1 (max itself is never returned)
+rnd | -- rand ; 64-bit random number (from var seed), can be negativo
+rndmax | max -- rand ; like randmax but using rnd: 0..max-1
+rndminmax | min max -- rand ; like randminmax but using rnd: min..max-1
+rnd128 | -- n ; 64-bit random number (xorshift128+, its own state)
+loopMix128 | -- rand ; 64-bit random number (LoopMix128 generator by Daniel Cota, its own state)
+SDL_Init | flags -- ; initialize the SDL subsystems (SDL_INIT_*)
+SDL_GetCurrentDisplayMode | display 'mode -- ; fill the SDL_DisplayMode at 'mode (format w h refresh_rate driverdata) with the current mode of the display
+SDL_Quit | -- ; shut down SDL
+SDL_GetNumVideoDisplays | -- n ; number of video displays
+SDL_CreateWindow | "title" x y w h flags -- window ; create a window (0 on error)
+SDL_SetWindowFullscreen | window flags -- ; 0 windowed, 1 fullscreen, $1001 fullscreen desktop
+SDL_RenderSetLogicalSize | renderer w h -- ; set a device independent resolution for the rendering
+SDL_RaiseWindow | window -- ; raise the window above the others and give it the input focus
+SDL_GetWindowSize | window 'w 'h -- ; store the size of the window in the integers at 'w and 'h
+SDL_SetWindowSize | window w h -- ; set the size of the window
+SDL_GetWindowSurface | window -- surface ; the surface of the window (for software drawing)
+SDL_ShowCursor | toggle -- ; 1 shows the mouse cursor, 0 hides it
+SDL_UpdateWindowSurface | window -- ; copy the surface of the window to the screen
+SDL_DestroyWindow | window -- ; destroy the window
+SDL_CreateRenderer | window index flags -- renderer ; create a 2d renderer (index -1 = the first driver that supports the flags)
+SDL_CreateTexture | renderer format access w h -- texture ; create a texture (access 0 static, 1 streaming, 2 target)
+SDL_QueryTexture | texture 'format 'access 'w 'h -- ; store the attributes of the texture in the variables (0 to ignore one)
+SDL_SetTextureColorMod | texture r g b -- ; color modulation of the texture (0..255)
+SDL_SetTextureAlphaMod | texture alpha -- ; alpha modulation of the texture (0..255)
+SDL_DestroyTexture | texture -- ; free the texture
+SDL_DestroyRenderer | renderer -- ; free the renderer
+SDL_UpdateTexture | texture 'rect 'pixels pitch -- result ; update an area of the texture (0 = all) with pixels, pitch = bytes per row; 0 if ok
+SDL_RenderClear | renderer -- ; clear the render target with the draw color
+SDL_RenderCopy | renderer texture 'src 'dst -- ; copy the rectangle 'src of the texture to the rectangle 'dst of the target (0 = whole)
+SDL_RenderPresent | renderer -- ; show what was drawn
+SDL_CreateTextureFromSurface | renderer surface -- texture ; create a texture from a surface
+SDL_CreateRGBSurfaceWithFormatFrom | 'pixels w h depth pitch format -- surface ; surface that uses existing pixels
+SDL_CreateRGBSurfaceWithFormat | flags w h depth format -- surface ; create a surface with a pixel format
+SDL_SetRenderDrawColor | renderer r g b a -- ; color for the drawing operations (0..255)
+SDL_GetRenderDrawColor | renderer 'r 'g 'b 'a -- ; store the draw color in the variables
+SDL_CreateRGBSurface | flags w h depth rmask gmask bmask amask -- surface ; create a surface
+SDL_LockSurface | surface -- ; lock the surface to access its pixels
+SDL_UnlockSurface | surface -- ; unlock the surface
+SDL_BlitSurface | src 'srcrect dst 'dstrect -- ; copy a surface to another one (0 = whole)
+SDL_SetSurfaceBlendMode | surface mode -- ; blend mode of the surface
+SDL_SetSurfaceAlphaMod | surface alpha -- ; alpha modulation of the surface (0..255)
+SDL_FillRect | surface 'rect color -- ; fill a rectangle of the surface (0 = whole) with the color
+SDL_FreeSurface | surface -- ; free the surface
+SDL_LockTexture | texture 'rect 'pixels 'pitch -- ; lock a streaming texture for writing: 'pixels and 'pitch receive the address and the bytes per row
+SDL_UnlockTexture | texture -- ; unlock the texture
+SDL_SetRenderDrawBlendMode | renderer mode -- ; blend mode of the drawing (0 none, 1 alpha blend, 2 add, 4 mod)
+SDL_SetTextureBlendMode | texture mode -- ; blend mode of the texture (0 none, 1 alpha blend, 2 add, 4 mod)
+SDL_ConvertSurfaceFormat | surface format flags -- surface ; copy of the surface in another pixel format
+SDL_UpdateYUVTexture | texture 'rect 'y ypitch 'u upitch 'v vpitch -- ; update a planar YUV texture
+SDL_RenderDrawPoint | renderer x y -- ; draw a point
+SDL_RenderDrawPoints | renderer 'points count -- ; draw an array of SDL_Point (two int32 each)
+SDL_RenderDrawLine | renderer x1 y1 x2 y2 -- ; draw a line
+SDL_RenderDrawRect | renderer 'rect -- ; draw the outline of a rectangle x y w h (int32 each; 0 = whole target)
+SDL_RenderFillRect | renderer 'rect -- ; fill a rectangle x y w h (int32 each; 0 = whole target)
+SDL_RenderGeometry | renderer texture 'vertices nvertices 'indices nindices -- ; draw triangles
+SDL_RenderReadPixels | renderer 'rect format 'pixels pitch -- ; read pixels back from the target
+SDL_RenderSetClipRect | renderer 'rect -- ; clipping rectangle (0 = no clipping)
+SDL_SetTextureScaleMode | texture mode -- ; scale mode of the texture (0 nearest, 1 linear, 2 best)
+SDL_SetRenderTarget | renderer texture -- ; draw into a target texture (0 = back to the window)
+SDL_Delay | ms -- ; wait ms milliseconds
+SDL_PollEvent | 'event -- ok ; fill the SDL_Event at 'event with the next pending event; 1 if there was one, 0 if not
+SDL_GetTicks | -- msec ; milliseconds since SDL started
+SDL_RWFromFile | "file" "mode" -- rwops ; open a file as an SDL_RWops (0 on error)
+SDL_RWclose | rwops -- ; close and free the rwops
+SDL_GL_SetAttribute | attr value -- ; set an OpenGL attribute (before creating the window)
+SDL_GL_CreateContext | window -- context ; create an OpenGL context for the window
+SDL_GL_DeleteContext | context -- ; delete the OpenGL context
+SDL_GL_SetSwapInterval | n -- ; swap interval (0 immediate, 1 vsync)
+SDL_GL_SwapWindow | window -- ; swap the OpenGL buffers of the window
+SDL_GL_LoadLibrary | "path" -- ; load the OpenGL library (0 = the default one)
+SDL_GL_GetProcAddress | "name" -- address ; address of an OpenGL function
+SDL_GL_MakeCurrent | window context -- ; make the OpenGL context current for the window
+SDL_SetHint | "name" "value" -- ; set an SDL configuration hint
+SDL_GetError | -- "message" ; text of the last SDL error
+SDL_OpenAudioDevice | "device" iscapture 'desired 'obtained changes -- id ; open an audio device (device 0 = the default one)
+SDL_QueueAudio | id 'data len -- ; queue len bytes of audio data
+SDL_GetQueuedAudioSize | id -- bytes ; bytes of audio still queued
+SDL_PauseAudioDevice | id pause -- ; 1 pauses the audio device, 0 plays it
+SDL_CloseAudioDevice | id -- ; close the audio device
+SDL_GetClipboardText | -- "text" ; text of the clipboard (free it with SDL_free)
+SDL_HasClipboardText | -- bool ; 1 if the clipboard has text
+SDL_SetClipboardText | "text" -- result ; put the text in the clipboard (0 if ok)
+SDL_free | mem -- ; free memory allocated by SDL
+SDL_windows | handle of the window created by SDLinit
+SDLrenderer | handle of the renderer created by SDLinit
+sw | width of the window in pixels (updated when it is resized)
+sh | height of the window in pixels (updated when it is resized)
+SDLinit | "title" w h -- ; initialize SDL, create a centered window w x h with its renderer (SDL_windows, SDLrenderer, sw, sh) and raise it
+SDLmini | "title" w h -- ; like SDLinit without raising the window
+SDLinitScr | "title" display w h -- ; like SDLinit on the display number given
+sdlinitR | "title" w h -- ; like SDLinit with a resizable window
+SDLdfullsw | display -- sw sh ; current resolution of the display
+SDLfullw | "title" display -- ; borderless window with the size of the display (sets sw sh)
+SDLfull | -- ; switch the window to fullscreen
+SDLframebuffer | w h -- texture ; streaming texture w x h in ARGB8888 format, to draw pixels
+SDLblend | -- ; enable alpha blending for the renderer drawing
+SDLquit | -- ; destroy the renderer and the window and quit SDL
+SDLevent | buffer (SDL_Event, 56 bytes) where SDLupdate reads the events
+SDLkey | key of the last key event of the SDLupdate: 16 bits (ASCII, or $4000 + scancode for special keys), $1000 added when released, 0 if none
+SDLchar | first byte of the last text input of the SDLupdate (0 if none)
+SDLx | mouse x position (16 bits)
+SDLy | mouse y position
+SDLb | mask of the pressed mouse buttons (1 left, 2 middle, 4 right)
+SDLw | vertical mouse wheel movement of the last SDLupdate
+SDLeventR | 'vec -- ; word to execute when the window is resized (sw and sh are updated first)
+SDLupdate | -- ; wait 10 ms and process the pending events, updating SDLkey, SDLchar, SDLx, SDLy, SDLb and SDLw
+SDLClick | 'event -- ; execute 'event once when the mouse button is released after being pressed (call it every frame)
+.exit | 1 ends the SDLshow loop (set by exit)
+SDLshow | 'word -- ; main loop: SDLupdate and execute 'word every frame until exit is called
+exit | -- ; end the SDLshow loop
+SDLredraw | -- ; show the frame (SDL_RenderPresent of the renderer)
+sdlbreak | -- ; debug stop: redraw and wait until F12 or ESC is pressed
+SDLTexwh | tex -- w h ; width and height of a texture (reads the SDL_Texture structure)
+%w | frac -- px ; fixed point fraction of the screen width (1.0 = sw) in pixels
+%h | frac -- px ; fixed point fraction of the screen height (1.0 = sh) in pixels
+color | rgb -- ; set the draw color from $RRGGBB (alpha 255)
+colorA | argb -- ; set the draw color from $AARRGGBB
+cls | rgb -- ; clear the target with the color $RRGGBB
+point | x y -- ; draw a point
+getpixel | x y -- rgb ; color $RRGGBB of the pixel
+line | x1 y1 x2 y2 -- ; draw a line
+lineH | x1 y x2 -- ; horizontal line from x1 to x2 (both included) at y
+lineV | x y1 y2 -- ; vertical line from y1 to y2 (both included) at x
+frect | x y w h -- ; filled rectangle (it covers x..x+w-1, y..y+h-1)
+rect | x y w h -- ; rectangle outline (same area as frect)
+fellipse | rx ry x y -- ; filled ellipse with radii rx ry centered at x y
+ellipse | rx ry x y -- ; ellipse outline with radii rx ry centered at x y
+fround | r x y w h -- ; filled rectangle x y w h with rounded corners of radius r
+round | r x y w h -- ; outline of a rectangle x y w h with rounded corners of radius r
+fcircle | r x y -- ; filled circle of radius r centered at x y
+circle | r x y -- ; circle outline of radius r centered at x y
+polyop | x y -- ; start a filled polygon with its first point
+polyline | x y -- ; add a point to the polygon: from the third point on each new point draws a filled triangle with the first point and the previous one
+triangle | x1 y1 x2 y2 x3 y3 -- ; filled triangle
+image | x y img -- ; draw the texture at x y with its own size
+images | x y w h img -- ; draw the texture scaled to the rectangle x y w h
+imageb | 'dst img -- ; draw the whole texture into the box 'dst (x y w h, four int32)
+imagebb | 'src 'dst img -- ; draw the box 'src of the texture into the box 'dst (x y w h, four int32 each)
+tsload | w h "file" -- ts ; load an image as a tileset of tiles w x h (left to right, top to bottom); the table is kept in memory at here
+tscolor | rgb ts -- ; color modulation $RRGGBB of the tileset texture
+tsalpha | alpha ts -- ; alpha modulation (0..255) of the tileset texture
+tsdraw | n ts x y -- ; draw tile n of the tileset at x y (its own size)
+tsdraws | n ts x y w h -- ; draw tile n scaled to the rectangle x y w h
+tsbox | 'box n ts -- ; fill the 'box (x y w h, four int32) with the source rectangle of tile n
+tsfree | ts -- ; free the texture of the tileset (the table stays in memory)
+sprite | x y img -- ; draw the texture centered at x y
+spriteZ | x y zoom img -- ; draw the texture centered at x y with zoom (fixed point, 1.0 = normal size)
+spriteR | x y ang img -- ; draw the texture centered at x y rotated by ang (1.0 = full turn)
+spriteRZ | x y ang zoom img -- ; draw the texture centered at x y rotated by ang (1.0 = full turn) with zoom (fixed point)
+ssload | w h "file" -- ssprite ; load an image as a spritesheet of frames w x h (left to right, top to bottom) for the ssprite words; the table is kept in memory at here
+sscnt | ssprite -- ssprite n ; number of frames (only right after ssload, while here has not changed)
+sstint | argb -- ; tint color $AARRGGBB (with alpha) used by the ssprite words
+ssnotint | -- ; no tint for the ssprite words ($ffffffff)
+sspritewh | ssprite -- w h ; size of a frame
+ssprite | x y n ssprite -- ; draw frame n of the spritesheet centered at x y
+sspriter | x y ang n ssprite -- ; draw frame n centered at x y rotated by ang (1.0 = full turn)
+sspritez | x y zoom n ssprite -- ; draw frame n centered at x y with zoom (fixed point, 1.0 = normal size)
+sspriterz | x y ang zoom n ssprite -- ; draw frame n centered at x y rotated by ang (1.0 = full turn) with zoom
+createSurf | w h -- surface ; create a 32-bit ARGB surface
+Surf>pix | surface -- surface pixels ; also leave the address of the pixels
+Surf>wha | surface -- surface 'wh ; also leave the address of w and h (two int32)
+Surf>wh | surface -- surface w h ; also leave the width and the height
+Surf>pixpi | surface -- pixels pitch ; address of the pixels and bytes per row (the surface is consumed)
+texIni | w h -- ; create a target texture w x h and draw into it (instead of the window) until texEnd; only one at a time
+texEnd | -- texture ; stop drawing into the texture, back to the window, and return the texture
+texEndAlpha | -- texture ; like texEnd with alpha blending enabled on the texture
+Tex2Surface | tex -- tex surface ; copy the pixels of a target texture into a new surface
+Tex2Static | tex -- newtex ; convert a target texture into a static one (the original texture is freed)
+GL_FALSE
+GL_TRUE
+GL_NONE
+GL_MAJOR_VERSION
+GL_MINOR_VERSION
+GL_DEPTH_BUFFER_BIT
+GL_STENCIL_BUFFER_BIT
+GL_COLOR_BUFFER_BIT
+GL_POINTS
+GL_LINES
+GL_LINE_LOOP
+GL_LINE_STRIP
+GL_TRIANGLES
+GL_TRIANGLE_STRIP
+GL_TRIANGLE_FAN
+GL_CULL_FACE
+GL_DEPTH_TEST
+GL_STENCIL_TEST
+GL_BLEND
+GL_POLYGON_OFFSET_FILL
+GL_NEVER
+GL_LESS
+GL_EQUAL
+GL_LEQUAL
+GL_GREATER
+GL_NOTEQUAL
+GL_GEQUAL
+GL_ALWAYS
+GL_SRC_ALPHA
+GL_ONE_MINUS_SRC_ALPHA
+GL_ONE
+GL_ZERO
+GL_UNSIGNED_BYTE
+GL_UNSIGNED_SHORT
+GL_UNSIGNED_INT
+GL_INT
+GL_FLOAT
+GL_DEPTH_COMPONENT
+GL_DEPTH_COMPONENT24
+GL_RED
+GL_RGB
+GL_RGBA
+GL_BGRA_EXT
+GL_TEXTURE0
+GL_TEXTURE1
+GL_TEXTURE2
+GL_TEXTURE3
+GL_TEXTURE4
+GL_TEXTURE5
+GL_TEXTURE6
+GL_TEXTURE7
+GL_TEXTURE8
+GL_TEXTURE_2D
+GL_TEXTURE_MAG_FILTER
+GL_TEXTURE_MIN_FILTER
+GL_TEXTURE_WRAP_S
+GL_TEXTURE_WRAP_T
+GL_TEXTURE_BORDER_COLOR
+GL_TEXTURE_COMPARE_MODE
+GL_TEXTURE_COMPARE_FUNC
+GL_COMPARE_REF_TO_TEXTURE
+GL_TEXTURE
+GL_TEXTURE_2D_ARRAY
+GL_TEXTURE_3D
+GL_NEAREST
+GL_LINEAR
+GL_CLAMP_TO_EDGE
+GL_CLAMP_TO_BORDER
+GL_REPEAT
+GL_ARRAY_BUFFER
+GL_ELEMENT_ARRAY_BUFFER
+GL_UNIFORM_BUFFER
+GL_UNIFORM_BUFFER_BINDING
+GL_STATIC_DRAW
+GL_DYNAMIC_DRAW
+GL_STREAM_DRAW
+GL_MAP_READ_BIT
+GL_MAP_WRITE_BIT
+GL_MAP_PERSISTENT_BIT
+GL_MAP_COHERENT_BIT
+GL_DYNAMIC_STORAGE_BIT
+GL_MAP_INVALIDATE_RANGE_BIT
+GL_MAP_UNSYNCHRONIZED_BIT
+GL_FRAGMENT_SHADER
+GL_VERTEX_SHADER
+GL_GEOMETRY_SHADER
+GL_COMPILE_STATUS
+GL_LINK_STATUS
+GL_INFO_LOG_LENGTH
+GL_FRAMEBUFFER
+GL_DEPTH_ATTACHMENT
+GL_TIME_ELAPSED
+GL_QUERY_RESULT
+GL_QUERY_RESULT_AVAILABLE
+GL_SYNC_GPU_COMMANDS_COMPLETE
+GL_SYNC_FLUSH_COMMANDS_BIT
+GL_ALREADY_SIGNALED
+GL_CONDITION_SATISFIED
+GL_UNPACK_ALIGNMENT
+GL_PACK_ALIGNMENT
+GL_DYNAMIC_COPY
+GL_DYNAMIC_READ
+GL_READ_ONLY
+GL_WRITE_ONLY
+GL_WRITE_WRITE
+GL_COLOR_ATTACHMENT0
+GL_COLOR_ATTACHMENT1
+GL_COLOR_ATTACHMENT2
+GL_FRAMEBUFFER_COMPLETE
+GL_RGBA32F
+GL_RGBA8
+GL_RGB16F
+GL_R32F
+GL_R8
+GL_DEPTH_COMPONENT32F
+GL_TEXTURE_CUBE_MAP
+GL_TEXTURE_CUBE_MAP_POSITIVE_X
+GL_TEXTURE_CUBE_MAP_NEGATIVE_X
+GL_TEXTURE_CUBE_MAP_POSITIVE_Y
+GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
+GL_TEXTURE_CUBE_MAP_POSITIVE_Z
+GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+GL_READ_FRAMEBUFFER
+GL_DRAW_FRAMEBUFFER
+GL_BACK
+GL_FRONT
+GL_CCW
+GL_CW
+GL_NO_ERROR
+GL_TEXTURE_1D
+GL_RGBA16F
+GL_RGB10_A2
+GL_R16UI
+GL_RED_INTEGER
+GL_UNSIGNED_INT_10_10_10_2
+GL_DEBUG_OUTPUT
+GL_DEBUG_OUTPUT_SYNCHRONOUS
+GL_DEBUG_SEVERITY_NOTIFICATION
+GL_DONT_CARE
+GL_VERTEX_ATTRIB_ARRAY_ENABLED
+GL_VERTEX_ATTRIB_ARRAY_SIZE
+GL_VERTEX_ATTRIB_ARRAY_TYPE
+GL_VERTEX_ATTRIB_ARRAY_STRIDE
+GL_VERTEX_ATTRIB_ARRAY_POINTER
+GL_SHADER_STORAGE_BUFFER
+GL_DEPTH24_STENCIL8
+GL_TEXTURE_MAX_ANISOTROPY_EXT
+GL_TEXTURE_MAX_LEVEL
+GL_TEXTURE_MAX_LOD
+GL_TEXTURE_MIN_LOD
+GL_TEXTURE_WRAP_R
+GL_NEAREST_MIPMAP_LINEAR
+GL_NEAREST_MIPMAP_NEAREST
+GL_RENDERBUFFER
+GL_DEPTH_STENCIL_ATTACHMENT
+GL_DEPTH
+GL_LINEAR_MIPMAP_LINEAR
+GL_FALSE
+GL_TRUE
+GL_NONE
+GL_MAJOR_VERSION
+GL_MINOR_VERSION
+GL_DRAW_BUFFER
+GL_READ_BUFFER
+GL_DEPTH_BUFFER_BIT
+GL_STENCIL_BUFFER_BIT
+GL_COLOR_BUFFER_BIT
+GL_POINTS
+GL_LINES
+GL_LINE_LOOP
+GL_LINE_STRIP
+GL_TRIANGLES
+GL_TRIANGLE_STRIP
+GL_TRIANGLE_FAN
+GL_CULL_FACE
+GL_DEPTH_TEST
+GL_STENCIL_TEST
+GL_BLEND
+GL_POLYGON_OFFSET_FILL
+GL_NEVER
+GL_LESS
+GL_EQUAL
+GL_LEQUAL
+GL_GREATER
+GL_NOTEQUAL
+GL_GEQUAL
+GL_ALWAYS
+GL_SRC_ALPHA
+GL_ONE_MINUS_SRC_ALPHA
+GL_ONE
+GL_ZERO
+GL_UNSIGNED_BYTE
+GL_UNSIGNED_SHORT
+GL_UNSIGNED_INT
+GL_INT
+GL_FLOAT
+GL_DEPTH_COMPONENT
+GL_DEPTH_COMPONENT24
+GL_RED
+GL_RGB
+GL_RGBA
+GL_BGRA_EXT
+GL_TEXTURE0
+GL_TEXTURE1
+GL_TEXTURE2
+GL_TEXTURE3
+GL_TEXTURE4
+GL_TEXTURE5
+GL_TEXTURE6
+GL_TEXTURE7
+GL_TEXTURE8
+GL_TEXTURE_2D
+GL_TEXTURE_MAG_FILTER
+GL_TEXTURE_MIN_FILTER
+GL_TEXTURE_WRAP_S
+GL_TEXTURE_WRAP_T
+GL_TEXTURE_BORDER_COLOR
+GL_TEXTURE_COMPARE_MODE
+GL_TEXTURE_COMPARE_FUNC
+GL_COMPARE_REF_TO_TEXTURE
+GL_TEXTURE
+GL_TEXTURE_2D_ARRAY
+GL_TEXTURE_3D
+GL_NEAREST
+GL_LINEAR
+GL_CLAMP_TO_EDGE
+GL_CLAMP_TO_BORDER
+GL_REPEAT
+GL_ARRAY_BUFFER
+GL_ELEMENT_ARRAY_BUFFER
+GL_UNIFORM_BUFFER
+GL_UNIFORM_BUFFER_BINDING
+GL_STATIC_DRAW
+GL_DYNAMIC_DRAW
+GL_STREAM_DRAW
+GL_MAP_READ_BIT
+GL_MAP_WRITE_BIT
+GL_MAP_PERSISTENT_BIT
+GL_MAP_COHERENT_BIT
+GL_DYNAMIC_STORAGE_BIT
+GL_MAP_INVALIDATE_RANGE_BIT
+GL_MAP_UNSYNCHRONIZED_BIT
+GL_FRAGMENT_SHADER
+GL_VERTEX_SHADER
+GL_GEOMETRY_SHADER
+GL_COMPILE_STATUS
+GL_LINK_STATUS
+GL_INFO_LOG_LENGTH
+GL_FRAMEBUFFER
+GL_DEPTH_ATTACHMENT
+GL_TIME_ELAPSED
+GL_QUERY_RESULT
+GL_QUERY_RESULT_AVAILABLE
+GL_SYNC_GPU_COMMANDS_COMPLETE
+GL_SYNC_FLUSH_COMMANDS_BIT
+GL_ALREADY_SIGNALED
+GL_CONDITION_SATISFIED
+GL_UNPACK_ALIGNMENT
+GL_PACK_ALIGNMENT
+GL_DYNAMIC_COPY
+GL_DYNAMIC_READ
+GL_READ_ONLY
+GL_WRITE_ONLY
+GL_WRITE_WRITE
+GL_COLOR_ATTACHMENT0
+GL_COLOR_ATTACHMENT1
+GL_COLOR_ATTACHMENT2
+GL_FRAMEBUFFER_COMPLETE
+GL_RGBA32F
+GL_RGBA8
+GL_RGB16F
+GL_R8
+GL_R32F
+GL_DEPTH_COMPONENT32F
+GL_TEXTURE_CUBE_MAP
+GL_TEXTURE_CUBE_MAP_POSITIVE_X
+GL_TEXTURE_CUBE_MAP_NEGATIVE_X
+GL_TEXTURE_CUBE_MAP_POSITIVE_Y
+GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
+GL_TEXTURE_CUBE_MAP_POSITIVE_Z
+GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+GL_READ_FRAMEBUFFER
+GL_DRAW_FRAMEBUFFER
+GL_BACK
+GL_FRONT
+GL_CCW
+GL_CW
+GL_NO_ERROR
+GL_TEXTURE_1D
+GL_RGBA16F
+GL_RGB10_A2
+GL_R16UI
+GL_RED_INTEGER
+GL_UNSIGNED_INT_10_10_10_2
+GL_DEBUG_OUTPUT
+GL_DEBUG_OUTPUT_SYNCHRONOUS
+GL_DEBUG_SEVERITY_NOTIFICATION
+GL_DONT_CARE
+GL_VERTEX_ATTRIB_ARRAY_ENABLED
+GL_VERTEX_ATTRIB_ARRAY_SIZE
+GL_VERTEX_ATTRIB_ARRAY_TYPE
+GL_VERTEX_ATTRIB_ARRAY_STRIDE
+GL_VERTEX_ATTRIB_ARRAY_POINTER
+GL_SHADER_STORAGE_BUFFER
+GL_DEPTH24_STENCIL8
+GL_TEXTURE_MAX_ANISOTROPY_EXT
+GL_TEXTURE_MAX_LEVEL
+GL_TEXTURE_MAX_LOD
+GL_TEXTURE_MIN_LOD
+GL_TEXTURE_WRAP_R
+GL_NEAREST_MIPMAP_LINEAR
+GL_NEAREST_MIPMAP_NEAREST
+GL_RENDERBUFFER
+GL_DEPTH_STENCIL_ATTACHMENT
+GL_DEPTH
+GL_LINEAR_MIPMAP_LINEAR
+uistate
+keymd
+wix
+wiy
+wiw
+wih
+immBox | x y w h --
+immFull | --
+immIni
+immMouse | -- state
+uiRefocus
+uiFocus>> | cambia id y luego wid
+uiFocus<<
+tabfocus
+immZone | -- ; Interaction is cx,cy,cw,th
+uiEx?
+uiEx!
+uiOvr | 'v --
+uiDwn | 'v --
+uiSel | 'v --
+uiUp | 'v --
+uiClk | 'v --
+uiFocusIn
+uiFocus
+glClearBufferfv
+glCreateProgram
+glCreateShader
+glShaderSource
+glCompileShader
+glGetShaderiv
+glAttachShader
+glGetProgramiv
+glGetAttribLocation
+glClearColor
+glGenBuffers
+glBindBuffer
+glBindRenderbuffer
+glBufferData
+glBufferSubData
+glGetTexImage
+glMapBuffer
+glUnmapBuffer
+glGetUniformBlockIndex
+glUniformBlockBinding
+glBindBufferBase
+glClear
+glUseProgram
+glValidateProgram
+glEnableVertexAttribArray
+glVertexAttribPointer
+glVertexAttribIPointer
+glDrawElements
+glDrawElementsInstanced
+glDrawArrays
+glDrawArraysInstanced
+glDisableVertexAttribArray
+glDeleteProgram
+glIsProgram
+glIsShader
+glGenVertexArrays
+glBindVertexArray
+glGetShaderInfoLog
+glGetProgramInfoLog
+glBindFragDataLocation
+glLinkProgram
+glGenTextures
+glActiveTexture
+glBindTexture
+glTexImage2D
+glUniform1i
+glUniform1ui
+glTexParameteri
+glTexSubImage2D
+glEnable
+glDisable
+glBlendFunc
+glDepthFunc
+glDetachShader
+glDeleteShader
+glDeleteTextures
+glDeleteBuffers
+glDeleteVertexArrays
+glGetError
+glGetString
+glViewport
+glScissor
+glVertexPointer
+glBegin
+glEnd
+glColor4ubv
+glVertex3fv
+glTexCoord2fv
+glVertex2fv
+glGetUniformLocation
+glUniform1iv
+glUniform2iv
+glUniform3iv
+glUniform4iv
+glUniform1fv
+glUniform2fv
+glUniform3fv
+glUniform4fv
+glVertexAttribDivisor
+glUniformMatrix4fv
+glUniformMatrix3fv
+glVertexAttrib1fv
+glVertexAttrib2fv
+glVertexAttrib3fv
+glVertexAttrib4fv
+glBindAttribLocation
+glGenFramebuffers
+glTexParameterfv
+glBindFramebuffer
+glFramebufferTexture2D
+glDrawBuffer
+glReadBuffer
+glPixelStorei
+glRenderbufferStorage
+glFramebufferRenderbuffer
+glGenRenderbuffers
+glGenQueries
+glDeleteQueries
+glBeginQuery
+glEndQuery
+glGetQueryObjectuiv
+glFenceSync
+glClientWaitSync
+glDeleteSync
+glBufferStorage
+glMapBufferRange
+glClearNamedFramebufferfv
+glCreateFramebuffers
+glCreateTextures
+glTextureStorage2D
+glTextureParameteri
+glNamedFramebufferTexture
+glCheckNamedFramebufferStatus
+glNamedFramebufferDrawBuffers
+glCreateVertexArrays
+glCreateBuffers
+glNamedBufferStorage
+glVertexArrayVertexBuffer
+glVertexArrayElementBuffer
+glEnableVertexArrayAttrib
+glVertexArrayAttribFormat
+glVertexArrayAttribBinding
+glBindTextures
+glProgramUniform1i
+glBindBufferRange
+glVertexAttribFormat
+glVertexAttribBinding
+glVertexBindingDivisor
+glColorMask
+glDepthMask
+glCullFace
+glFrontFace
+glBlitFramebuffer
+glDrawBuffers
+glCheckFramebufferStatus
+glDeleteRenderbuffers
+glClearDepth
+glDebugMessageCallback
+glDebugMessageControl
+glGetBufferSubData
+glUniform1f
+glUniform2f
+glUniform3f
+glUniform4f
+glTexImage1D
+glObjectLabel
+glDeleteFramebuffers
+glGenerateMipmap
+glClipControl
+InitGLAPI
+SDLinitGL | "title" w h --
+SDLinitSGL | "title" w h --
+SDLGLcls
+SDLGLupdate
+glInfo
+vcolorgl
+vbasegl
+GLpaper | $ffffff --
+GlDepth | deeph --
+GLcls
+GLIni | w h --
+GLIniFull | --
+GLend
+GLUpdate
+IMG_Load
+IMG_Init
+IMG_LoadTexture | rend file -- texture
+IMG_LoadSizedSVG_RW | src w h -- surface
+IMG_LoadAnimation | file -- anim
+IMG_FreeAnimation | anim --
+IMG_SavePNG | (SDL_Surface *surface, const char *file);
+IMG_SavePNG_RW | (SDL_Surface *surface, SDL_RWops *dst, int freedst);
+IMG_SaveJPG | (SDL_Surface *surface, const char *file, int quality);
+IMG_SaveJPG_RW | (SDL_Surface *surface, SDL_RWops *dst, int freedst, int quality);
+loadimg | "" -- texture
+unloadimg | adr --
+loadsvg | w h "" -- tex
+Mix_Init | flags -- result ; initialize the audio format loaders (MIX_INIT_OGG, MIX_INIT_MP3...), returns the flags that were loaded
+Mix_Quit | -- ; unload the loaders started with Mix_Init
+Mix_LoadWAV | "file" -- chunk ; load a sound effect file (WAV, and OGG, MP3... depending on the loaders) as a chunk; 0 on error
+Mix_LoadMUS | "file" -- music ; load a music file; 0 on error
+Mix_PlayChannelTimed | channel chunk loops ticks -- channel ; play the chunk: channel -1 = the first free one, loops 0 = once and -1 = forever, ticks -1 = no time limit; returns the channel used or -1
+Mix_HaltChannel | channel -- ; stop the channel (-1 = all channels)
+Mix_FadeOutChannel | channel ms -- ; fade out the channel in ms milliseconds (-1 = all channels)
+Mix_PlayMusic | music loops -- ; play the music (loops -1 = forever)
+Mix_HaltMusic | -- ; stop the music
+Mix_FadeOutMusic | ms -- ; fade out the music in ms milliseconds
+Mix_VolumeMusic | volume -- ; set the music volume (0..128)
+Mix_PlayingMusic | -- bool ; 1 if the music is playing
+Mix_Playing | channel -- n ; 1 if the channel is playing (channel -1: number of channels playing)
+Mix_FreeChunk | chunk -- ; free a chunk loaded with Mix_LoadWAV
+Mix_FreeMusic | music -- ; free a music loaded with Mix_LoadMUS
+Mix_OpenAudio | freq format channels chunksize -- ; open the audio device (for example 44100 $8010 2 4096)
+Mix_CloseAudio | -- ; close the audio device
+Mix_MasterVolume | volume -- ; set the master volume (0..128; needs SDL_mixer 2.6 or newer)
+SNDInit | -- ; open the audio at 44100 Hz, 16 bit signed, stereo, 4096 samples per buffer (it is called when the library is loaded)
+SNDplay | chunk -- ; play the chunk once in the first free channel
+SNDplayn | channel chunk -- ; play the chunk once in the given channel
+SNDQuit | -- ; close the audio
+SDLNet_Init
+SDLNet_Quit
+SDLNet_ResolveHost
+SDLNet_ResolveIP
+SDLNet_GetLocalAddresses
+SDLNet_TCP_OpenServer
+SDLNet_TCP_OpenClient
+SDLNet_TCP_Open
+SDLNet_TCP_Accept
+SDLNet_TCP_GetPeerAddress
+SDLNet_TCP_Send
+SDLNet_TCP_Recv
+SDLNet_TCP_Close
+SDLNet_AllocPacket
+SDLNet_ResizePacket
+SDLNet_FreePacket
+SDLNet_AllocPacketV
+SDLNet_FreePacketV
+SDLNet_UDP_Open
+SDLNet_UDP_SetPacketLoss
+SDLNet_UDP_Bind
+SDLNet_UDP_Unbind
+SDLNet_UDP_GetPeerAddress
+SDLNet_UDP_SendV
+SDLNet_UDP_Send
+SDLNet_UDP_RecvV
+SDLNet_UDP_Recv
+SDLNet_UDP_Close
+SDLNet_AllocSocketSet
+SDLNet_AddSocket
+SDLNet_DelSocket
+SDLNet_CheckSockets
+SDLNet_FreeSocketSet
+SDLNet_GetError
+fngon | ang n r x y --
+linegr! | grosor --
+linegr | -- grosor
+gop | x y --
+gline | x y --
+ngon | ang n r x y --
+TTF_Init
+TTF_OpenFont | TTF_Font * ( char *file, int ptsize);
+TTF_SetFontStyle | void ( *font, int style);
+TTF_SetFontOutline | void ( *font, int outline);
+TTF_SetFontLineSkip | (TTF_Font *font, int lineskip);
+TTF_SetFontWrappedAlign | (TTF_Font *font, int align);
+TTF_SetFontSize | int ( *font, int ptsize);
+TTF_SetFontSDF | int ( *font, SDL_bool on_off);
+TTF_SizeText | int  ( *font,  char *, int *w, int *h);
+TTF_SizeUTF8 | int  ( *font,  char *, int *w, int *h);
+TTF_MeasureUTF8 | int (*font, char *,measure_width,*extent,*count);
+TTF_RenderText_Solid | surface ( *font, char *, SDL_Color fg);
+TTF_RenderUTF8_Solid | surface ( *font, char *, SDL_Color fg);
+TTF_RenderText_Shaded | surface (*font,char *, SDL_Color fg, SDL_Color bg)
+TTF_RenderUTF8_Shaded | surface (*font,char *, SDL_Color fg, SDL_Color bg)
+TTF_RenderText_Blended | surface ( *font, char *, SDL_Color fg);
+TTF_RenderUTF8_Blended | surface ( *font, char *, SDL_Color fg);
+TTF_RenderUTF8_Blended_Wrapped | font str color width -- surface
+TTF_RenderUNICODE_Blended
+TTF_CloseFont | void ( *font);
+TTF_Quit | void (void);
+<back>
+>back<
+<tab>
+>tab<
+<ret>
+>ret<
+<esc>
+>esc<
+<spc>
+>spc<
+<del>
+>del<
+<home>
+>home<
+<end>
+>end<
+<pgup>
+>pgup<
+<pgdn>
+>pgdn<
+<ins>
+>ins<
+<ri>
+>ri<
+<le>
+>le<
+<dn>
+>dn<
+<up>
+>up<
+<F1>
+>F1<
+<F2>
+>F2<
+<F3>
+>F3<
+<F4>
+>F4<
+<F5>
+>F5<
+<F6>
+>F6<
+<F7>
+>F7<
+<F8>
+>F8<
+<F9>
+>F9<
+<F10>
+>F10<
+<F11>
+>F11<
+<F12>
+>F12<
+<ctrl>
+>ctrl<
+<ctr2>
+>ctr2<
+<shift>
+>shift<
+<shif2>
+>shif2<
+<alt>
+>alt<
+<alt2>
+>alt2<
+<A>
+<B>
+<C>
+<D>
+<E>
+<F>
+<G>
+<H>
+<I>
+<J>
+<K>
+<L>
+<M>
+<N>
+<O>
+<P>
+<Q>
+<R>
+<S>
+<T>
+<U>
+<V>
+<W>
+<X>
+<Y>
+<Z>
+>A<
+>B<
+>C<
+>D<
+>E<
+>F<
+>G<
+>H<
+>I<
+>J<
+>K<
+>L<
+>M<
+>N<
+>O<
+>P<
+>Q<
+>R<
+>S<
+>T<
+>U<
+>V<
+>W<
+>X<
+>Y<
+>Z<
+<1>
+<2>
+<3>
+<4>
+<5>
+<6>
+<7>
+<8>
+<9>
+<0>
+>1<
+>2<
+>3<
+>4<
+>5<
+>6<
+>7<
+>8<
+>9<
+>0<
+<->
+>-<
+<+>
+>+<
+strcpyl | src des -- ndes ; copy string src (with its 0) to des, ndes = address after the final 0
+strcpy | src des -- ; copy string src (with its 0) to des
+strcat | src des -- ; append string src to the end of string des
+strcpylnl | src des -- ndes ; copy src to des up to CR, LF or 0, add a 0; ndes = address after it
+strcpyln | src des -- ; copy a line of src to des (up to CR, LF or 0), add a 0
+copynom | dst src -- ; copy the first word of src (up to a char <= 32) to dst, add a 0
+copystr | dst src -- ; copy src to dst up to the first " (not included), add a 0
+strpath | src dst -- ; copy the path of src to dst (all before the last /, without it)
+toupp | c -- C ; clear bit 5: a-z to A-Z, no range check (only for letters)
+tolow | C -- c ; set bit 5: A-Z to a-z, no range check (only for letters)
+count | s1 -- s1 cnt ; string length in bytes, reading 8 bytes at a time
+count | s1 -- s1 cnt ; string length in bytes, one byte at a time
+utf8c? | c -- flag ; 0 if c is a UTF-8 continuation byte (10xxxxxx), else not 0
+utf8len | c -- n ; length (1-4) of the UTF-8 sequence that starts with byte c, 0 if invalid
+utf8skip | adr -- adr' ; skip the continuation bytes at adr
+utf8next | adr -- adr' ; address of the next UTF-8 character (stays at the final 0)
+utf8lead | adr -- adr' ; go back to the first byte of the character that contains adr
+utf8prev | adr -- adr' ; address of the previous UTF-8 character
+utf8@+ | adr -- adr' cp ; read the UTF-8 character at adr as a code point; an invalid byte is returned as is
+utf8!+ | cp adr -- adr' ; write code point cp as UTF-8 (1 to 4 bytes) at adr, no 0
+utf8count | str -- str count ; number of UTF-8 characters of str
+utf8ncpy | str 'dst cnt -- 'end ; copy cnt UTF-8 chars of str to 'dst; 'end is after the last byte, no 0 added
+utf8bytes | str cnt -- str bytes ; byte length of the first cnt UTF-8 chars of str (up to the final 0)
+= | s1 s2 -- 1/0 ; 1 if s1 equals s2 ignoring case; s2 may continue after a blank
+cmpstr | a b -- n ; compare strings (case-sensitive): <0 if a<b, 0 if equal, >0 if a>b
+=s | s1 s2 -- 1/0 ; 1 if the first word of s1 equals the first word of s2, ignoring case
+=w | s1 s2 -- 1/0 ; like =s but ASCII only: a byte >= 128 ends the word (use =s for UTF-8)
+=pre | adr "str" -- adr 1/0 ; 1 if the string at adr starts with "str", ignoring case
+=pos | s1 ".pos" -- s1 1/0 ; 1 if s1 ends with ".pos", ignoring case
+=lpos | lstr ".pos" -- lstr 1/0 ; like =pos, lstr = address of the final 0 of the string
+findchar | adr char -- adr'/0 ; address of the first char in the string at adr, 0 if not found
+findstr | adr "text" -- adr'/0 ; address of the first "text" in the string at adr, 0 if not found
+findstri | adr "text" -- adr'/0 ; like findstr ignoring case
+rfindstri | start "text" adr -- adr'/0 ; search "text" backwards from adr down to start, ignoring case; 0 if none
+.d | val -- str ; signed integer to decimal string
+.b | bin -- str ; binary string of val, unsigned
+.h | hex -- str ; hexadecimal string of val, uppercase, no prefix, unsigned
+.o | oct -- str ; octal string of val, unsigned
+.f | fix -- str ; 48.16 fixed point to decimal string with 4 decimals, rounded
+.f2 | fix -- str ; 48.16 fixed point to decimal string with 2 decimals, rounded
+.f1 | fix -- str ; 48.16 fixed point to decimal string with 1 decimal, rounded
+.r. | str width -- str' ; pad on the left with spaces up to width chars; str comes from .d .h .f ...
+.fd | fix -- str ; 32.32 fixed point to decimal string with 8 decimals, rounded
+trim | adr -- adr' ; skip chars <= 32; adr' is the first one > 32 or the final 0
+trimc | char adr -- adr' ; address of the first char found, or of the final 0 if none
+trimcar | adr -- adr' c ; skip chars <= 32 and read the next char c (0 at the end); adr' is after c
+trimstr | adr -- adr' ; address of the closing " of the string text at adr ("" is escaped quote)
+>>cr | adr -- adr' ; address of the next CR or LF, or of the final 0
+>>0 | adr -- adr' ; address after the next 0 (the next string of a list of strings)
+l0count | list -- cnt ; number of strings of a list of 0-terminated strings (the list ends with an empty string)
+n>>0 | adr n -- adr' ; skip n strings of a list of 0-terminated strings
+only10 | adr -- 'end ; in place, change CRLF, CR and LFCR to LF; 'end is after the final 0
+only13 | adr -- 'end ; in place, change CRLF, LF and LFCR to CR; 'end is after the final 0
+>>sp | adr -- adr' ; address of the next char <= 32 (blank), or of the final 0
+>>str | adr -- adr' ; address after the closing " of the string text at adr ("" is escaped quote)
+<<trace | --
+<<traceh | --
+<<memdump | adr cnt --
+<<memdumpc | adr cnt --
+clearlog
+filelog | .. str --
+<<memmap | inimem --
+vset! | 'set --
+vget! | 'get --
+vsize! | w h --
+vop | x y  --
+vline | x y --
+vfill | c x y --
+vrect | x1 y1 x2 y2 --
+vfrect | x1 y1 x2 y2 --
+vellipse | rx ry x y --
+vellipseb | rx ry x y --
+v2= | 'v1 'v2 -- ; v1 = v2 (copy)
+v2+ | 'v1 'v2 -- ; v1 = v1 + v2
+v2- | 'v1 'v2 -- ; v1 = v1 - v2
+v2+* | m 'v1 'v2 -- ; v1 = v1 + v2 * m (m fixed point)
+v2-* | m 'v1 'v2 -- ; v1 = v1 - v2 * m (m fixed point)
+v2* | 'v1 n -- ; v1 = v1 * n (n fixed point)
+v2/ | 'v1 n -- ; v1 = v1 / n (n fixed point; n = 0 crashes)
+v2len | 'v -- m ; length of the vector (fixed point)
+v2nor | 'v -- ; scale the vector to length 1.0 (a zero vector crashes)
+v2lim | 'v lim -- ; limit the length of the vector to lim (fixed point)
+v2rot | 'v bang -- ; x' = x*sin - y*cos, y' = x*cos + y*sin
+v2dot | 'v1 'v2 -- dot ; dot product (fixed point)
+v2perp | 'dst 'src -- ; dst = (-src.y, src.x): src turned 90 degrees counter-clockwise
+v3len | 'v -- l ; length of the 3d vector (fixed point)
+v3nor | 'v -- ; scale the vector to length 1.0 (a zero vector stays 0 0 0)
+v3ddot | 'v1 'v2 -- r ; dot product v1.v2 (fixed point)
+v3vec | 'v1 'v2 -- ; v1 = v1 x v2 (cross product)
+v3- | 'v1 'v2 -- ; v1 = v1 - v2
+v3+ | 'v1 'v2 -- ; v1 = v1 + v2
+v3+* | 'v1 'v2 s -- ; v1 = v1 + v2 * s (s fixed point)
+v3* | 'v1 s -- ; v1 = v1 * s (s fixed point)
+v3= | 'v1 'v2 -- ; v1 = v2 (copy)
+normInt2Fix | x y z -- xf yf zf ; normalize the integer vector x y z (values on the stack) to a fixed point unit vector (0 0 0 stays 0 0 0)
+normFix | x y z -- x y z ; normalize the fixed point vector x y z (values on the stack) to length 1.0 (0 0 0 stays 0 0 0)
+v3rotX | 'dst 'src angle -- ; dst = src rotated around the X axis (angle: 1.0 = full turn): y' = y*cos - z*sin, z' = y*sin + z*cos
+v3rotY | 'dst 'src angle -- ; dst = src rotated around the Y axis (angle: 1.0 = full turn): x' = x*cos + z*sin, z' = z*cos - x*sin
+v3rotZ | 'dst 'src angle -- ; dst = src rotated around the Z axis (angle: 1.0 = full turn): x' = x*cos - y*sin, y' = x*sin + y*cos
+v3rotAxis | 'dst 'src 'axis angle -- ; dst = src rotated around the vector axis, which must be a unit vector (angle: 1.0 = full turn)
+q4= | 'q1 'q2 -- ; q1 = q2 (copy of the 4 cells x y z w)
+q4W | 'q 'dest -- ; copy x y z of q to dest and set w = -sqrt(|1 - x*x - y*y - z*z|)
+q4dot | 'q1 'q2 -- dot ; 4d dot product of two quaternions (fixed point)
+q4inv | 'q 'dest -- ; dest = inverse of q (its conjugate divided by dot(q,q))
+q4conj | 'q 'dest -- ; dest = conjugate of q (-x -y -z w)
+q4len | 'q -- len ; length of the quaternion (fixed point)
+q4nor | 'q -- ; normalize the quaternion to length 1.0 (a zero quaternion becomes the identity 0 0 0 1.0)
+q4lenf | 'q -- 1/len ; fast approximation of 1/length, only good for lengths near 1
+q4norf | 'q -- ; fast normalization with q4lenf, only for quaternions already near unit length
+q4integrate | 'q 'omega dt -- ; advance quaternion q by the angular velocity vector omega during dt (fixed point), then renormalize with q4norf
+WEBCAM_FMT_RGB24
+WEBCAM_FMT_RGB32
+WEBCAM_FMT_YUYV
+WEBCAM_FMT_YUV420
+WEBCAM_FMT_MJPEG
+WEBCAM_PARAM_BRIGHTNESS
+WEBCAM_PARAM_CONTRAST
+WEBCAM_PARAM_SATURATION
+WEBCAM_PARAM_EXPOSURE
+WEBCAM_PARAM_FOCUS
+WEBCAM_PARAM_ZOOM
+WEBCAM_PARAM_GAIN
+WEBCAM_PARAM_SHARPNESS
+webcam_list_devices
+webcam_free_list
+webcam_query_capabilities
+webcam_free_capabilities
+webcam_find_best_format
+webcam_open
+webcam_capture
+webcam_release_frame
+webcam_close
+webcam_get_actual_width
+webcam_get_actual_height
+webcam_get_format
+webcam_get_parameter
+webcam_set_parameter
+webcam_set_auto
+webcam_set_conversion_size
+webcam_get_converted_frame
+p.ini | cnt list --
+p.clear | list --
+p.cnt | list -- cnt
+p.adr | nro list -- adr
+p.nro | adr list -- nro
+p!+ | 'act list -- adr
+p! | list -- adr
+p.draw | list --
+p.drawo | list --
+p.del | adr list --
+p.mapv | 'vector list --
+p.mapd | 'vector list --
+p.map2 | 'vec 'list ---
+p.sort | col 'list --
+p.isort | col 'list --
+p8.ini | cnt list --
+p8.clear | list --
+p8.cnt | list -- cnt
+p8.adr | nro list -- adr
+p8.nro | adr list -- nro
+p8!+ | 'act list -- adr
+p8! | list -- adr
+p8.draw | list --
+p8.drawo | list --
+p8.del | adr list --
+p8.last | ;ist -- adr
+p8.cpy | adr 'list --
+p8.mapv | 'vector list --
+p8.mapd | 'vector list --
+p8.map2 | 'vec 'list ---
+p8.sort | col 'list --
+p8.isort | col 'list --
+wp | width of a character in pixels
+hp | height of a character in pixels
+bmfont | w h "file" -- ; load the font image (a 16x16 grid of 256 characters of w x h pixels: column = low nibble, row = high nibble of the ASCII code) and set the character size
+bcolor | rgb -- ; color $RRGGBB of the font texture (color modulation)
+bfbox | -- ; fill the character cell at the cursor with the draw color
+bbox | -- ; outline of the character cell at the cursor
+bbox2 | -- ; outline of the lower half of the character cell at the cursor
+bfillline | x y w h -- ; fill with the draw color the rectangle given in character cells (x y w h)
+bsrcsize | x y w h -- x y w h ; convert the two pairs from character cells to pixels (x*wp y*hp w*wp h*hp)
+bfillemit | "" -- "" ; fill with the draw color the area the string would use at the cursor
+bfcemit | cnt -- ; fill with the draw color the area of cnt characters at the cursor
+bemit | ascii -- ; draw the character at the cursor and move the cursor one character to the right
+bprint | .. "" -- ; formatted print (see sprint) at the cursor
+bemits | "" -- ; print the string at the cursor
+bprintd | .. "" -- ; formatted print with double width
+bemitsd | "" -- ; print the string with double width
+bprint2 | .. "" -- ; formatted print with double width and height
+bemits2 | "" -- ; print the string with double width and height
+bprintz | .. "" size -- ; formatted print scaled by size (fixed point, 1.0 = normal)
+bemitsz | "" size -- ; print the string scaled by size (fixed point, 1.0 = normal)
+bat | x y -- ; move the cursor to the pixel position x y
+ccx | -- x ; cursor x in pixels (also defined in pcfont)
+ccy | -- y ; cursor y in pixels (also defined in pcfont)
+gotoxy | x y -- ; move the cursor to the character cell x y (also defined in pcfont)
+gotox | x -- ; move the cursor to the character column x, same y (also defined in pcfont)
+bcr | -- ; new line: x = 0 and y down one character
+bcr2 | -- ; new line for double height text (y down two characters)
+bcrz | size -- ; new line for text scaled by size (fixed point)
+bsp | -- ; move the cursor one character to the right
+bnsp | n -- ; move the cursor n characters to the right
+bsize | "" -- "" w h ; size in pixels of the string (count * wp, hp)
+bpos | -- x y ; cursor position in pixels
+brect | "" -- "" x y w h ; rectangle (position and size in pixels) of the string at the cursor
+bcursor | n -- ; fill with the draw color the character cell n characters to the right of the cursor (block cursor)
+bcursori | n -- ; like bcursor but a bar of a quarter of the height at the bottom (insert cursor)
+bcursor2 | n -- ; like bcursor for double size characters
+bcursori2 | n -- ; like bcursori for double size characters
+bfont1 | -- ; load the font media/img/VGA8x16.png (8x16 characters)
+bfont2 | -- ; load the font media/img/font16x24.png (16x24 characters)
+blistdel | 'list 'from --
+blist! | f 'list --
+blist- | f 'list --
+blist@ | 'list -- f/0
+blist? | f 'list -- f/0
+bsprdraw | word that drawmaps calls for each sprite of the list: x y n --  (the default one does nothing)
+inisprite | -- ; start the list of sprites drawn in order with the map rows (call it every frame before +sprite); the list is in free memory at here
++sprite | N x y -- ; add the sprite N at screen position x y to the sorted list; it is ignored if it is outside the screen
+drawmaps | xvp yvp -- ; draw the map with its sprites from the viewport position xvp yvp in pixels (tiles of 32x32): back layers, then the sprites row by row, then the front layers
+loadmap | "filename" -- ; load a map file (8 bytes header, mapw maph, mapw*maph cells of 64 bits, tilew tileh, tileset image name) and its tileset; the view is 34x23 tiles of 32 pixels
+bmap2xy | x y -- x y ; tile position x y to the pixel position in the tileset size (x*tilew, y*tileh) as fixed point
+whbmap | -- w h ; size of the map in tiles
+xyinmap@ | x y -- cell ; map cell (64 bits) at the position x y given as fixed point pixels (no range check)
+xytrigger | x y -- x y ; mark with the trigger flag (bit 51) the conditional tiles (bit 50) of the cells around x y; drawmaps clears the flag at the end of the frame
+,time | -- ; write the current time as h:mm:ss (hour without leading zero)
+,ti:me | -- ; write the current time as h:mm with a blinking colon (a space on odd seconds)
+,date | -- ; write the current date as d/m/yyyy
+,date- | -- ; write the current date as yyyy-mm-dd
+str_DMA | -- str ; the current date as " d/m/yyyy " in a temporary string (at here, valid until the next write to memory)
+str_HMS | -- str ; the current time as " h:mm:ss " in a temporary string (at here)
+str_HM | -- str ; the current time as " h:mm " (blinking colon) in a temporary string (at here)
+>dianame | n -- str ; Spanish name of the weekday n (0 = domingo .. 6 = sabado), no range check
+>mesname | n -- str ; Spanish name of the month n (0 = enero .. 11 = diciembre), no range check
+str_fullday | -- str ; current date as "weekday, d month yyyy " in Spanish, zero-terminated, in a temporary string
+str_hhmmss | -- str ; current time as hh:mm:ss (2 digits each), zero-terminated, in a temporary string (at here)
+dt2timesql | 'timedate -- ; write a timedate (address from sysdate or filetimeD) as yyyy-mm-dd hh:mm:ss at here (no final 0)
+dt>64 | 'timedate -- dt64 ; pack a timedate in 64 bits: year<<48 | month<<44 | weekday<<40 | day<<32 | hour<<24 | minute<<16 | second<<8 | ms>>2
+,64>dtf | dt64 -- ; write a dt64 as dd/mm/yyyy hh:mm
+,64>dtd | dt64 -- ; write the date of a dt64 as d/m/yyyy followed by a space
+,64>dtt | dt64 -- ; write the time of a dt64 as hh:mm:ss
+64>dtc | dt64 -- ; write a dt64 as date and time
+rowdb | number of the record the incremental words (loaddb-i, prevdb-i) will load next
+getnfilename | n "path" -- filename/0 ; name of the nth file of a folder (Windows only: it uses the Windows directory entry layout); 0 if there are fewer
+loadnfile | "path" -- filename ; incremental: each call returns the next file name of the folder, the position is kept in the file "path.now" and wraps to the first (Windows only)
+>>line | adr -- adr' ; address after the next ^ (end of record), or the final 0 if there is none
+loaddb-i | "filename" -- ; incremental: load the record number kept in "filename.now" and split it in fields (read them with dbfld), then advance to the next record (wraps at the end)
+prevdb-i | "filename" -- ; step the position kept in "filename.now" back one record (the next loaddb-i loads the previous one)
+dbfld | nro -- str ; field nro (0 is the first) of the record loaded with loaddb-i; an empty string if there are fewer fields
+loaddb | "filename" -- 'db ; load a text database (records field|field|..^) at here, where it stays, and return its address; 0 if the file is empty or missing
+getdbrow | id 'db -- 'row ; address of record number id (0 is the first) of a database loaded with loaddb
+findbrow | 'key 'db -- 'row/0 ; first record whose first 8 bytes equal the 8 bytes at 'key (the original comment called it hash); 0 if none
+cntdbrow | 'db -- cnt ; number of records (count of ^); 0 if 'db is 0
+>>fld | adr -- adr' ; address after the next | (next field); it stops at a ^ (end of record) without skipping it
+getdbfld | nro 'row -- 'fld ; address of field nro (0 is the first) of a record; the field ends at | or ^, not at a 0
+cpydbfld | 'fld 'str -- ; copy the text of a field (up to | or ^) to 'str with a final 0
+cpydbfldn | max 'fld 'str -- ; like cpydbfld copying at most max characters
+colord | color selected in the dialog $RRGGBB
+color! | color -- ; set the selected color $RRGGBB and move the marks of the picker to it
+dlgColor | -- ; draw the color dialog: the current color box (a click opens or closes the picker with hue bar, saturation and value square and alpha bar) and the palette of 3x20 colors (the old comment x y is not used, see xydlgColor!)
+dlgColorIni | -- ; start the color dialog: build the 128 step hue bar and the palette, color white, alpha 127
+xydlgColor! | x y -- ; position of the color dialog and rebuild its geometry
+dlgFileLoad | -- fn/0 ; modal dialog to choose a file to load (it runs its own SDLshow loop; up, down, enter and esc keys, click on a line); returns the full file name, or 0 if it was cancelled
+dlgFileSave | -- fn/0 ; modal dialog to write the name of a file to save (editable name, 64 characters); returns the full file name, or 0 if it was cancelled
+dlgSetPath | "path" -- ; set the folder where the file dialogs start
+dc.ini | mac 'dc dc.ini
+dc.clear | list --
+dc? | list -- cnt
+dcn@ | n l -- v
+dc@ | list -- val
+dc! | val list --
+dc@- | list -- val
+uiDirs | list of folders (or full tree) of flScanDir/flScanFullDir: 0-terminated entries, each one a byte $40+level ($20 more, $80 open) and the name; it ends with an empty entry
+uiFiles | list of the files of a folder made by FlGetFiles: 0-terminated names that end with an empty entry
+flcpy | 'file 'str -- ; copy a list entry up to | or the final 0 into 'str, with a final 0
+flTreePath | n -- str ; path of node n of the tree shown by the tui tree widget (it uses the widget state of tui: only meaningful inside it)
+FlGetFiles | "path" -- ; fill uiFiles with the names of the files (no folders) of the folder; the memory was reserved by flScanDir
+flScanDir | "path" -- ; scan the folders under path recursively into uiDirs and reserve 64 KB for uiFiles; call it only once
+flScanFullDir | "path" -- ; like flScanDir but uiDirs also has the files (the folders end with /)
+flOpenFullPath | "root/a/b" -- place ; open the folders of a path in the uiDirs list of flScanFullDir (the first component, the root, is skipped; the string is modified); returns the row of the last entry in the visible tree
+flOpenSearch | "text" -- adr/0 ; first entry of uiDirs that contains the text (ignoring case): its folders are opened and its address is returned; 0 if not found
+flCloseAll | -- ; close all the folders of uiDirs
+H2d.ini | maxobj -- ; reserve at here the hash table, the object list and the contact list for up to maxobj objects (ids 0..65534)
+H2d.clear | -- ; empty the hash table and the contact list (call it every frame before adding the objects)
+H2d.list | -- 'adr cnt ; list of contacts found: cnt dwords, each (newer object nro << 16) | older object nro
+checkmax | maximum distance in pixels where the neighbours are looked for (the hash cells are 32 pixels)
+h2d+! | nro r x y -- ; add object nro (0..65534) with radius r (0..1023) at x y (pixels, 19 bits) and add to the list its contacts with the objects already added (square test: max(|dx|,|dy|) < r1 + r2)
+h2d! | x y zoom nro size -- x y zoom ; add object nro at x y with the radius size*zoom (zoom fixed point) and leave x y zoom
+heap! | nodo 'h --
+heap@ | 'h -- nodo
+heapini | max 'h --
+color! | color --
+uiColor | 'var --
+uiColorH | 'var --
+ycursor
+xcursor
+edfilename
+inisel | inicio seleccion
+finsel | fin seleccion
+fuente | fuente editable
+fuente> | cursor
+edlinenum! | 0/1 -- ; muestra u oculta el numero de linea
+edlinenum | -- 0/1
+edcodedraw
+edfill
+edtoolbar
+edfocus
+edfocusro
+clearmark
+addmark
+addsrcmark | src color --
+showmark
+edram
+edwin | x y w h --
+edloadmem | "" --
+edload | "" --
+edsave | --
+immfileload | 'vecload 'file --
+immfilesave | 'vecload 'file --
+fullfilename
+uiFileName | 'var --
+uiDateTime | 'var --
+uiDate | 'var --
+uiTime | 'var --
+cx
+cy
+cw
+ch | cursor
+%cw
+%ch
+uiPading | x y --
+uiBox | x y w h --
+uiFull | --
+uiPush
+uiPop
+uiRest
+uiN | lineas --
+uiS | lineas --
+uiE | cols --
+uiO | cols --
+uiAt | x y --
+uiTo | w h --
+uiGrid | c r -- ; adjust for fit
+uiNext
+uiNextV
+mdrag | drag place <<<
+keymd | key modify <<<
+btnMouse
+uiEx?
+uiOvr | 'v --
+uiDwn | 'v --
+uiSel | 'v -- ; 3 <?
+uiClk | 'v --
+uiUp | 'v --
+uiFocusIn
+uiFocus
+uiStart
+uiExitWidget
+uiSaveLast | x y w h 'vector --
+uiEnd
+uiZone | -- ; Interaction is cx,cy,cw,th
+uiZoneL | nlines -- ; Interaction is cx,cy,cw,th*lines
+uiZoneW | -- ; Interaction is cx,cy,cw,ch
+uiZoneBox | x y w h --
+uiBackBox
+uiPlace | n --
+uiRefocus
+uiFocus>> | cambia id y luego wid
+uiFocus<<
+tabfocus
+uiFill
+uiRect
+uiRFill | round --
+uiRRect | round --
+uiCRect
+uiCFill
+uiTex | texture --
+uiWinBox | -- x y w h
+uiLineGridV
+uiLineGridH
+uiLineGrid
+stDang | danger
+stWarn | warning
+stSucc | success
+stInfo | info
+stLink | link
+stDark | dark
+stLigt | white
+stColor | rgb --
+uilFill
+uilRFill
+uilCFill
+uilTex
+uilRect
+uilRRect | round --
+uilCRect
+uil..
+ui..
+ui--
+ttwrite | "text" --
+ttwritec | "text" --
+ttwriter | "text" --
+uiTlabel
+uiLabel
+uiLabelC
+uiLabelR
+uiText | "" align --
+uiTBtn | 'click "" align --
+uiNBtn | v "" -- ; width from text
+uiBtn | 'click "" --
+uiRBtn | 'click "" --
+uiCBtn | 'click "" --
+uiSliderf | 0.0 1.0 'value --
+uiSlideri | 0 255 'value --
+uiProgressf | 0.0 1.0 'value --
+uiProgressi | 0 255 'value --
+uiVSliderf | 0.0 1.0 'value --
+uiVSlideri | 0 255 'value --
+uiNindx | n -- str
+uiCheck | 'var 'list --
+uiRadio | 'var 'list --
+uiList | 'var cntl 'list --
+uiTree | 'var cntl list --
+uiCombo | 'var 'list --
+uiInputLine | 'buff max --
+verl
+nver | vertices
+facel
+nface | faces (tri or quad)
+norml
+texl
+ntex | texture coord
+paral
+colorl
+ncolor | colores
+]face | nro -- FACE ( p1 p2 p3 color)
+]vert | nro -- vertex
+]norm | nro -- normal
+]uv | nro -- uv
+>>cr | adr -- adr'/0 ; proxima linea/0
+]Ka@
+]Kd@
+]Ks@
+]Ke@
+]Ns@
+]Ni@
+]d@
+]i@
+]Mkd@
+]MNs@
+]Mbp@
+cnt/
+getpath | str -- str
+loadobj | "" -- mem
+xmin
+ymin
+zmin
+xmax
+ymax
+zmax
+objminmax | --
+objmove | x y z --
+objcentra
+objescala | por div --
+objescalax | por div --
+objescalay | por div --
+objescalaz | por div --
+objcube | lado --
+pccolor | rgb -- ; color $RRGGBB of the font texture (color modulation)
+pcemit | ascii -- ; draw the character (8x16) at the cursor and move the cursor one character to the right
+pcfbox | -- ; fill the character cell at the cursor with the draw color
+pcbox | -- ; outline of the character cell at the cursor
+pcbox2 | -- ; outline of the lower half of the character cell at the cursor
+pcfillline | x y w h -- ; fill with the draw color the rectangle given in character cells (x y w h)
+pcsrcsize | x y w h -- x y w h ; convert the two pairs from character cells to pixels (x*8 y*16 w*8 h*16)
+pcfillemit | "" -- "" ; fill with the draw color the area the string would use at the cursor
+pcprint | .. "" -- ; formatted print (see sprint) at the cursor
+pcemits | "" -- ; print the string at the cursor
+pcprintd | .. "" -- ; formatted print with double width
+pcemitsd | "" -- ; print the string with double width
+pcprint2 | .. "" -- ; formatted print with double width and height
+pcemits2 | "" -- ; print the string with double width and height
+pcprintz | .. "" size -- ; formatted print scaled by size (fixed point, 1.0 = normal)
+pcemitsz | "" size -- ; print the string scaled by size (fixed point, 1.0 = normal)
+pcat | x y -- ; move the cursor to the pixel position x y
+ccx | -- x ; cursor x in pixels (also defined in bfont)
+ccy | -- y ; cursor y in pixels (also defined in bfont)
+gotoxy | x y -- ; move the cursor to the character cell x y (also defined in bfont)
+gotox | x -- ; move the cursor to the character column x, same y (also defined in bfont)
+pccr | -- ; new line: x = 0 and y down 16 pixels
+pcsp | -- ; move the cursor one character (8 pixels) to the right
+pcnsp | n -- ; move the cursor n characters to the right
+pcsize | "" -- "" w h ; size in pixels of the string (count * 8, 16)
+pcpos | -- x y ; cursor position in pixels
+pcrect | "" -- "" x y w h ; rectangle (position and size in pixels) of the string at the cursor
+pccursor | n -- ; fill with the draw color the character cell n characters to the right of the cursor (block cursor)
+pccursori | n -- ; like pccursor but a bar of a quarter of the height at the bottom (insert cursor)
+pcfont | -- ; load the font media/img/VGA8x16.png (8x16 characters in a 16x16 grid) and set the cursor size
+Lineal | t -- t ; no easing (linear): t unchanged; all the easing words take and return t in fixed point 0..1.0
+Quad_In | t -- t' ; t squared (quadratic) easing, slow at the start (0..1.0 in, 0..1.0 out)
+Quad_Out | t -- t' ; t squared (quadratic) easing, slow at the end
+Quad_InOut | t -- t' ; t squared (quadratic) easing, slow at the start and at the end
+Cub_In | t -- t' ; t cubed easing, slow at the start (0..1.0 in, 0..1.0 out)
+Cub_Out | t -- t' ; t cubed easing, slow at the end
+Cub_InOut | t -- t' ; t cubed easing, slow at the start and at the end
+Quar_In | t -- t' ; t to the 4th easing, slow at the start (0..1.0 in, 0..1.0 out)
+Quar_Out | t -- t' ; t to the 4th easing, slow at the end
+Quar_InOut | t -- t' ; t to the 4th easing, slow at the start and at the end
+Quin_In | t -- t' ; t to the 5th easing, slow at the start (0..1.0 in, 0..1.0 out)
+Quin_Out | t -- t' ; t to the 5th easing, slow at the end
+Quin_InOut | t -- t' ; t to the 5th easing, slow at the start and at the end
+Sin_In | t -- t' ; sine curve easing, slow at the start (0..1.0 in, 0..1.0 out)
+Sin_Out | t -- t' ; sine curve easing, slow at the end
+Sin_InOut | t -- t' ; sine curve easing, slow at the start and at the end
+Exp_In | t -- t' ; exponential curve easing, slow at the start (0..1.0 in, 0..1.0 out)
+Exp_Out | t -- t' ; exponential curve easing, slow at the end
+Exp_InOut | t -- t' ; exponential curve easing, slow at the start and at the end
+Cir_In | t -- t' ; circular curve easing, slow at the start (0..1.0 in, 0..1.0 out)
+Cir_Out | t -- t' ; circular curve easing, slow at the end
+Cir_InOut | t -- t' ; circular curve easing, slow at the start and at the end
+Ela_In | t -- t' ; elastic (the Tween.js version: it overshoots and oscillates) easing, slow at the start (0..1.0 in, 0..1.0 out)
+Ela_Out | t -- t' ; elastic (the Tween.js version: it overshoots and oscillates) easing, slow at the end
+Ela_InOut | t -- t' ; elastic (the Tween.js version: it overshoots and oscillates) easing, slow at the start and at the end
+Bac_In | t -- t' ; back (it overshoots a little before going) easing, slow at the start (0..1.0 in, 0..1.0 out)
+Bac_Out | t -- t' ; back (it overshoots a little before going) easing, slow at the end
+Bac_InOut | t -- t' ; back (it overshoots a little before going) easing, slow at the start and at the end
+Bou_Out | t -- t' ; bounce easing, bounces at the end
+Bou_In | t -- t' ; bounce easing, bounces at the start
+Bou_InOut | t -- t' ; bounce easing, bounces at the start and at the end
+easet | table of the easing words used by ease (entry 0 is not used, so number 1 is Quad_In); it ends with a 0
+ease | t nro -- t' ; apply the easing number nro to t: 0 linear, then In Out InOut of 1-3 Quad, 4-6 Cub, 7-9 Quar, 10-12 Quin, 13-15 Sin, 16-18 Exp, 19-21 Cir, 22-24 Ela, 25-27 Bac, 28-30 Bou (no range check above 30)
+easem | t nro -- t' ; like ease with a short table, only the low 4 bits of nro count: 0 linear, then In Out InOut of 1-3 Sin, 4-6 Exp, 7-9 Bac, 10-12 Ela, 13-15 Bou
+catmullRom | p0 p1 p2 p3 t -- v ; Catmull-Rom spline value between p1 (t = 0) and p2 (t = 1.0) using the neighbours p0 and p3
+immlist | cnt -- ; the list of files of the dialog with cnt lines: a click selects, a second click on the same line enters the folder or accepts the file; it has a scroll bar
+filedlgini | -- ; start the file dialog: 15 lines and memory reserved at here (a table of 1024 entries and 64 KB of names)
+immfileload | 'vecload 'file -- ; open the file dialog in LOAD mode on the folder of 'file with its name selected; 'vecload is executed when LOAD is pressed
+immfilesave | 'vecsave 'file -- ; like immfileload but in SAVE mode
+fullfilename | -- str ; the folder and the file name chosen, joined with sprint in a temporary string (no / between them)
+padx | horizontal padding around the widgets in pixels
+pady | vertical padding around the widgets in pixels
+curx | x of the current widget (cursor) in pixels
+cury | y of the current widget (cursor) in pixels
+boxw | width of the widgets in pixels
+boxh | height of the widgets in pixels
+immcolorwin | window background color $RRGGBB
+immcolortwin | window title bar color $RRGGBB
+immcolortex | text color $RRGGBB
+immcolorbtn | button color $RRGGBB
+immgui | -- ; start of a gui frame, once per frame before the widgets: calls gui and resets the layout (cursor at 0 0, box = screen width by font height + 8)
+immkey! | 'vec -- ; word to execute at the end of immRedraw of this frame (keyboard handler)
+immat | x y -- ; set the cursor (position of the next widget)
+immat+ | x y -- ; move the cursor by x y pixels
+immbox | w h -- ; set the size of the next widgets
+immfont! | font -- ; set the TTF font used by the widgets and measure its height
+immpad! | padx pady -- ; set the padding around the widgets
+immwinxy | x y -- ; set the origin of the window and put the cursor inside it with the padding
+imm>> | -- ; move the cursor one widget to the right (box width plus the padding of both sides)
+imm<< | -- ; move the cursor one widget to the left
+immdn | -- ; move the cursor one widget down (box height plus the padding of both sides)
+immcr | -- ; new line: x back to the left of the window and y down one widget
+immln | -- ; new line: x back to the left of the window and y down only the box height
+plgui | -- ; start a widget at the cursor: guiBox of the current box with the padding
+plxywh | -- x y w h ; rectangle of the widget at the cursor, with the padding
+immcur | x y w h -- ; set the guiBox of the rectangle x y w h (relative to the window), draw a gray outline around it and make it the cursor and the box
+immcur> | -- cur ; pack the cursor and the box in one value: curx | cury<<16 | boxw<<32 | boxh<<48
+imm>cur | cur -- ; restore the cursor and the box packed by immcur>
+immlabel | "" -- ; draw the text (formatted, see ttprint) at the left of the current box, vertically centered
+immlabelc | "" -- ; draw the text centered in the current box
+immlabelr | "" -- ; draw the text right aligned in the current box
+imm. | "" -- ; draw the text (formatted with sprint) at the cursor and move the cursor right by its width plus padding (inline text)
+immStrC | "" -- ; draw the text centered in the current box (no format)
+immListBox | lines -- ; guiBox of a list area of that many box heights
+immback | color -- ; fill the current box with the color (for the lines of a list)
+immblabel | "" -- ; text of a list line at the left of the current box (without the vertical padding)
+immicon | nro x y -- ; draw the icon nro of the icon set at x y
+immiconb | nro -- ; draw the icon nro centered in the current box with the text color
+immwidth | w -- ; set the width of the next widgets
+immbtn | 'click "" -- ; button with centered text: moves 2 pixels while the mouse is over it and executes 'click when clicked
+immibtn | 'click nro -- ; button with the icon nro
+immtbtn | 'click "" -- ; button as wide as its text; the background shows only while the mouse is over it
+immebtn | 'click "" -- ; button with the text only (no background), as wide as its text
+immzone | 'click -- ; invisible clickable area of the current box
+immSliderf | min max 'value -- ; horizontal slider of a fixed point value between min and max (it shows the value with 2 decimals)
+immSlideri | min max 'value -- ; horizontal slider of an integer value between min and max
+immCheck | 'val "text" -- ; check box: a click toggles bit 0 of the variable
+immScrollv | 0 max 'value -- ; vertical scroll bar for the value between 0 and max (the code notes it is incorrect)
+immRadio | 'val "op1|op2|op3" -- ; radio buttons, one line per option: the variable holds the number (0 is the first) of the chosen one
+immCombo | 'val "op1|op2|op3" -- ; shows the chosen option; a click goes to the next one (it is not a drop down list)
+immInputLine | 'buff max -- ; line editor of the text in 'buff (max bytes): insert or overwrite (Ins), left, right, home, end, backspace and delete; tab and enter go to the next widget
+immInputInt | 'var -- ; integer input: the digits typed are appended, backspace or delete divide by 10 (no negative numbers)
+immwin! | 'winword -- ; add a window to the list drawn by immRedraw ('winword draws the window and its widgets); it is not added twice
+immwin$ | 'winword -- ; remove the window from the list
+winexit | -- ; close the window that has the mouse over it (it is the action of the close button)
+immwin | 'win -- 0/flags ; draw the window of the record 'win (flags, x y w h in four dwords, title): flag 1 = open, flag 2 = comes to the front; handles dragging by the title and the close button; returns 0 if it is closed, else puts the cursor and the box inside the window
+immnowin | x y w h -- ; set the region for the widgets without a window frame
+immwinbottom | 'win -- ; set the height of the window record to the cursor y reached (the window fits its content)
+immRedraw | -- ; execute the word of every window of the list, bring the clicked window to the front and execute the key handler set with immkey!
+immwins | 'win -- ; like immwin for a fixed window: no dragging, no close button
+immSDL | font -- ; start the gui with the TTF font and load the icons media/img/icong16.png (tiles of 24x21)
+shellsort | len lista -- ; lista es valor-dato
+shellsort2 | len lista -- ; lista es dato-valor
+shellsort1 | len lista -- ; lista es dato|valor
+sortstr | len lista -- ; lista es pstr-valor
+radixsort32 | cnt '2array --
+radixsort16 | cnt '2array --
+radixsort64 | cnt '2array --
+radixsort | cnt 'array --
+radixsortm | cnt 'array --
+textbox | str $colb-colo-ofvh-colf w h font -- texture
+[map] | x y -- ad
+drawtile | y x tile -- y x
+tiledraw | w h x y sx sy 'amap --
+tiledrawv | w h x y sx sy 'amap 'vec --
+drawtile | y x tile -- y x
+tiledraws | w h x y sx sy sw sh 'amap --
+tiledrawvs | w h x y sx sy sw sh 'amap 'v --
+scr2view | xs ys -- xv yv
+scr2tile | x y -- adr : only after tilemapdraw (set the vars)
+loadtilemap | "" -- amap
+advx | width in pixels of a character cell (font width times zoom)
+advy | height in pixels of a character cell
+trgb | c -- ; color $RRGGBB of the font texture (color modulation)
+tpal | c -- rgb ; color of the palette entry c (low 4 bits: 0 black, 1 blue, 2 cyan, 3 green, 4 purple, 5 red, 6 white, 7 yellow, 8..15 the bright ones) of the style in termcolor (style0 Campbell)
+tcol | c -- ; set the text color from the palette entry c
+tfbox | -- ; fill the character cell at the cursor with the draw color
+tbox | -- ; outline of the character cell at the cursor
+temit | ascii -- ; draw the character at the cursor and move the cursor one character to the right
+tprint | .. "" -- ; formatted print (see sprint) at the cursor
+temits | "" -- ; print the string at the cursor
+tat | x y -- ; move the cursor to the pixel position x y
+tatx | x -- ; set the cursor x in pixels
+txy | x y -- ; move the cursor to the character cell x y
+tx | x -- ; move the cursor to the character column x
+tcx | -- x ; cursor x in pixels
+tcy | -- y ; cursor y in pixels
+tcr | -- ; new line: x = 0 and y down one character
+tsp | -- ; move the cursor one character to the right
+tnsp | n -- ; move the cursor n characters to the right
+tsbox | "" -- "" w h ; size in pixels of the string (count * advx, advy)
+tpos | -- x y ; cursor position in pixels
+trect | "" -- "" x y w h ; rectangle (position and size in pixels) of the string at the cursor
+tcursor | n -- ; fill with the draw color the character cell n characters to the right of the cursor (block cursor)
+tcursori | n -- ; like tcursor but a bar of a quarter of the height at the bottom (insert cursor)
+tsize | zoom -- ; set the character size as the font size times zoom (fixed point, 1.0 = normal)
+tsrcsize | x y w h -- x y w h ; convert the two pairs from character cells to pixels
+tfnt | size w h "file" -- ; load a font image (16x16 grid of characters of w x h pixels) and set its zoom size (fixed point)
+tini | -- ; load the default font media/img/VGA8x16.png (8x16) at size 1.0
+ttx | cursor x in pixels
+tty | cursor y in pixels
+ttcolor | rrggbb -- ; text color (stored with red and blue swapped, as SDL_Color wants it)
+ttfont! | font -- ; set the font (from TTF_OpenFont) used by the tt words
+ttat | x y -- ; move the cursor to the pixel position x y
++ttat | x y -- ; move the cursor by x y pixels
+ttwh | "" -- "" w h ; size in pixels of the string with the current font
+ttsize | size -- ; set the point size of the current font
+ttstyle | style -- ; set the style of the current font: bit 0 bold, 1 italic, 2 underline, 3 strikethrough
+ttprint | .. "" -- ; formatted print (see sprint) at the cursor
+ttemits | "" -- ; draw the string at the cursor and move the cursor to its end (a texture is created for each call)
+ttemitc | width "" -- ; draw the string centered in width pixels starting at the cursor
+ttemitr | "" -- ; draw the string right aligned: it ends at the cursor x
+ttboxcc | w h "" -- ; draw the string centered in a box w x h starting at the cursor
+ttcursor | str strcur -- str ; fill with the draw color the block cursor of the character at strcur (an address inside str); the string is cut there temporarily
+ttcursori | str strcur -- str ; like ttcursor but a bar of 2 pixels at the bottom (insert cursor)
+ttrect | "" -- "" x y w h ; rectangle (position and size in pixels) of the string at the cursor
+fx
+fy
+fw
+fh
+flin? | x y -- 0/-1
+flin?1 | x y -- 0/-1
+flxvalid? | -- 0= not valid
+flx! | x y w h --
+flx | --
+flxpush
+flxpop
+flxRest
+flxN | lineas --
+flxS | lineas --
+flxE | cols --
+flxO | cols --
+fw%
+fh%
+flpad | x y --
+fhome | -- ; arriba-izquierda del panel
+uikey | tecla
+tuiexit | exit from tui
+tuX? | ask for acion (local)
+tuR! | redraw again, some changes
+tuC! | cursor ON
+.tdebug
+tuiw | -- flag
+tuiw1 | -- flag ; 1 line only zone
+tuRefocus
+tuif | -- flag
+tui
+onTui | 'vector --
+onTuia | 'vector --
+onTuiResize | vec --
+.wfill
+.wborde
+.wborded
+.wbordec
+.wtitle | place "" --
+tuWin | --
+tuWina | --
+tuTBtn | 'ev "" --
+tuBtn
+tuLabel | "" --
+tuLabelC | "" --
+tuLabelR | "" --
+xwrite!
+xwrite.reset
+uiNindx | n -- str
+tuList | 'var list --
+xwriten!
+xwriten.reset
+uiNindxn
+tuListN | 'var listn --
+flVisibleIndex | listadr adr -- idx/-1 ; adr debe ser un item de listadr
+tuTree | 'var list --
+tuText | "" align --
+padi> | inicio
+tuInputLine | 'buff max --
+tuCheck | 'var "label" --
+tuRadio | n 'var "label" --
+tuSlider | 'var min max --
+tuProgress | percent --
+pal.dark
+pal! | 'pal --
+cbg | n --
+cfg | n --
+bg0
+bg1
+bg2
+bg3
+fTx
+fMu
+fDi
+fPr
+fBl
+fPu
+fGr
+fRd
+fYe
+fcr | -- ; baja linea (y reinicia columnas de tabla)
+.lw
+.cw
+.rw
+.nd
+.nh
+.nf
+.nb
+pan | "title" -- ; fondo bg1, padding 1, titulo en acento
+.lines | 'v n --
+tcols | 'def --
+cell | "" -- ; el color es el activo
+row | "a|b|c" -- ; fila completa desde texto separado por |
+hdr | "a|b|c" --
+tbw | -- n ; ancho total de la tabla con recuadro
+tbtop
+tbsep
+tbbot
+tbrowc | "a|b|c" 'color -- ; fila con recuadro, 'color = palabra de color
+tbrow | "a|b|c" -- ; fila con recuadro
+tbhdr | "a|b|c" -- ; cabecera con recuadro
+flxRoot | -- ; fullscr
+flxC | w h -- ; frame w x h cent
+tuDlg | "title" w h --
+tuDlgEnd | --
+filename
+fuente | fuente editable
+fuente> | cursor
+$fuente | fin de texto
+themeold
+themenew
+tuTheme! | 'theme -- ; 'themeold / 'themenew
+tcol | n -- col256 ; colors of the editor: 0 string 1 include 2 comment 3 definition 4 variable 5 address 6 number 7 word
+tuiecursor! | cursor --
+tuipos! | pos --
+tuiposq! | pos --
+tuelstart | adr -- adr' ; start of the line of adr
+tuejpush | -- ; saves the place of the cursor
+tuejdepth | -- n ; how many places are saved (32 at most)
+tuejback | -- ; back to the last saved place
+tuegodef | -- ; goes to the definition of the word under the cursor, saving the place to come back
+tuefindword | -- ; the next whole word like the one under the cursor (wraps), the place is saved
+tueinsat | 'str adr --
+tueKeyMove
+tuEditLN! | n -- ; line number place
+tuEditShowCursor
+tuEditCode
+tuReadCode
+tuReadCodeMono
+tuecursor.
+TuLoadMem | "" --
+TuLoadMemC | "" -- | already sane
+TuLoadCode | "" --
+TuNewCode
+TuSaveCode
+tokenCursor | 'mark --
+txloadwicon | "font" size -- nfont ; load a TTF font at that size into an atlas texture (ASCII 32..127, the accented letters of the utf8 list and the Font Awesome icons of media/ttf/Font Awesome 7 Free-Solid-900.otf from code 192); returns the atlas (texture and table kept at here)
+txload | "font" size -- nfont ; like txloadwicon without the icons
+txfont | font -- ; select the atlas font (from txload) used by the tx words
+txfont@ | -- font ; the atlas font selected now
+txrgb | c -- ; color $RRGGBB of the font texture (color modulation)
+txcw | adr car -- adr' width ; width in pixels of a character: car is the byte just read at adr-1; a two byte accented character reads its second byte (adr' is after it)
+txw | "" -- "" width ; width in pixels of the string
+txfit | w "" -- ncar ; number of bytes of the string that fit in w pixels
+txch | adr car -- adr' h ; height of a character (same protocol as txcw)
+txh | -- h ; height of the font (line height)
+txat | x y -- ; move the cursor to the pixel position x y
+tx+at | x y -- ; move the cursor by x y pixels
+txcr | -- ; new line: x = 0 and y down one line height
+txpos | -- x y ; cursor position in pixels
+txemit | adr car -- adr' ; draw one character at the cursor and advance it (same protocol as txcw)
+txwrite | "" -- ; draw the string at the cursor
+txemitr | "" -- ; draw the string right aligned: it ends at the cursor x
+txemitc | w "" -- ; draw the string centered in w pixels starting at the cursor x
+txprint | .. "" -- ; formatted print (see sprint) at the cursor
+txprintr | .. "" -- ; formatted print right aligned
+txcur | str cur -- ; fill with the draw color the block cursor of the character at cur (an address inside str); it moves the cursor x to that character
+txcuri | str cur -- ; like txcur but a bar of a quarter of the height at the bottom (insert cursor)
+lwrite | w "str" -- ; left aligned text for txText (ignores w)
+cwrite | w "str" -- ; centered text in w pixels for txText
+rwrite | w "str" -- ; right aligned text in w pixels for txText
+txalign | $VH -- ; alignment for txText: low 2 bits horizontal (0 left, 1 center, 2 right), bits 4-5 vertical (0 top, 1 center, 2 bottom)
+txText | w h x y "" -- ; draw the string wrapped by words in the box x y w h with the txalign alignment; CR, LF and ; start a new line
+pad.reset | 'var max -- 'var max ; prepare the line editor on the buffer 'var of max bytes: cursor at the end, insert mode
+pad.draw | 'buff -- ; draw the edited line at the cursor with a blinking cursor and handle the keys: SDLchar to insert or overwrite, left, right, backspace, delete, home, end and insert to change the mode
+.xwrite | str --
+.awrite | str --
+.vline | h --
+.hline | w --
+.vlined | h --
+.hlined | w --
+.vline2 | h --
+.vlined2 | h --
+.boxl | x y w h --
+.boxc | x y w h --
+.boxd | x y w h --
+.boxf | x y w h --
+lalign | cnt str --
+calign | cnt str --
+ralign | cnt str --
+lwrite | w "str" --
+cwrite | w "str" --
+rwrite | w "str" --
+xalign | $VH --
+xwrite | w "str" --
+xText | w h x y "" --
+rgb4t | col12 -- col256
+deltatime | milliseconds between the last two vupdate or timer. calls
+timeline | start of the event list (8 bytes per event, sorted by start time)
+timeline< | end of the events already running in the list
+timeline> | end of the event list
+exevar | table with the data of each event (32 bytes: +0 ease and duration, +8 ini, +16 fin, +24 variable; the exe events keep 0, 'exe and the parameters)
+timer< | -- ; reset the timer (deltatime = 0)
+timer. | -- ; update the timer: deltatime = milliseconds since the previous call
+timer+ | n -- n' ; add deltatime to n
+timer- | n -- n' ; subtract deltatime from n
+vareset | -- ; remove all the events and restart the animation clock
+vaini | max -- ; reserve at here the memory for up to max events at the same time and reset
+vupdate | -- ; advance the animations with the time elapsed since the last call (once per frame): starts the events whose time has come, updates the variables and removes the finished ones
++vanim | 'var fin ini ease dur. start -- ; animate the cell 'var from ini to fin (the first value is the destination); ease = easing number (0 linear, 1 Quad_In... see ease in penner.r3), dur. and start in seconds (fixed point); the animation starts at the first vupdate after start
++vanimg | 'var fin ini ease dur. start group -- ; like +vanim in a group (0..15) that vkillgroup can remove
++vboxanim | 'var fin ini ease dur. start -- ; animate the four 16-bit values packed in the cell (see xywh64), each one on its own
++vboxanimg | 'var fin ini ease dur. start group -- ; like +vboxanim in a group (0..15)
++vxyanim | 'var fin ini ease dur. start -- ; animate the two 32-bit values packed in the cell (see xy32), each one on its own
++vxyanimg | 'var fin ini ease dur. start group -- ; like +vxyanim in a group (0..15)
++vcolanim | 'var fin ini ease dur. start -- ; animate a color $AARRGGBB mixing ini and fin channel by channel (alpha included)
++vcolanimg | 'var fin ini ease dur. start group -- ; like +vcolanim in a group (0..15)
++vexe | 'exe start -- ; execute 'exe once after start seconds; 'exe receives the address of the stored parameters and must leave it on the stack
++vexeg | 'exe start group -- ; like +vexe in a group (0..15)
++vvexe | v 'exe start -- ; like +vexe with a parameter: 'exe receives an address and reads v with dup @
++vvexeg | v 'exe start group -- ; like +vvexe in a group (0..15)
++vvvexe | v1 v2 'exe start -- ; like +vexe with two parameters: 'exe reads them with dup @+ swap @ (v2 deeper, v1 on top) and leaves the address
++vvvexeg | v1 v2 'exe start group -- ; like +vvvexe in a group (0..15)
+vkillgroup | group -- ; remove all the events of the group (0..15)
+vkillvar | 'var -- ; remove the animations of the variable 'var
+64xy | b -- x y ; unpack the first two signed 16-bit values (x in the highest 16 bits)
+64wh | b -- w h ; unpack the last two signed 16-bit values
+64xywh | b -- x y w h ; unpack four signed 16-bit values
+xywh64 | x y w h -- b ; pack four 16-bit values (x in the highest 16 bits)
+64xyrz | b -- x y r z ; unpack a sprite: x y in 16 bits, r (rotation) with 2 bits less of precision and z (zoom) with 4 bits less
+xyrz64 | x y r z -- b ; pack a sprite (see 64xyrz)
+64box | b adr -- ; write the four 16-bit values of b as four dwords x y w h at adr (an SDL_Rect)
+32xy | b -- x y ; unpack two signed 32-bit values (x in the high half)
+xy32 | x y -- b ; pack two 32-bit values (x in the high half)
+vaempty | -- n ; number of events in the list (waiting or running)
+aniInit | ini cnt fps -- V ; value of a frame animation: first frame ini (12 bits), cnt frames (up to 256) and fps in fixed point (10.0 = 10 frames per second, 0 = still)
+ani+! | dt 'V -- ; advance the frame animation in 'V by dt milliseconds: as many frames as dt covers (the time left over is kept); after the last frame it goes back to the first
+aniFrame | V -- f ; current frame number (ini + step)
+aniCnt | V -- n ; current step 0..cnt-1 of the animation (it is not the number of frames)
+ani+timer! | 'V -- ; advance the frame animation in 'V by deltatime
+vscreen | w h -- ; create a virtual screen of w x h pixels (a render target) shown in the window centered with the aspect ratio kept and linear filtering; it follows the window resizes
+vscreenf | w h -- ; like vscreen with nearest neighbor scaling (sharp pixels)
+vini | -- ; start drawing into the virtual screen (it becomes the render target)
+vredraw | -- ; draw the virtual screen in the window and present it
+vfree | -- ; free the virtual screen texture
+sdlx | -- x ; mouse x in virtual screen pixels (it replaces the sdlx of sdl2 for the code that follows)
+sdly | -- y ; mouse y in virtual screen pixels (it replaces the sdly of sdl2 for the code that follows)
+%w | frac -- px ; fixed point fraction of the virtual screen width (1.0 = all) in pixels (it replaces the one of sdl2)
+%h | frac -- px ; fixed point fraction of the virtual screen height (1.0 = all) in pixels (it replaces the one of sdl2)

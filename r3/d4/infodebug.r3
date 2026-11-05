@@ -396,12 +396,7 @@
 ##dstackoff
 ##rstackoff
 ##dataoff
-
-:precalc
-	vmDS mdatastack - 8 + 'dstackoff !
-	vmRS mretstack - 8 + 'rstackoff !
-	dshare memdata - 'dataoff !
-	;
+##dataini
 
 ::memtokn
 	2 << cshare + d@ ;
@@ -409,7 +404,7 @@
 	memtokn .token ;
 
 |LIN|:sysnew
-|LIN|	here "x-terminal-emulator -e bash -c '" ,s swap ,s "' &" ,s ,eol 
+|LIN|	here mark "x-terminal-emulator -e bash -c '" ,s swap ,s "' &" ,s ,eol empty
 |LIN|	libc-system drop
 |LIN| ;
 	
@@ -458,7 +453,11 @@
 	'bshare inisharev
 	'dshare inisharev
 	'cshare inisharev
-	precalc
+
+	vmDS mdatastack - 8 + 'dstackoff !
+	vmRS mretstack - 8 + 'rstackoff !
+	dshare memdata - 'dataoff !
+	dshare 'dataini !
 	;
 
 |------------------------------------

@@ -1,4 +1,4 @@
-| Utg Graphics
+| Utf-8  Graphics/font/color ex
 | PHREDA 2025
 ^r3/lib/console.r3
 
@@ -90,9 +90,9 @@ $3C003C003C003C0 $143C7C3FE02AA8 $4007C02FC002C0 $10003D003F80380
 :xcol
 	$20 nand 63 >? ( 7 - ) $30 - $f and ;
 :escape
-	xcol .bc c@+ xcol .fc ;
+	xcol .bc c@+ 0? ( drop 1- ; ) xcol .fc ;
 :xchar | char
-	$5b =? ( drop c@+ $5b <>? ( escape ; ) ) | [[
+	$5b =? ( drop c@+ $5b <>? ( 0? ( drop 1- ; ) escape ; ) ) | [[
 	bigemit ;
 	
 | big font zx, colors with [BF 
@@ -100,7 +100,7 @@ $3C003C003C003C0 $143C7C3FE02AA8 $4007C02FC002C0 $10003D003F80380
 	( c@+ 1? xchar ) 2drop ;
 
 :achar | char
-	$5b =? ( drop c@+ $5b <>? ( escape ; ) ) | [[
+	$5b =? ( drop c@+ $5b <>? ( 0? ( drop 1- ; ) escape ; ) ) | [[
 	bigemita ;
 
 | big font A, colors with [BF 
@@ -108,8 +108,8 @@ $3C003C003C003C0 $143C7C3FE02AA8 $4007C02FC002C0 $10003D003F80380
 	( c@+ 1? achar ) 2drop ;
 
 |---- Draw lines
-#vl ( $e2 $94 $82 $1b $5b $42 $1b $5b $44 0 ) | |v<
-#vd	( $e2 $95 $91 $1b $5b $42 $1b $5b $44 0 ) | ||v<
+#vl ( $e2 $94 $82 $1b $5b $42 $8 0 )
+#vd	( $e2 $95 $91 $1b $5b $42 $8 0 )  ||v<
 
 ::.vline | h --
 	'vl .rep ;
@@ -121,55 +121,54 @@ $3C003C003C003C0 $143C7C3FE02AA8 $4007C02FC002C0 $10003D003F80380
 ::.hlined | w --
 	"═" .rep ;
 
+#vl2 ( $e2 $94 $82 $1b $5b $42 0 )
+#vd2 ( $e2 $95 $91 $1b $5b $42 0 )  ||v<
+
+::.vline2 | h --
+	'vl2 .rep ;
+::.vlined2 | h --
+	'vd2 .rep ;
+
 ::.boxl | x y w h --
 	3 <? ( 4drop ; ) swap
 	3 <? ( 4drop ; ) swap
 	2over .at
 	"┌" .write over 2 - "─" .rep "┐" .write
-	2swap 1+
-	2swap 2 -
-	( 1? 1- >r
-		pick2 pick2 .at "│" .write 
-		pick2 over + 1- .col "│" .write 
-		swap 1+ swap r> ) drop 	
-	-rot .at
-	"└" .write 2 - "─" .rep "┘" .write ;
+	2 - 2swap 1+ | w h x y
+	2dup .at pick2 .vline
+	"└" .write pick3 2 - "─" .rep "┘" .write 
+	>r rot + 1- cols =? ( r> .at .vline2 ; )
+	r> .at .vline ;
 
 ::.boxc | x y w h --
 	3 <? ( 4drop ; ) swap
 	3 <? ( 4drop ; ) swap
 	2over .at
 	"╭" .write over 2 - "─" .rep "╮" .write
-	2swap 1+
-	2swap 2 -
-	( 1? 1- >r
-		pick2 pick2 .at "│" .write 
-		pick2 over + 1- .col "│" .write 
-		swap 1+ swap r> ) drop 	
-	-rot .at
-	"╰" .write 2 - "─" .rep "╯" .write ;
+	2 - 2swap 1+ | w h x y
+	2dup .at pick2 .vline
+	"╰" .write pick3 2 - "─" .rep "╯" .write 
+	>r rot + 1- cols =? ( r> .at .vline2 ; )
+	r> .at .vline ;
 
 ::.boxd | x y w h --
 	3 <? ( 4drop ; ) swap
 	3 <? ( 4drop ; ) swap
 	2over .at
 	"╔" .write over 2 - "═" .rep "╗" .write
-	2swap 1+
-	2swap 2 -
-	( 1? 1- >r
-		pick2 pick2 .at "║" .write 
-		pick2 over + 1- .col "║" .write 
-		swap 1+ swap r> ) drop 
-	-rot .at
-	"╚" .write 2 - "═" .rep "╝" .write ;
-	
-::.boxf
+	2 - 2swap 1+ | w h x y
+	2dup .at pick2 .vlined
+	"╚" .write pick3 2 - "═" .rep "╝" .write 
+	>r rot + 1- cols =? ( r> .at .vlined2 ; )
+	r> .at .vlined ;
+		
+::.boxf | x y w h --
+	1 <? ( 4drop ; ) swap 
 	1 <? ( 4drop ; ) swap
-	1 <? ( 4drop ; ) swap
-	( 1? 1- >r
-		pick2 pick2 .at
-		dup .nsp swap 1+ swap 
-		r> ) 4drop ;
+	2over .at
+	( 1- 1? over .ndel "B" .[w ) drop
+	.ndel
+	2drop ;
 	
 |--- utf align | result in HERE
 ::lalign | cnt str -- 
@@ -211,7 +210,7 @@ $3C003C003C003C0 $143C7C3FE02AA8 $4007C02FC002C0 $10003D003F80380
 ::rwrite | w "str" --
 	ralign here .write ;
 
-|---- Text
+|---- Box Text
 #strsplit
 #strsplit>
 #lines
@@ -230,7 +229,7 @@ $3C003C003C003C0 $143C7C3FE02AA8 $4007C02FC002C0 $10003D003F80380
 
 :testw | str -- str
 	pick4 >r utf8count 
-	r> swap >? ( drop ; ) | str count
+	r> swap >=? ( drop ; ) | str count
 	over a!+ | newline
 	utf8bytes | str bytes
 	over + <<sp
@@ -253,7 +252,7 @@ $3C003C003C003C0 $143C7C3FE02AA8 $4007C02FC002C0 $10003D003F80380
 
 :vtop	drop ;
 :vcen	cntlines - 2/ + ;
-:vbot	cntlines - ;
+:vbot	cntlines - + ;
 
 #halign 'calign
 #valign 'vcen
@@ -277,7 +276,7 @@ $3C003C003C003C0 $143C7C3FE02AA8 $4007C02FC002C0 $10003D003F80380
 	mark ab[ 
 	splitlines 
 	rot 	| w x y h
-	valign ex
+	valign ex 1 max
 	lines >a ( 
 		2dup .at
 		a@+ 1? pick3 swap xwrite 
@@ -285,3 +284,17 @@ $3C003C003C003C0 $143C7C3FE02AA8 $4007C02FC002C0 $10003D003F80380
 		) drop
 	3drop
 	]ba empty ;
+
+#map4to6 ( 0 0 0 1 1 1 1 2 2 2 3 3 4 4 5 5 )
+#gray_lut ( 232 233 235 236 238 239 241 242 244 245 247 248 250 251 253 255 )
+
+::rgb4t | col12 -- col256
+	dup 8 >> $f and 
+	over 4 >> $f and 
+	rot $f and | r g b
+	over =? ( pick2 =? ( nip nip 'gray_lut + c@ $ff and ; ) )
+	'map4to6 + c@
+	swap 'map4to6 + c@ 6 * +
+	swap 'map4to6 + c@ 36 * +
+	16 + ;
+

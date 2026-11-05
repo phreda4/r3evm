@@ -82,8 +82,8 @@
 	dup 'fy +! 2* neg 'fh +!
 	dup 'fx +! 2* neg 'fw +! ;
 	
-::flcr
-	.cr 1 'fy +! fx .col ;
+::fhome | -- ; arriba-izquierda del panel
+	fx fy .at ;	
 	
 |---- Events
 #vecdraw
@@ -106,7 +106,8 @@
 	0 'wid ! 0 'rflag !
 	;
 
-::exit	rflag $4 or 'rflag ! ; 
+::tuiexit | exit from tui
+rflag $4 or 'rflag ! ; 
 
 :tucl	rflag $2 nand 'rflag ! ;	| exec action is for every widget
 :tuX!	rflag $2 or 'rflag ! ;	| exec action need (click or enter)
@@ -185,7 +186,7 @@
 	
 :hkey
 	evtkey
-	[esc] =? ( exit ) 
+|	[esc] =? ( exit ) 
 	'uikey ! ;
 	
 |:hmouse 
@@ -193,13 +194,19 @@
 |	evtmw 1? ( dup 32 << 'uimouse ! ) drop
 |	;
 :exvector | --
-	.cl .hidec tui vecdraw ex ;
+	.cl tui vecdraw ex ;
 
+#(resizevec) 0
+
+:resizevec 
+	(resizevec) 1? ( dup ex ) drop
+	exvector ;
+	
 :tuiredraw
 	exvector
 	rflag
-	$8 and? ( 0 'uikey ! exvector ) | redraw
-	$1 and? ( .restorec .showc )	| with cursor
+	$8 and? ( 0 'uikey ! exvector exvector ) | redraw x2: wida (panel focus) lags one draw
+	$1 and? ( .restorec )	| with cursor
 	drop
 	.flush ;
 	
@@ -211,7 +218,7 @@
 	( rflag $4 nand? drop
 		0 'uikey ! 0 'rflag ! |0 'uimouse !
 		|inevt
-		getevt
+		getevt 
 		1 =? ( hkey ) |	2 =? ( hmouse )
 		1? ( tuiredraw ) | ?? animation
 		drop
@@ -238,6 +245,10 @@
 	tuireset 0 'uikey !
 	'vecdraw ! | restore old draw
 	tuR! | redraw prev screen
+	;
+	
+::onTuiResize | vec --
+	'(resizevec) !
 	;
 
 |---------------------	
@@ -302,17 +313,17 @@
 	6 =? ( tuX! )
 	drop
 	kbBtn
-	fx fy .at
+	fhome
 	fw swap calign here .write 
 	.reset 1 'fy +!
 	tuX? 0? ( 2drop ; ) drop ex ;
 	
 ::tuLabel | "" --
-	fw swap lwrite .reset flcr ;
+	fx .col fw swap lwrite 1 'fy +! .cr ;
 ::tuLabelC | "" --
-	fw swap cwrite .reset flcr ;
+	fx .col fw swap cwrite 1 'fy +! .cr ;
 ::tuLabelR | "" --
-	fw swap rwrite .reset flcr ;
+	fx .col fw swap rwrite 1 'fy +! .cr ;
 	
 |--------------------------------	
 |---- write line
@@ -406,14 +417,14 @@
 	pick2 8 + @ over +
 	fx .col | color?
 	cntlist >=? ( drop fw .nsp .cr ; ) 
-	pick3 @ =? ( .rever )
+	pick3 @ =? ( .rev )
 	uiNindx 
 	fw swap (xwrite) ex .cr
 	.reset 
 	;
 
 ::tuList | 'var list --
-	fx fy .at
+	fhome
 	mark makeindx
 	fh
 	mouList
@@ -449,13 +460,13 @@
 	pick2 8 + @ over +
 	fx .col | color?
 	cntlist >=? ( drop fw .nsp .cr ; ) 
-	pick3 @ =? ( .rever )
+	pick3 @ =? ( .rev )
 	uiNindxn 
 	fw swap (xwriten) ex .cr
 	.reset ;
 	
 ::tuListN | 'var listn --
-	fx fy .at
+	fhome
 	makeindxn
 	fh
 	mouList
@@ -532,7 +543,7 @@
 	
 :itree | 'var max n  -- 'var max n
 	pick2 8 + @ over +
-	pick3 @ =? ( .rever )
+	pick3 @ =? ( .rev )
 	fx .col
 	uiNindx c@+ 0? ( 2drop fw .nsp .cr ; )
 	mark dup $1f and 2* ,nsp ,iicon ,s ,eol empty
@@ -540,7 +551,7 @@
 	.reset ;
 	
 ::tuTree | 'var list --
-	fx fy .at
+	fhome
 	mark maketree
 	fh
 	mouTree
@@ -610,6 +621,9 @@
 	dup 'pad> ! 'padf> !
 	'lins  'modo ! ;
 
+:cshape | -- ; forma de cursor segun modo
+	modo 'lins =? ( drop .insc ; ) drop .ovec ;
+
 :tuInputfoco | 'buff max -- 'buff max 
 	tuif 0? ( drop ; )
 	1 =? ( drop inInput dup ) drop
@@ -617,6 +631,7 @@
 	fx fy swap 
 	pad> padi> - + | !! falta utf
 	swap .at .savec | cursor
+	cshape
 	tuC!		| activate cursor
 	;
 	
@@ -624,7 +639,7 @@
 	tuiw1 drop
 	tuInputfoco
 	drop
-	fx fy .at
+	fhome
 	fw 2 <? ( 2drop ; ) 
 	swap lwrite
 	;
@@ -638,7 +653,7 @@
 	6 =? ( pick2 dup @ 1 xor swap ! tuX! tuR! )
 	dup .bc
 	drop
-	fx fy .at
+	fhome
 	over @ checkr .write .write 
 	.reset 1 'fy +!
 	tuif 0? ( 2drop ; ) drop
@@ -656,7 +671,7 @@
 	6 =? ( pick3 pick3 ! tuX! tuR! )
 	dup .bc
 	drop
-	fx fy .at
+	fhome
 	pick2 pick2 @ checkr .write .write 
 	.reset 1 'fy +!
 	tuif 0? ( 3drop ; ) drop
@@ -667,6 +682,14 @@
 
 |--- slide
 
+:kbSlider | 'var min max -- 'var min max
+	tuif 0? ( drop ; ) drop
+	uikey 0? ( drop ; )
+	[tab] =? ( focus>> ) [shift+tab] =? ( focus<< )
+	[le] =? ( pick3 dup @ 1- pick4 max swap ! tuX! tuR! )
+	[ri] =? ( pick3 dup @ 1+ pick3 min swap ! tuX! tuR! )
+	drop ;
+
 ::tuSlider | 'var min max --
 	tuiw1
 	3 =? ( 3 + )
@@ -675,7 +698,8 @@
 		pick4 !
 		tuR! tuX! )
 	drop
-	fx fy .at fw "─" .rep
+	kbSlider
+	fhome fw "─" .rep
 	rot @ | min max var
 	pick2 - fw 2swap swap - */
 	fx + fy .at "●" .write
@@ -683,8 +707,141 @@
 
 |--- progress
 ::tuProgress | percent --
-	fx fy .at
+	fhome
 	100 clamp0max fw 100 */ "█" .rep
 	.reset 1 'fy +! ;
 
 |--- combo
+
+|--- paleta ($rrggbb) 
+##pal.dark [
+	$000000 $18181c $24242a $383842		| bg0 bg1 bg2 bg3
+	$eeeeee $8c8c98 $585862 $fab283		| fTx fMu fDi fPr
+	$5c9cf5 $9d7cd8 $7fd88f $e06c75 $f5a742	] | fBl fPu fGr fRd fYe
+
+#palp 'pal.dark
+
+::pal! | 'pal --
+	'palp ! ;
+
+:rgb@ | n -- r g b
+	2 << palp + d@ ;
+
+::cbg | n --
+	rgb@ .bg32 ;
+::cfg | n --
+	rgb@ .fg32 ;
+
+::bg0 0 cbg ;	::bg1 1 cbg ;	::bg2 2 cbg ;	::bg3 3 cbg ;
+::fTx 4 cfg ;	::fMu 5 cfg ;	::fDi 6 cfg ;	::fPr 7 cfg ;
+::fBl 8 cfg ;	::fPu 9 cfg ;	::fGr 10 cfg ;	::fRd 11 cfg ;	::fYe 12 cfg ;
+
+|--- cursor / linea -------------------------------------------------
+#tdef #tdef0
+
+
+::fcr | -- ; baja linea (y reinicia columnas de tabla)
+	.cr fx .col tdef0 'tdef ! ;
+	
+|--- lineas: "" -- (ancho fw, bajan linea) 
+::.lw	fw swap lwrite fcr ;
+::.cw	fw swap cwrite fcr ;
+::.rw	fw swap rwrite fcr ;
+
+|--- numeros: w n -- 
+::.nd .d swap .r. .write ;
+::.nh .h swap .r. .write ;
+::.nf .f swap .r. .write ;
+::.nb .b swap .r. .write ;
+
+|--- panel 
+::pan | "title" -- ; fondo bg1, padding 1, titulo en acento
+	bg1 .wfill 1 1 flpad fhome
+	fPr .Bold .write fcr .NBold fTx ;
+
+::.lines | 'v n -- 
+	0 ( over <? pick2 over swap ex fcr 1+ ) 3drop ;
+
+|--- tabla: def = ( w just ... 0 ) just 0 izq 1 cen 2 der 
+::tcols | 'def --
+	dup 'tdef0 ! 'tdef ! ;
+::cell | "" -- ; el color es el activo
+	tdef c@+ $ff and 0? ( 3drop ; )
+	swap c@+ $ff and swap 'tdef !
+	rot swap
+	0? ( drop lwrite .sp ; )
+	1 =? ( drop cwrite .sp ; )
+	drop rwrite .sp ;
+::row | "a|b|c" -- ; fila completa desde texto separado por |
+	mark here swap
+	( c@+ 1? $7c =? ( 0 nip ) ,c ) ,c 0 ,c drop
+	( dup c@ 1? drop dup cell >>0 ) 2drop
+	fcr empty ;
+::hdr | "a|b|c" --
+	fMu .Bold row .NBold fTx ;
+
+|--- tabla con recuadro: mismo def que tcols, widths w ---------------
+| linea  ┌──┬──┐ / ├──┼──┤ / └──┴──┘  ;  fila  │ a │ b │
+| cada columna ocupa w+2 entre bordes; ancho total = tbw
+| bordes en fDi, el contenido usa el color de la fila (tbrowc) y el fondo activo
+:tbline | "l" "m" "r" -- ; linea horizontal
+	>r >r .write
+	tdef0 dup c@ $ff and
+	( 1? 2 + "─" .rep
+		2 + dup c@ $ff and
+		1? ( r@ .write ) )
+	2drop r> drop r> .write fcr ;
+
+::tbw | -- n ; ancho total de la tabla con recuadro
+	1 tdef0
+	( dup c@ $ff and 1? 3 + rot + swap 2 + ) 2drop ;
+
+::tbtop fDi "┌" "┬" "┐" tbline ;
+::tbsep fDi "├" "┼" "┤" tbline ;
+::tbbot fDi "└" "┴" "┘" tbline ;
+
+:tbcol | 'color -- ; borde izquierdo de una columna y color del contenido
+	fDi "│" .write .sp ex ;
+
+::tbrowc | "a|b|c" 'color -- ; fila con recuadro, 'color = palabra de color
+	>r mark here swap
+	( c@+ 1? $7c =? ( 0 nip ) ,c ) ,c 0 ,c drop
+	( dup c@ 1? drop
+		r@ tbcol dup cell >>0 ) 2drop
+	( tdef c@ $ff and 1? drop			| columnas sin dato
+		r@ tbcol "" cell ) drop
+	fDi "│" .write r> drop fcr empty ;
+
+::tbrow | "a|b|c" -- ; fila con recuadro
+	'fTx tbrowc ;
+::tbhdr | "a|b|c" -- ; cabecera con recuadro
+	.Bold 'fMu tbrowc .NBold fTx ;
+
+::flxRoot | -- ; fullscr
+	1 'fx ! 1 'fy ! cols 'fw ! rows 'fh ! ;
+
+::flxC | w h -- ; frame w x h cent
+	fh min swap fw min swap			| w h
+	fw pick2 - 2/ fx +				| w h x
+	fh pick2 - 2/ fy +				| w h x y
+	'fy ! 'fx ! 'fh ! 'fw ! ;
+
+|--- dialogo -----------------------------------------------------
+| 44 9 "Titulo" tuDlg
+|    ... contenido (fcr, .lw, .cw, flxN, flxS, etc) ...
+| tuDlgEnd
+|
+| centrado en pantalla, fondo bg2, borde redondeado, titulo centrado en el borde.
+| el frame activo queda en el interior (padding 1) y el cursor en su esquina.
+| usa 2 niveles de la pila de frames; tuDlgEnd restaura el frame de antes.
+::tuDlg | "title" w h --
+	flxpush					| guarda el frame activo
+	flxRoot flxC
+	bg2 .wfill
+	fDi .wbordec
+	fPr .Bold $4 swap " %s " sprint .wtitle .NBold
+	fTx 1 1 flpad fhome
+	flxpush ;					| el interior es la base de flxN/flxS...
+
+::tuDlgEnd | --
+	flxpop flxpop ;

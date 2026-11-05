@@ -44,12 +44,21 @@
 
 |-------------------------------------------
 |-------------------------------- includes
+| Target of the generated code: lines |WIN| |LIN| |MAC| |RPI| are active only for the target.
+| osgen 0 WIN, 1 LIN, 2 MAC, 3 RPI. External variable: set it before r3load to compile
+| for another system. The default is the system where this compiler runs.
+##osgen
+|WIN|	0
+|LIN|	1
+|MAC|	2
+|RPI|	3
+
 :iscom
 	1+
-|WIN|	"WIN|" =pre 1? ( drop 4 + ; ) drop | Compila para WINDOWS
-|LIN|	"LIN|" =pre 1? ( drop 4 + ; ) drop | Compila para LINUX
-|MAC|	"MAC|" =pre 1? ( drop 4 + ; ) drop | Compila para MAC
-|RPI|	"RPI|" =pre 1? ( drop 4 + ; ) drop | Compila para RPI
+	"WIN|" =pre 1? ( drop osgen 0 =? ( drop 4 + ; ) ) drop | Compila para WINDOWS
+	"LIN|" =pre 1? ( drop osgen 1 =? ( drop 4 + ; ) ) drop | Compila para LINUX
+	"MAC|" =pre 1? ( drop osgen 2 =? ( drop 4 + ; ) ) drop | Compila para MAC
+	"RPI|" =pre 1? ( drop osgen 3 =? ( drop 4 + ; ) ) drop | Compila para RPI
 	"MEM" =pre 1? ( drop				| MEM 640
 		4 +
 		trim str>nro 'switchmem !
@@ -165,10 +174,10 @@
 	tok> codeini - 3 >> | code_length
 	32 <<
 	dic> 8 - ! | info in wordnow
-	endcnt
-	0? ( $80 'flag +! )
-	1 >? ( $10 'flag +! )
-	drop ;
+	tok> 8 - @ $ff and 7 =? ( drop			| termina con ;
+		endcnt 1 >? ( $10 'flag +! ) drop ; ) drop
+	$80 'flag +!						| termina sin ; (cae en la palabra siguiente)
+	endcnt 1? ( $10 'flag +! ) drop ;
 	
 :endef
 	level 1? ( drop "missing )" error! 0 ; ) drop
@@ -260,8 +269,8 @@
 
 :cond | atok' tok -- atok'
 	dup $ff and
-	$c <? ( 2drop ; ) | 0?..
-	$1f >? ( 2drop ; ) | ..in?
+	$d <? ( 2drop ; ) | 0?..
+	$19 >? ( 2drop ; ) | ..in?
 	drop
 	dup 8 >> $ffffffff and 1? ( 2drop ; ) drop | no jump
 	tok> pick2 - 8 + $ffffffff and 8 << or | saltar a tok>
@@ -297,7 +306,7 @@
 		) drop
 	sst@ 3 << tok + | tok[
 	tok> over - 8 - 8 << over @ or over !
-	8 + 8 << swap 6 + or ,t >>sp 
+	8 + tok - 3 >> 8 << swap 6 + or ,t >>sp 	| ] = (indice del 1er token dentro de [ ]) << 8
 	sst@ 'flag !	| restore flag
 	flag $40 or 'flag !
 	;
@@ -398,7 +407,8 @@
 		
 		inc> 16 - <? ( dic> 'dic< ! ) | main source code mark
 		8 + ) drop 
-	callend
+	|callend
+	1 endef 0? ( 2drop ; ) drop	| endef deja 0 solo si hay error; el 1 evita leer basura de la pila
 	| continue word need add lengths
 	dic> 16 - ( dic >? 
 		16 - contword ) drop	
@@ -468,12 +478,14 @@
 #cano
 #finlist * 800  | 100 ;
 #lastdircode
+#exunk	| 1 if the word has an ex with unknown stack effect
+#regA #regB	| lastdircode saved by >a >b
 
 ::resetinfo | --
 	0 'flag !
 	'sst 'sst> !		| stack
 	0 'pano ! 0 'cano ! 0 'cntfin !
-	0 'usoD ! 0 'deltaD ! 0 'deltaR ! ;
+	0 'usoD ! 0 'deltaD ! 0 'deltaR ! -1 'lastdircode ! 0 'exunk ! -1 'regA ! -1 'regB ! ;
 
 :pushvar
 	deltaD $ff and 8 << 
@@ -485,6 +497,12 @@
 	sst@ 
 	dup 56 << 56 >> 'deltaR !
 	dup 8 >> $ff and 'usoD ! 
+	40 << 56 >> 'deltaD ! ;
+
+:popblk	| end of ( ) block: restore stack delta but KEEP the max stack use seen inside
+	sst@ 
+	dup 56 << 56 >> 'deltaR !
+	dup 8 >> $ff and usoD max 'usoD ! 
 	40 << 56 >> 'deltaD ! ;
 
 :dropvar
@@ -510,9 +528,10 @@
 :.blit 
 :.lit
 :.data 
-:.adata 
 	drop
 	;
+:.adata 
+	8 >> $ffffff and 'lastdircode ! ;	| last address pushed (var or code), used by ex
 	
 :.code 
 	|dup 8 - @
@@ -548,7 +567,7 @@
 	pushvar ;
 :.)
 	drop
-	popvar ;
+	popblk ;
 :.[
 	drop
 	pushvar 1 'pano +! 1 'cano +! ;
@@ -560,9 +579,35 @@
 	24 << 32 >> over + 8 - 		| go to )
 	@ 8 >> $ffffff and 0? ( drop ; ) drop	| IF -> do nothing
 	dropvar pushvar ; 						| WHILE -> copy stack
+##exstrict 0	| 1: error when the vectors of an ex table have different stack delta
+#vuse #vdel #vcnt #vbad #curdic
+
+:vecinfo | tok --	; stack effect of one vector of the table
+	dup $ff and 3 <>? ( 2drop ; ) drop	| only code addresses
+	8 >> $ffffff and nro>dic
+	dup @ 1 and? ( 2drop ; ) drop
+	8 + @
+	dup $ff and vuse max 'vuse !	| use: the max of all
+	48 << 56 >>						| delta
+	vcnt 0? ( drop 'vdel ! 1 'vcnt ! ; ) drop
+	vdel <>? ( 1 'vbad !
+		exstrict 1? ( curdic @ dic>name "ex: vectors with different stack delta" error! ) drop )
+	drop ;
+
+:exdata | dic --	; 'table @ ex: all vectors of the table must have the same effect
+	0 'vuse ! 0 'vcnt ! 0 'vbad !
+	toklend ( 1? 1- swap @+ vecinfo swap ) 2drop
+	vcnt 0? ( drop 1 'exunk ! ; ) drop	| no vectors (runtime var): unknown
+	vbad 1? ( drop 1 'exunk ! ; ) drop	| vectors differ: unknown
+	vuse deltaD swap - neg clamp0 usoD max 'usoD !
+	vdel 'deltaD +! ;
+
 :.ex
 	drop
-	lastdircode nro>dic 8 + @
+	lastdircode -? ( drop 1 'exunk ! ; ) nro>dic
+	-1 'lastdircode !	| consumed
+	dup @ 1 and? ( drop exdata ; ) drop
+	8 + @
 	dup $ff and deltaD swap - neg clamp0 usoD max 'usoD !
 	48 << 56 >> 'deltaD +!
 	;
@@ -580,6 +625,13 @@
 	6 >? ( dup 7 - basename .print ) drop
 	;
 	
+:regtrack | ntok --	; follow the vector address through the registers
+	85 =? ( lastdircode 'regA ! -1 'lastdircode ! drop ; )	| >A
+	86 =? ( regA 'lastdircode ! drop ; )						| A>
+	100 =? ( lastdircode 'regB ! -1 'lastdircode ! drop ; )	| >B
+	101 =? ( regB 'lastdircode ! drop ; )						| B>
+	drop ;
+
 ::tokeninfo | tok --
 |	debuginfo
 	dup $ff and | tok ntok
@@ -589,16 +641,31 @@
 	c@+ 'deltaR +!
 	c@ $ff and flag or 'flag !
 |	usoD deltaD " d:%d u:%d " .println
-	25 >? ( 2drop ; )
+	25 >? ( nip regtrack ; )
 	3 << 'toklis + @ ex	
 	;
+
+##retstrict 0	| 1: error when the ; of a word have different stack delta
+#finm
+
+:chkfin | --	; every ; of the word must leave the same stack movement
+	cntfin 2 <? ( drop ; ) drop
+	exunk 1? ( drop ; ) drop				| ex with unknown effect: can't compare
+	curdic @ $20 and? ( drop ; ) drop	| recursive: own effect unknown
+	'finlist @ $ff00ff and 'finm !	| deltaD and deltaR (use may differ)
+	'finlist 8 + cntfin 1- ( 1? 1- swap
+		@+ $ff00ff and finm <>? ( 
+			retstrict 1? ( curdic @ dic>name "different stack in ;" error! ) drop ) drop
+		swap ) 2drop ;
 
 :anacode | dic --
 	|dup @ dic>name "%w" .println
 	resetinfo
+	dup 'curdic !
 	dup toklen ( 1? 1- swap
 		@+ tokeninfo 
 		swap ) 2drop
+	chkfin
 |	usoD deltaD " d:%d u:%d " .println .cr
 	| store in dic
 	flag 8 << 'flag !
