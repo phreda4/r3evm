@@ -1,4 +1,6 @@
-![CI r3evm](https://github.com/phreda4/r3evm/actions/workflows/ci.yml/badge.svg)
+![Linux](https://github.com/TU_USUARIO/TU_REPOSITORIO/actions/workflows/ci_2.yml/badge.svg?branch=main&job=build-linux)
+![macOS](https://github.com/TU_USUARIO/TU_REPOSITORIO/actions/workflows/ci_2.yml/badge.svg?branch=main&job=build-macos)
+![Windows](https://github.com/TU_USUARIO/TU_REPOSITORIO/actions/workflows/ci_2.yml/badge.svg?branch=main&job=build-windows)
 
 # r3 VM
 
