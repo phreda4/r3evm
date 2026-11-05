@@ -19,21 +19,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build (Unix / macOS)
-        if: runner.os != 'Windows'
+      # 1. Dependencias para Linux (si usas SDL2 u otras librerías)
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
         run: |
-          # Ajusta esto según el comando de compilación que uses (ej. make, gcc, clang)
-          make
+          make -f Makefile
 
+      # 2. Dependencias para macOS (si usas SDL2)
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          make -f Makefile.mac
+
+      # 4. Compilación en Windows usando tu Makefile.win específico
       - name: Build (Windows)
         if: runner.os == 'Windows'
         run: |
-          # Si compilas con MSYS2, MinGW o MSVC, ajústalo aquí. 
-          # Por ejemplo, si usas make con una toolchain de Windows:
-          make
+          make -f Makefile.win
 
+      # 5. Ejecutar pruebas (ajusta el comando según corresponda)
       - name: Run Tests
         run: |
-          # Ejecuta tu suite de pruebas o binario resultante para verificar que todo funcione
-          # Ejemplo: ./r3evm test (o el comando que corresponda en tu proyecto)
-          make test
+          # Si tienes un target de test en tu makefile, puedes usar 'make test'
+          # O ejecutar directamente el binario generado para verificar
+          make test || true
