@@ -932,7 +932,11 @@ return a == b;
 char *nextcom(char *str)
 {
 str++;
-#if __linux__
+#if __APPLE__
+  if (r3tok5(str,"MAC|")) {	// mac
+    return str+4;
+  }
+#elif __linux__
   if (r3tok5(str,"LIN|")) {	// linux specific
     return str+4;
   }
@@ -944,12 +948,8 @@ str++;
   if (r3tok5(str,"RPI|")) {	// raspberry pi specific
     return str+4;
   }
-#elif __APPLE__  
-  if (r3tok5(str,"MAC|")) {	// mac
-    return str+4;
-  }
 #elif __ANDROID__  
-  if (r3tok5(str,"AND|")) {	// mac
+  if (r3tok5(str,"AND|")) {	// android
     return str+4;
   }
 #else
@@ -959,7 +959,6 @@ str++;
 #endif
 return nextcr(str);
 }
-
 // tokeniza string
 int r3token(char *str) 
 {

@@ -854,16 +854,16 @@ str++;
   if (r3tok5(str,"LIN|")) {	// linux specific
     return str+4;
   }
-#elif EMSCRIPTEN
+#elif defined(__ANDROID__)
+  if (r3tok5(str,"AND|")) {	// android
+    return str+4;
+  }
+#elif defined(EMSCRIPTEN)
   if (r3tok5(str,"WEB|")) {	// web specific
     return str+4;
   }
-#elif __aarch64__
+#elif defined(__aarch64__)
   if (r3tok5(str,"RPI|")) {	// raspberry pi specific
-    return str+4;
-  }
-#elif __ANDROID__
-  if (r3tok5(str,"AND|")) {	// android
     return str+4;
   }
 #else
