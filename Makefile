@@ -4,7 +4,7 @@
 CPP      = g++
 CC       = gcc
 OBJ      = r3.o r3d.o
-LIBS     = -ldl -lrt -s -flto
+LIBS     = -ldl -s -flto
 INCS     = 
 CXXINCS  = 
 BIN      = r3lin r3lind
