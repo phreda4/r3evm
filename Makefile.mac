@@ -1,21 +1,14 @@
 #
 # Makefile for Mac (only tested with M2 Macair)
 #
-# Prereq
-#   brew install sdl2 sdl2_mixer sdl_net
-# then make
 #
 CPP      = g++
 CC       = gcc
 OBJ      = r3.o
 
-#SDL_CFLAGS := $(shell sdl2-config --cflags)
-SDL_CFLAGS := -I/opt/homebrew/include/ -D_THREAD_SAFE
-SDL_LIBS   := $(shell sdl2-config --libs)
-LIBS     = $(SDL_LIBS) -lSDL2_mixer -lSDL2_net -ldl -flto
+LIBS     = -ldl -flto
 BIN      = r3mac
-CXXFLAGS = $(SDL_CFLAGS) $(CXXINCS) -Oz -fpermissive -fomit-frame-pointer -fno-exceptions -fno-rtti
-#CXXFLAGS = $(SDL_CFLAGS) $(CXXINCS)
+CXXFLAGS = $(CXXINCS) -Oz -fpermissive -fomit-frame-pointer -fno-exceptions -fno-rtti
 CFLAGS   = $(INCS) -Oz
 RM       = rm -f
 
