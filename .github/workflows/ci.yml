@@ -19,27 +19,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Dependencias para Linux (si usas SDL2 u otras librerías)
-      - name: Install dependencies (Ubuntu)
+      - name: Build (Ubuntu)
         if: runner.os == 'Linux'
         run: |
           make -f Makefile
 
-      # 2. Dependencias para macOS (si usas SDL2)
-      - name: Install dependencies (macOS)
+      - name: Build (macOS)
         if: runner.os == 'macOS'
         run: |
           make -f Makefile.mac
 
-      # 4. Compilación en Windows usando tu Makefile.win específico
       - name: Build (Windows)
         if: runner.os == 'Windows'
         run: |
           make -f Makefile.win
 
-      # 5. Ejecutar pruebas (ajusta el comando según corresponda)
       - name: Run Tests
         run: |
-          # Si tienes un target de test en tu makefile, puedes usar 'make test'
-          # O ejecutar directamente el binario generado para verificar
-          make test || true
+          # Si tu Makefile tiene un target 'test', se ejecutará aquí.
+          # Si falla, la CI fallará correctamente para avisarte.
+          make test
+
+      - name: Upload Binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3evm-binaries-${{ matrix.os }}
+          path: |
+            r3lin
+            r3lind
+            r3mac
+            r3macd
+            r3.exe
+            r3d.exe
