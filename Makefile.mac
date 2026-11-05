@@ -1,11 +1,11 @@
-# Makefile para Mac (optimizado para Apple Silicon y compatible con Intel)
+# Makefile para Mac (Apple Silicon e Intel)
 CPP      = g++
 CC       = gcc
 OBJ      = r3.o r3d.o
 LIBS     = -ldl -flto
 BIN      = r3mac r3macd
-CXXFLAGS = $(CXXINCS) -Oz -fpermissive -fomit-frame-pointer -fno-exceptions -fno-rtti
-CFLAGS   = $(INCS) -Oz
+CXXFLAGS = $(CXXINCS) -O2 -fpermissive -fomit-frame-pointer -fno-exceptions -fno-rtti
+CFLAGS   = $(INCS) -O2
 RM       = rm -f
 
 .PHONY: all all-before all-after clean clean-custom
@@ -19,7 +19,7 @@ r3mac: r3.o
 	$(CPP) r3.o -o r3mac $(LIBS)
 
 r3macd: r3d.o
-	$(CPP) r3d.o -o r3macd $(LIBS)
+	$(CPP) r3.o -o r3macd $(LIBS)
 
 r3.o: r3.cpp
 	$(CPP) -c r3.cpp -o r3.o $(CXXFLAGS)
