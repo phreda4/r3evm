@@ -7,47 +7,56 @@ on:
     branches: [ "**" ]
 
 jobs:
-  build-and-test:
-    name: ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-
+  build-linux:
+    name: Linux (Ubuntu)
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Build (Ubuntu)
-        if: runner.os == 'Linux'
         run: |
           make -f Makefile
 
-      - name: Build (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          make -f Makefile.mac
-
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          make -f Makefile.win
-
-      - name: Run Tests
-        run: |
-          # Si tu Makefile tiene un target 'test', se ejecutará aquí.
-          # Si falla, la CI fallará correctamente para avisarte.
-          # make test
-
-      - name: Upload Binaries
+      - name: Upload Binaries (Linux)
         uses: actions/upload-artifact@v4
         with:
-          name: r3evm-binaries-${{ matrix.os }}
+          name: r3evm-binaries-ubuntu-latest
           path: |
             r3lin
             r3lind
+
+  build-macos:
+    name: macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (macOS)
+        run: |
+          make -f Makefile.mac
+
+      - name: Upload Binaries (macOS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3evm-binaries-macos-latest
+          path: |
             r3mac
             r3macd
+
+  build-windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (Windows)
+        run: |
+          make -f Makefile.win
+
+      - name: Upload Binaries (Windows)
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3evm-binaries-windows-latest
+          path: |
             r3.exe
             r3d.exe
